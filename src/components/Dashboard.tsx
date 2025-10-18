@@ -89,13 +89,13 @@ export default function Dashboard() {
     // 高尔夫球动画
     const ball = document.getElementById('golf-ball')
     if (ball) {
-      let x = 50
-      let y = 50
-      let vx = 3
+      let x = 20  // 从左边开始
+      let y = 30  // 从上方开始
+      let vx = 2
       let vy = 0
-      const gravity = 0.3
-      const bounce = 0.6
-      const ground = 200 // 地面高度
+      const gravity = 0.2
+      const bounce = 0.7
+      const ground = 120 // 绿色区域内的地面高度
       
       function animate() {
         vy += gravity
@@ -108,7 +108,7 @@ export default function Dashboard() {
           vy *= -bounce
           
           // 如果弹跳很小则开始滚动
-          if (Math.abs(vy) < 0.5) {
+          if (Math.abs(vy) < 1.0) {
             vy = 0
             rollOut()
             return
@@ -118,7 +118,7 @@ export default function Dashboard() {
         ball.style.left = x + 'px'
         ball.style.top = y + 'px'
         
-        if (x < window.innerWidth + 100) {
+        if (x < 500) { // 允许球滚动到右边
           requestAnimationFrame(animate)
         }
       }
@@ -126,10 +126,10 @@ export default function Dashboard() {
       function rollOut() {
         let rollX = x
         function roll() {
-          rollX += 2
+          rollX += 1.5
           ball.style.left = rollX + 'px'
           ball.style.top = ground + 'px'
-          if (rollX < window.innerWidth + 60) {
+          if (rollX < 500) { // 允许滚动到右边
             requestAnimationFrame(roll)
           }
         }
@@ -138,9 +138,9 @@ export default function Dashboard() {
       
       // 每30秒启动一次动画
       const interval = setInterval(() => {
-        x = 50
-        y = 50
-        vx = 3
+        x = 20
+        y = 30
+        vx = 2
         vy = 0
         ball.style.left = x + 'px'
         ball.style.top = y + 'px'
