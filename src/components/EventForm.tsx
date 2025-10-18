@@ -133,7 +133,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
     setIsSubmitting(true)
 
     try {
-      let qrCodeUrl = ''
+      let qrCodeUrl = event?.payment_qr_code || '' // 保持原有二维码，如果没有新文件
 
       // 如果有二维码文件，先上传到存储
       if (qrCodeFile && supabase) {
