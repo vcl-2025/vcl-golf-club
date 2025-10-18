@@ -671,45 +671,38 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {currentView === 'dashboard' ? (
           <>
-            {/* Welcome Banner - 高尔夫球场背景设计 */}
+            {/* Welcome Banner - 高尔夫主题设计 */}
             <div className="relative rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-2xl">
-              {/* 纯草地背景 - 只有草地，没有天空 */}
-              <div className="absolute inset-0 bg-gradient-to-b from-green-400 via-green-500 to-green-600"></div>
+              {/* 背景渐变 + 草地纹理 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-green-700 to-green-800"></div>
               
-              {/* 草地纹理效果 */}
+              {/* 草地纹理叠加层 */}
               <div 
-                className="absolute inset-0 opacity-40"
+                className="absolute inset-0 opacity-20"
                 style={{
                   backgroundImage: `
-                    radial-gradient(circle at 10% 80%, rgba(255,255,255,0.15) 1px, transparent 1px),
-                    radial-gradient(circle at 30% 70%, rgba(255,255,255,0.12) 1.5px, transparent 1.5px),
-                    radial-gradient(circle at 50% 85%, rgba(255,255,255,0.18) 1px, transparent 1px),
-                    radial-gradient(circle at 70% 75%, rgba(255,255,255,0.1) 1.2px, transparent 1.2px),
-                    radial-gradient(circle at 90% 80%, rgba(255,255,255,0.14) 1px, transparent 1px),
-                    radial-gradient(circle at 20% 90%, rgba(255,255,255,0.16) 1px, transparent 1px),
-                    radial-gradient(circle at 80% 90%, rgba(255,255,255,0.13) 1px, transparent 1px)
+                    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 40% 20%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 60% 70%, rgba(255,255,255,0.1) 1px, transparent 1px)
                   `,
-                  backgroundSize: '25px 25px, 30px 30px, 35px 35px, 28px 28px, 32px 32px, 26px 26px, 29px 29px'
+                  backgroundSize: '60px 60px, 80px 80px, 100px 100px, 70px 70px'
                 }}
               ></div>
               
-              {/* 深色遮罩层，确保文字可读性 */}
-              <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-              
-              
               {/* 高尔夫球轨迹线条 */}
               <div className="absolute inset-0">
-                <svg className="w-full h-full opacity-50" viewBox="0 0 400 200">
+                <svg className="w-full h-full opacity-30" viewBox="0 0 400 200">
                   <path 
                     d="M50,150 Q150,50 250,100 T350,80" 
-                    stroke="rgba(255,255,255,0.6)" 
+                    stroke="rgba(255,255,255,0.3)" 
                     strokeWidth="2" 
                     fill="none"
                     strokeDasharray="5,5"
                   />
                   <path 
                     d="M80,160 Q180,60 280,110 T380,90" 
-                    stroke="rgba(255,255,255,0.4)" 
+                    stroke="rgba(255,255,255,0.2)" 
                     strokeWidth="1.5" 
                     fill="none"
                     strokeDasharray="3,7"
@@ -717,6 +710,16 @@ export default function Dashboard() {
                 </svg>
               </div>
               
+              {/* 飞行动画的高尔夫球 - 每30秒出现一次，飞行2秒 */}
+              <div className="absolute inset-0 overflow-hidden">
+                <div 
+                  className="absolute w-4 h-4 bg-white rounded-full shadow-lg opacity-80"
+                  style={{
+                    animation: 'golfFlight 30s ease-in-out infinite',
+                    animationDelay: '0s'
+                  }}
+                ></div>
+              </div>
               
               {/* 高尔夫球窝点装饰 */}
               <div className="absolute top-4 right-4 w-8 h-8 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
