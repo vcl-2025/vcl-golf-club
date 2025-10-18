@@ -42,6 +42,10 @@ export default function MemberAdmin() {
   const [selectedYear, setSelectedYear] = useState<string>('all')
   const [selectedMonth, setSelectedMonth] = useState<string>('all')
   const [showInactive, setShowInactive] = useState(true)
+  
+  // 排序状态
+  const [sortField, setSortField] = useState<string>('')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // 获取可用年份
   const availableYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
@@ -49,6 +53,59 @@ export default function MemberAdmin() {
   useEffect(() => {
     fetchMembers()
   }, [])
+
+  // 排序函数
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  // 获取排序后的会员列表
+  const getSortedMembers = () => {
+    if (!sortField) return filteredMembers
+
+    return [...filteredMembers].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.full_name
+          bValue = b.full_name
+          break
+        case 'email':
+          aValue = a.email
+          bValue = b.email
+          break
+        case 'phone':
+          aValue = a.phone
+          bValue = b.phone
+          break
+        case 'role':
+          aValue = a.role
+          bValue = b.role
+          break
+        case 'status':
+          aValue = a.is_active ? 'active' : 'inactive'
+          bValue = b.is_active ? 'active' : 'inactive'
+          break
+        case 'created_at':
+          aValue = new Date(a.created_at).getTime()
+          bValue = new Date(b.created_at).getTime()
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+  }
 
   useEffect(() => {
     filterMembers()
@@ -336,20 +393,70 @@ export default function MemberAdmin() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  会员信息
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>会员信息</span>
+                    {sortField === 'name' && (
+                      <span className="text-gray-400">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  联系方式
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('email')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>联系方式</span>
+                    {sortField === 'email' && (
+                      <span className="text-gray-400">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  角色
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('role')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>角色</span>
+                    {sortField === 'role' && (
+                      <span className="text-gray-400">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  状态
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>状态</span>
+                    {sortField === 'status' && (
+                      <span className="text-gray-400">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  注册时间
+                <th 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('created_at')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>注册时间</span>
+                    {sortField === 'created_at' && (
+                      <span className="text-gray-400">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   操作
@@ -357,7 +464,7 @@ export default function MemberAdmin() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredMembers.map((member) => (
+              {getSortedMembers().map((member) => (
                 <tr key={member.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">

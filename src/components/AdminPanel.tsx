@@ -89,6 +89,11 @@ export default function AdminPanel() {
   const [scoreSearchTerm, setScoreSearchTerm] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
+  
+  // 排序状态
+  const [sortField, setSortField] = useState<string>('')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  
   const { confirmDelete, showSuccess, showError } = useModal()
 
   useEffect(() => {
@@ -104,6 +109,62 @@ export default function AdminPanel() {
         newSet.add(eventId)
       }
       return newSet
+    })
+  }
+
+  // 排序函数
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  // 获取排序后的活动列表
+  const getSortedEvents = () => {
+    if (!sortField) return events
+
+    return [...events].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortField) {
+        case 'title':
+          aValue = a.title
+          bValue = b.title
+          break
+        case 'start_time':
+          aValue = new Date(a.start_time).getTime()
+          bValue = new Date(b.start_time).getTime()
+          break
+        case 'location':
+          aValue = a.location
+          bValue = b.location
+          break
+        case 'fee':
+          aValue = a.fee
+          bValue = b.fee
+          break
+        case 'status':
+          aValue = getEventStatus(a)
+          bValue = getEventStatus(b)
+          break
+        case 'registrations':
+          // 报名情况排序 - 按已报名人数
+          const aRegistrations = eventRegistrations.filter(reg => reg.event_id === a.id && reg.approval_status === 'approved').length
+          const bRegistrations = eventRegistrations.filter(reg => reg.event_id === b.id && reg.approval_status === 'approved').length
+          aValue = aRegistrations
+          bValue = bRegistrations
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      return 0
     })
   }
 
@@ -489,17 +550,95 @@ export default function AdminPanel() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">活动名称</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">时间</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">地点</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">费用</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">报名情况</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">状态</th>
+                  <th 
+                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('title')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>活动名称</span>
+                      {sortField === 'title' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('start_time')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>时间</span>
+                      {sortField === 'start_time' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('location')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>地点</span>
+                      {sortField === 'location' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('fee')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>费用</span>
+                      {sortField === 'fee' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('registrations')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>报名情况</span>
+                      {sortField === 'registrations' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>状态</span>
+                      {sortField === 'status' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900">操作</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredEvents.map((event) => (
+                {getSortedEvents().filter(e => {
+                  const status = getEventStatus(e)
+                  const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                       e.description?.toLowerCase().includes(searchTerm.toLowerCase())
+                  const matchesStatus = statusFilter === 'all' || status === statusFilter
+                  return matchesSearch && matchesStatus
+                }).map((event) => (
                   <tr key={event.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div className="font-medium text-gray-900">{event.title}</div>
