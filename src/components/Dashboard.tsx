@@ -671,95 +671,83 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {currentView === 'dashboard' ? (
           <>
-            {/* Welcome Banner - 自然风格设计 */}
-            <div className="relative rounded-3xl sm:rounded-[2rem] p-6 sm:p-8 lg:p-10 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-lg">
-              {/* 自然渐变背景 */}
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700"></div>
+            {/* Welcome Banner - 高尔夫主题设计 */}
+            <div className="relative rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-2xl">
+              {/* 背景渐变 + 草地纹理 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-green-700 to-green-800"></div>
               
-              {/* 自然纹理叠加 */}
+              {/* 草地纹理叠加层 */}
+              <div 
+                className="absolute inset-0 opacity-20"
+                style={{
+                  backgroundImage: `
+                    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 40% 20%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 60% 70%, rgba(255,255,255,0.1) 1px, transparent 1px)
+                  `,
+                  backgroundSize: '60px 60px, 80px 80px, 100px 100px, 70px 70px'
+                }}
+              ></div>
+              
+              {/* 高尔夫球轨迹线条 */}
               <div className="absolute inset-0">
-                {/* 有机形状装饰 */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white bg-opacity-10 rounded-full blur-xl"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white bg-opacity-15 rounded-full blur-lg"></div>
-                <div className="absolute top-1/3 left-1/4 w-16 h-16 bg-white bg-opacity-8 rounded-full blur-md"></div>
-                <div className="absolute bottom-1/3 right-1/3 w-20 h-20 bg-white bg-opacity-12 rounded-full blur-lg"></div>
-                
-                {/* 自然纹理图案 */}
-                <div 
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage: `
-                      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1) 2px, transparent 2px),
-                      radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 1px, transparent 1px),
-                      radial-gradient(circle at 40% 60%, rgba(255,255,255,0.12) 1.5px, transparent 1.5px),
-                      radial-gradient(circle at 70% 30%, rgba(255,255,255,0.06) 1px, transparent 1px)
-                    `,
-                    backgroundSize: '40px 40px, 60px 60px, 80px 80px, 50px 50px'
-                  }}
-                ></div>
-                
-                {/* 自然曲线装饰 */}
-                <svg className="w-full h-full absolute inset-0 opacity-25" viewBox="0 0 400 200">
-                  <path d="M0,100 Q100,50 200,100 T400,100" stroke="rgba(255,255,255,0.3)" strokeWidth="2" fill="none"/>
-                  <path d="M0,150 Q150,100 300,150 T400,150" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" fill="none"/>
-                  <circle cx="80" cy="60" r="8" fill="rgba(255,255,255,0.15)"/>
-                  <circle cx="320" cy="140" r="6" fill="rgba(255,255,255,0.12)"/>
-                  <circle cx="250" cy="80" r="4" fill="rgba(255,255,255,0.18)"/>
+                <svg className="w-full h-full opacity-30" viewBox="0 0 400 200">
+                  <path 
+                    d="M50,150 Q150,50 250,100 T350,80" 
+                    stroke="rgba(255,255,255,0.3)" 
+                    strokeWidth="2" 
+                    fill="none"
+                    strokeDasharray="5,5"
+                  />
+                  <path 
+                    d="M80,160 Q180,60 280,110 T380,90" 
+                    stroke="rgba(255,255,255,0.2)" 
+                    strokeWidth="1.5" 
+                    fill="none"
+                    strokeDasharray="3,7"
+                  />
                 </svg>
               </div>
               
-              {/* 主要内容区域 */}
+              {/* 高尔夫球窝点装饰 */}
+              <div className="absolute top-4 right-4 w-8 h-8 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 sm:w-6 sm:h-6 bg-white bg-opacity-40 rounded-full"></div>
+              </div>
+              
+              {/* 主要内容 */}
               <div className="relative z-10">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center mb-4">
-                      <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-semibold mr-4">
-                        欢迎回来，<span className="font-bold text-white">{userProfile?.full_name || '用户'}</span>
-                      </h2>
-                      <div className="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm border border-white border-opacity-30">
-                        {getMembershipTypeText(userProfile?.membership_type || 'standard')}
-                      </div>
-                    </div>
-                    
-                    <p className="text-green-100 text-base sm:text-lg lg:text-xl mb-6 font-medium">
-                      🌿 祝您今天有美好的高尔夫体验 🌿
-                    </p>
-                    
-                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
-                      <div className="flex items-center text-sm text-green-100">
-                        <div className="w-2 h-2 bg-white bg-opacity-60 rounded-full mr-3"></div>
-                        <span className="font-medium">会员数量：</span>
-                        <span className="font-semibold text-white ml-1">{memberCount}</span>
-                      </div>
-                      <div className="flex items-center text-sm text-green-100">
-                        <div className="w-2 h-2 bg-white bg-opacity-60 rounded-full mr-3"></div>
-                        <span className="font-medium">加入日期：</span>
-                        <span className="font-semibold text-white ml-1">{new Date().toLocaleDateString('zh-CN')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* 自然风格日期显示区域 */}
-                  <div className="mt-6 lg:mt-0 lg:ml-8">
-                    <div className="bg-white bg-opacity-15 rounded-2xl p-6 text-center backdrop-blur-sm border border-white border-opacity-30 relative overflow-hidden">
-                      {/* 内部自然装饰 */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-white from-opacity-10 to-transparent rounded-2xl"></div>
-                      <div className="relative z-10">
-                        <div className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">{year}</div>
-                        <div className="text-sm text-green-100 mb-3">{season}</div>
-                        <div className="w-12 h-0.5 bg-white bg-opacity-40 mx-auto mb-3 rounded-full"></div>
-                        <div className="text-xs text-green-200 font-medium">NATURE DAY</div>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex items-center mb-4">
+                  <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mr-2 sm:mr-4">
+                    欢迎回来，{userProfile?.full_name || '用户'}！
+                  </h2>
+                  <span className="bg-white bg-opacity-25 px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+                    {getMembershipTypeText(userProfile?.membership_type || 'standard')}
+                  </span>
+                </div>
+                <p className="text-green-100 text-sm sm:text-base lg:text-lg mb-3 sm:mb-4 flex items-center">
+                  <span className="mr-2">⛳</span>
+                  祝您今天有美好的高尔夫体验
+                </p>
+                <div className="text-xs text-green-100 flex items-center space-x-4">
+                  <span className="flex items-center">
+                    <span className="mr-1">👥</span>
+                    会员数量：{memberCount}
+                  </span>
+                  <span className="flex items-center">
+                    <span className="mr-1">📅</span>
+                    加入日期：{new Date().toLocaleDateString('zh-CN')}
+                  </span>
                 </div>
               </div>
               
-              {/* 自然装饰元素 */}
-              <div className="absolute top-6 right-6 w-12 h-12 bg-white bg-opacity-10 rounded-full"></div>
-              <div className="absolute bottom-6 left-6 w-8 h-8 bg-white bg-opacity-15 rounded-full"></div>
-              <div className="absolute top-1/2 left-6 w-1 h-12 bg-white bg-opacity-30 rounded-full"></div>
-              <div className="absolute top-1/2 right-6 w-1 h-12 bg-white bg-opacity-30 rounded-full"></div>
+              {/* 日期显示区域 - 重新设计 */}
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white bg-opacity-25 rounded-xl p-3 sm:p-4 text-center shadow-lg backdrop-blur-sm">
+                <div className="text-sm sm:text-lg lg:text-2xl font-bold">{year}</div>
+                <div className="text-xs text-green-100">{season}</div>
+                <div className="w-full h-0.5 bg-white bg-opacity-30 my-1"></div>
+                <div className="text-xs text-green-200">⛳ 高尔夫日</div>
+              </div>
             </div>
 
             {/* Quick Actions */}
