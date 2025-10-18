@@ -15,6 +15,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
   const [eventStats, setEventStats] = useState<Record<string, EventStats>>({})
   const [userRegistrations, setUserRegistrations] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
+  const [statsLoading, setStatsLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const eventsPerPage = 6
   
@@ -48,51 +49,66 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
 
   const fetchEvents = async () => {
     try {
-      const { data, error } = await supabase
+      // 1. 先获取活动列表（快速显示）
+      const eventsResponse = await supabase
         .from('events')
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (error) throw error
-
+      if (eventsResponse.error) throw eventsResponse.error
+      
       // 过滤出可以显示的活动（未开始、进行中、已完成）
-      const displayableEvents = (data || []).filter(event => {
+      const displayableEvents = (eventsResponse.data || []).filter(event => {
         const status = getEventStatus(event)
         return status !== 'cancelled'
       })
       setEvents(displayableEvents)
+      setLoading(false) // 活动列表加载完成，可以显示
 
-      // 获取每个活动的统计信息
-      const stats: Record<string, EventStats> = {}
-      for (const event of displayableEvents) {
-        const { data: statsData } = await supabase
-          .rpc('get_event_stats', { event_uuid: event.id })
+      // 2. 异步加载统计数据和用户报名状态（懒加载）
+      setStatsLoading(true)
+      
+      const [statsResponse, registrationsResponse] = await Promise.all([
+        // 批量获取所有活动统计信息（避免N+1查询）
+        supabase.rpc('get_batch_event_stats'),
         
-        if (statsData) {
-          stats[event.id] = statsData
-        }
-      }
-      setEventStats(stats)
-
-      // 获取用户报名状态
-      if (user) {
-        const { data: registrations, error: regError } = await supabase
+        // 获取用户报名状态（如果有用户）
+        user ? supabase
           .from('event_registrations')
           .select('event_id, payment_status, status, approval_status')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id) : Promise.resolve({ data: null, error: null })
+      ])
 
-        if (!regError && registrations) {
-          const regMap: Record<string, any> = {}
-          registrations.forEach(reg => {
-            regMap[reg.event_id] = reg
+      // 处理统计数据
+      if (statsResponse.error) {
+        console.error('获取统计数据失败:', statsResponse.error)
+      } else {
+        // 将批量统计数据转换为对象格式
+        const stats: Record<string, EventStats> = {}
+        if (statsResponse.data) {
+          statsResponse.data.forEach((stat: any) => {
+            stats[stat.event_id] = {
+              total_registrations: stat.total_registrations,
+              paid_registrations: stat.paid_registrations,
+              available_spots: stat.available_spots
+            }
           })
-          setUserRegistrations(regMap)
         }
+        setEventStats(stats)
+      }
+
+      // 处理用户报名状态
+      if (user && registrationsResponse.data) {
+        const regMap: Record<string, any> = {}
+        registrationsResponse.data.forEach((reg: any) => {
+          regMap[reg.event_id] = reg
+        })
+        setUserRegistrations(regMap)
       }
     } catch (error) {
       console.error('获取活动列表失败:', error)
     } finally {
-      setLoading(false)
+      setStatsLoading(false)
     }
   }
 
@@ -288,7 +304,14 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                       <span className="text-orange-600 font-medium">名额已满</span>
                     ) : (
                       <span className="text-green-600 font-medium">
-                        还有 {stats?.available_spots || 0} 个名额
+                        {statsLoading ? (
+                          <span className="flex items-center">
+                            <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                            加载中...
+                          </span>
+                        ) : (
+                          `还有 ${stats?.available_spots || 0} 个名额`
+                        )}
                       </span>
                     )}
                   </div>
