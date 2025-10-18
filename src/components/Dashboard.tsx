@@ -89,13 +89,19 @@ export default function Dashboard() {
     // 高尔夫球动画
     const ball = document.getElementById('golf-ball')
     if (ball) {
+      // 获取绿色区域的父容器
+      const bannerContainer = ball.closest('.relative')
+      const bannerRect = bannerContainer?.getBoundingClientRect()
+      const bannerWidth = bannerRect?.width || 400
+      const bannerHeight = bannerRect?.height || 200
+      
       let x = 20  // 从左边开始
       let y = 30  // 从上方开始
       let vx = 2
       let vy = 0
       const gravity = 0.2
       const bounce = 0.7
-      const ground = 120 // 绿色区域内的地面高度
+      const ground = bannerHeight * 0.6 // 根据实际高度计算地面
       
       function animate() {
         vy += gravity
@@ -118,7 +124,7 @@ export default function Dashboard() {
         ball.style.left = x + 'px'
         ball.style.top = y + 'px'
         
-        if (x < 500) { // 允许球滚动到右边
+        if (x < bannerWidth - 20) { // 使用实际绿色区域宽度
           requestAnimationFrame(animate)
         }
       }
@@ -129,7 +135,7 @@ export default function Dashboard() {
           rollX += 1.5
           ball.style.left = rollX + 'px'
           ball.style.top = ground + 'px'
-          if (rollX < 500) { // 允许滚动到右边
+          if (rollX < bannerWidth - 20) { // 使用实际绿色区域宽度
             requestAnimationFrame(roll)
           }
         }
