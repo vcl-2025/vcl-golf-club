@@ -673,11 +673,23 @@ export default function Dashboard() {
           <>
             {/* Welcome Banner - 高尔夫球场背景设计 */}
             <div className="relative rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-2xl">
-              {/* 绿色草地背景图片 */}
+              {/* 纯草地背景 - 只有草地，没有天空 */}
+              <div className="absolute inset-0 bg-gradient-to-b from-green-400 via-green-500 to-green-600"></div>
+              
+              {/* 草地纹理效果 */}
               <div 
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                className="absolute inset-0 opacity-40"
                 style={{
-                  backgroundImage: 'url("https://images.unsplash.com/photo-1593111774240-d529f12cf4b4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80")'
+                  backgroundImage: `
+                    radial-gradient(circle at 10% 80%, rgba(255,255,255,0.15) 1px, transparent 1px),
+                    radial-gradient(circle at 30% 70%, rgba(255,255,255,0.12) 1.5px, transparent 1.5px),
+                    radial-gradient(circle at 50% 85%, rgba(255,255,255,0.18) 1px, transparent 1px),
+                    radial-gradient(circle at 70% 75%, rgba(255,255,255,0.1) 1.2px, transparent 1.2px),
+                    radial-gradient(circle at 90% 80%, rgba(255,255,255,0.14) 1px, transparent 1px),
+                    radial-gradient(circle at 20% 90%, rgba(255,255,255,0.16) 1px, transparent 1px),
+                    radial-gradient(circle at 80% 90%, rgba(255,255,255,0.13) 1px, transparent 1px)
+                  `,
+                  backgroundSize: '25px 25px, 30px 30px, 35px 35px, 28px 28px, 32px 32px, 26px 26px, 29px 29px'
                 }}
               ></div>
               
