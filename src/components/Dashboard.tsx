@@ -725,28 +725,27 @@ export default function Dashboard() {
                     {getMembershipTypeText(userProfile?.membership_type || 'standard')}
                   </span>
                 </div>
-                <p className="text-green-100 text-sm sm:text-base lg:text-lg mb-3 sm:mb-4 flex items-center">
-                  <span className="mr-2">⛳</span>
+                <p className="text-green-100 text-sm sm:text-base lg:text-lg mb-3 sm:mb-4">
                   祝您今天有美好的高尔夫体验
                 </p>
                 <div className="text-xs text-green-100 flex items-center space-x-4">
                   <span className="flex items-center">
-                    <span className="mr-1">👥</span>
+                    <div className="w-1.5 h-1.5 bg-green-200 rounded-full mr-2"></div>
                     会员数量：{memberCount}
                   </span>
                   <span className="flex items-center">
-                    <span className="mr-1">📅</span>
+                    <div className="w-1.5 h-1.5 bg-green-200 rounded-full mr-2"></div>
                     加入日期：{new Date().toLocaleDateString('zh-CN')}
                   </span>
                 </div>
               </div>
               
-              {/* 日期显示区域 - 重新设计 */}
+              {/* 日期显示区域 - 现代设计 */}
               <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white bg-opacity-25 rounded-xl p-3 sm:p-4 text-center shadow-lg backdrop-blur-sm">
                 <div className="text-sm sm:text-lg lg:text-2xl font-bold">{year}</div>
                 <div className="text-xs text-green-100">{season}</div>
                 <div className="w-full h-0.5 bg-white bg-opacity-30 my-1"></div>
-                <div className="text-xs text-green-200">⛳ 高尔夫日</div>
+                <div className="text-xs text-green-200 font-medium">GOLF DAY</div>
               </div>
             </div>
 
