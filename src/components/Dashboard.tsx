@@ -671,93 +671,95 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {currentView === 'dashboard' ? (
           <>
-            {/* Welcome Banner - 奢华风格设计 */}
-            <div className="relative rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-2xl border border-amber-200 border-opacity-20">
-              {/* 奢华渐变背景 */}
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800"></div>
+            {/* Welcome Banner - 自然风格设计 */}
+            <div className="relative rounded-3xl sm:rounded-[2rem] p-6 sm:p-8 lg:p-10 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-lg">
+              {/* 自然渐变背景 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700"></div>
               
-              {/* 金色装饰元素 */}
+              {/* 自然纹理叠加 */}
               <div className="absolute inset-0">
-                {/* 金色光晕效果 */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-radial from-amber-400 via-amber-500 to-transparent opacity-10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-radial from-yellow-400 via-yellow-500 to-transparent opacity-8 rounded-full blur-2xl"></div>
+                {/* 有机形状装饰 */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white bg-opacity-10 rounded-full blur-xl"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white bg-opacity-15 rounded-full blur-lg"></div>
+                <div className="absolute top-1/3 left-1/4 w-16 h-16 bg-white bg-opacity-8 rounded-full blur-md"></div>
+                <div className="absolute bottom-1/3 right-1/3 w-20 h-20 bg-white bg-opacity-12 rounded-full blur-lg"></div>
                 
-                {/* 奢华装饰图案 */}
-                <svg className="w-full h-full absolute inset-0 opacity-15" viewBox="0 0 400 200">
-                  {/* 金色装饰线条 */}
-                  <path d="M50,50 Q100,30 150,50 T250,50" stroke="url(#goldGradient)" strokeWidth="2" fill="none"/>
-                  <path d="M300,150 Q350,130 400,150" stroke="url(#goldGradient)" strokeWidth="1.5" fill="none"/>
-                  
-                  {/* 奢华几何图案 */}
-                  <polygon points="80,80 100,60 120,80 100,100" fill="url(#goldGradient)" opacity="0.3"/>
-                  <polygon points="320,120 340,100 360,120 340,140" fill="url(#goldGradient)" opacity="0.2"/>
-                  
-                  {/* 渐变定义 */}
-                  <defs>
-                    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.8"/>
-                      <stop offset="50%" stopColor="#D97706" stopOpacity="0.6"/>
-                      <stop offset="100%" stopColor="#B45309" stopOpacity="0.4"/>
-                    </linearGradient>
-                  </defs>
+                {/* 自然纹理图案 */}
+                <div 
+                  className="absolute inset-0 opacity-20"
+                  style={{
+                    backgroundImage: `
+                      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1) 2px, transparent 2px),
+                      radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 1px, transparent 1px),
+                      radial-gradient(circle at 40% 60%, rgba(255,255,255,0.12) 1.5px, transparent 1.5px),
+                      radial-gradient(circle at 70% 30%, rgba(255,255,255,0.06) 1px, transparent 1px)
+                    `,
+                    backgroundSize: '40px 40px, 60px 60px, 80px 80px, 50px 50px'
+                  }}
+                ></div>
+                
+                {/* 自然曲线装饰 */}
+                <svg className="w-full h-full absolute inset-0 opacity-25" viewBox="0 0 400 200">
+                  <path d="M0,100 Q100,50 200,100 T400,100" stroke="rgba(255,255,255,0.3)" strokeWidth="2" fill="none"/>
+                  <path d="M0,150 Q150,100 300,150 T400,150" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" fill="none"/>
+                  <circle cx="80" cy="60" r="8" fill="rgba(255,255,255,0.15)"/>
+                  <circle cx="320" cy="140" r="6" fill="rgba(255,255,255,0.12)"/>
+                  <circle cx="250" cy="80" r="4" fill="rgba(255,255,255,0.18)"/>
                 </svg>
               </div>
               
               {/* 主要内容区域 */}
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex-1">
                     <div className="flex items-center mb-4">
-                      <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mr-6">
-                        欢迎回来，<span className="text-amber-300">{userProfile?.full_name || '用户'}</span>
+                      <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-semibold mr-4">
+                        欢迎回来，<span className="font-bold text-white">{userProfile?.full_name || '用户'}</span>
                       </h2>
-                      <div className="bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-3 rounded-full text-sm font-bold text-black shadow-lg border-2 border-amber-300">
+                      <div className="bg-white bg-opacity-20 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm border border-white border-opacity-30">
                         {getMembershipTypeText(userProfile?.membership_type || 'standard')}
                       </div>
                     </div>
                     
-                    <p className="text-gray-300 text-lg sm:text-xl lg:text-2xl mb-6 font-medium">
-                      ✨ 祝您今天有美好的高尔夫体验 ✨
+                    <p className="text-green-100 text-base sm:text-lg lg:text-xl mb-6 font-medium">
+                      🌿 祝您今天有美好的高尔夫体验 🌿
                     </p>
                     
-                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-8">
-                      <div className="flex items-center text-base text-gray-300">
-                        <div className="w-3 h-3 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full mr-4 shadow-lg"></div>
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
+                      <div className="flex items-center text-sm text-green-100">
+                        <div className="w-2 h-2 bg-white bg-opacity-60 rounded-full mr-3"></div>
                         <span className="font-medium">会员数量：</span>
-                        <span className="font-bold text-amber-300 ml-2 text-lg">{memberCount}</span>
+                        <span className="font-semibold text-white ml-1">{memberCount}</span>
                       </div>
-                      <div className="flex items-center text-base text-gray-300">
-                        <div className="w-3 h-3 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full mr-4 shadow-lg"></div>
+                      <div className="flex items-center text-sm text-green-100">
+                        <div className="w-2 h-2 bg-white bg-opacity-60 rounded-full mr-3"></div>
                         <span className="font-medium">加入日期：</span>
-                        <span className="font-bold text-amber-300 ml-2 text-lg">{new Date().toLocaleDateString('zh-CN')}</span>
+                        <span className="font-semibold text-white ml-1">{new Date().toLocaleDateString('zh-CN')}</span>
                       </div>
                     </div>
                   </div>
                   
-                  {/* 奢华日期显示区域 */}
-                  <div className="ml-8">
-                    <div className="bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl p-6 text-center shadow-2xl border-2 border-amber-300 relative overflow-hidden">
-                      {/* 内部装饰 */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-white from-opacity-20 to-transparent"></div>
+                  {/* 自然风格日期显示区域 */}
+                  <div className="mt-6 lg:mt-0 lg:ml-8">
+                    <div className="bg-white bg-opacity-15 rounded-2xl p-6 text-center backdrop-blur-sm border border-white border-opacity-30 relative overflow-hidden">
+                      {/* 内部自然装饰 */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white from-opacity-10 to-transparent rounded-2xl"></div>
                       <div className="relative z-10">
-                        <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-black mb-2">{year}</div>
-                        <div className="text-sm text-black font-semibold mb-3">{season}</div>
-                        <div className="w-16 h-1 bg-black bg-opacity-30 mx-auto mb-3 rounded-full"></div>
-                        <div className="text-xs text-black font-bold">PREMIUM DAY</div>
+                        <div className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">{year}</div>
+                        <div className="text-sm text-green-100 mb-3">{season}</div>
+                        <div className="w-12 h-0.5 bg-white bg-opacity-40 mx-auto mb-3 rounded-full"></div>
+                        <div className="text-xs text-green-200 font-medium">NATURE DAY</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
               
-              {/* 奢华装饰边框 */}
-              <div className="absolute inset-0 border-2 border-gradient-to-r from-amber-400 via-yellow-500 to-amber-400 rounded-2xl sm:rounded-3xl"></div>
-              
-              {/* 角落装饰 */}
-              <div className="absolute top-4 right-4 w-8 h-8 border-2 border-amber-400 rounded-lg rotate-45"></div>
-              <div className="absolute bottom-4 left-4 w-6 h-6 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-lg rotate-12"></div>
-              <div className="absolute top-1/2 left-4 w-2 h-16 bg-gradient-to-b from-amber-400 to-yellow-500 rounded-full"></div>
-              <div className="absolute top-1/2 right-4 w-2 h-16 bg-gradient-to-b from-yellow-500 to-amber-400 rounded-full"></div>
+              {/* 自然装饰元素 */}
+              <div className="absolute top-6 right-6 w-12 h-12 bg-white bg-opacity-10 rounded-full"></div>
+              <div className="absolute bottom-6 left-6 w-8 h-8 bg-white bg-opacity-15 rounded-full"></div>
+              <div className="absolute top-1/2 left-6 w-1 h-12 bg-white bg-opacity-30 rounded-full"></div>
+              <div className="absolute top-1/2 right-6 w-1 h-12 bg-white bg-opacity-30 rounded-full"></div>
             </div>
 
             {/* Quick Actions */}
