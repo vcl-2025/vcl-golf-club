@@ -671,68 +671,93 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {currentView === 'dashboard' ? (
           <>
-            {/* Welcome Banner - 现代简约设计 */}
-            <div className="relative rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-xl">
-              {/* 现代渐变背景 */}
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900"></div>
+            {/* Welcome Banner - 奢华风格设计 */}
+            <div className="relative rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-2xl border border-amber-200 border-opacity-20">
+              {/* 奢华渐变背景 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800"></div>
               
-              {/* 几何图形装饰 */}
+              {/* 金色装饰元素 */}
               <div className="absolute inset-0">
-                {/* 大圆形 */}
-                <div className="absolute -top-20 -right-20 w-40 h-40 bg-white bg-opacity-5 rounded-full"></div>
-                <div className="absolute -bottom-16 -left-16 w-32 h-32 bg-white bg-opacity-10 rounded-full"></div>
+                {/* 金色光晕效果 */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-radial from-amber-400 via-amber-500 to-transparent opacity-10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-radial from-yellow-400 via-yellow-500 to-transparent opacity-8 rounded-full blur-2xl"></div>
                 
-                {/* 几何线条 */}
-                <svg className="w-full h-full absolute inset-0 opacity-20" viewBox="0 0 400 200">
-                  <line x1="0" y1="100" x2="400" y2="100" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-                  <line x1="200" y1="0" x2="200" y2="200" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-                  <polygon points="50,50 100,30 150,50 100,70" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-                  <polygon points="300,150 350,130 400,150 350,170" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
+                {/* 奢华装饰图案 */}
+                <svg className="w-full h-full absolute inset-0 opacity-15" viewBox="0 0 400 200">
+                  {/* 金色装饰线条 */}
+                  <path d="M50,50 Q100,30 150,50 T250,50" stroke="url(#goldGradient)" strokeWidth="2" fill="none"/>
+                  <path d="M300,150 Q350,130 400,150" stroke="url(#goldGradient)" strokeWidth="1.5" fill="none"/>
+                  
+                  {/* 奢华几何图案 */}
+                  <polygon points="80,80 100,60 120,80 100,100" fill="url(#goldGradient)" opacity="0.3"/>
+                  <polygon points="320,120 340,100 360,120 340,140" fill="url(#goldGradient)" opacity="0.2"/>
+                  
+                  {/* 渐变定义 */}
+                  <defs>
+                    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.8"/>
+                      <stop offset="50%" stopColor="#D97706" stopOpacity="0.6"/>
+                      <stop offset="100%" stopColor="#B45309" stopOpacity="0.4"/>
+                    </linearGradient>
+                  </defs>
                 </svg>
               </div>
               
               {/* 主要内容区域 */}
-              <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center mb-4">
-                    <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-light mr-4">
-                      欢迎回来，<span className="font-bold">{userProfile?.full_name || '用户'}</span>
-                    </h2>
-                    <div className="bg-white bg-opacity-15 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm border border-white border-opacity-20">
-                      {getMembershipTypeText(userProfile?.membership_type || 'standard')}
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex-1">
+                    <div className="flex items-center mb-4">
+                      <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold mr-6">
+                        欢迎回来，<span className="text-amber-300">{userProfile?.full_name || '用户'}</span>
+                      </h2>
+                      <div className="bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-3 rounded-full text-sm font-bold text-black shadow-lg border-2 border-amber-300">
+                        {getMembershipTypeText(userProfile?.membership_type || 'standard')}
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-300 text-lg sm:text-xl lg:text-2xl mb-6 font-medium">
+                      ✨ 祝您今天有美好的高尔夫体验 ✨
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-8">
+                      <div className="flex items-center text-base text-gray-300">
+                        <div className="w-3 h-3 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full mr-4 shadow-lg"></div>
+                        <span className="font-medium">会员数量：</span>
+                        <span className="font-bold text-amber-300 ml-2 text-lg">{memberCount}</span>
+                      </div>
+                      <div className="flex items-center text-base text-gray-300">
+                        <div className="w-3 h-3 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full mr-4 shadow-lg"></div>
+                        <span className="font-medium">加入日期：</span>
+                        <span className="font-bold text-amber-300 ml-2 text-lg">{new Date().toLocaleDateString('zh-CN')}</span>
+                      </div>
                     </div>
                   </div>
                   
-                  <p className="text-slate-200 text-base sm:text-lg lg:text-xl mb-6 font-light">
-                    祝您今天有美好的高尔夫体验
-                  </p>
-                  
-                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-8">
-                    <div className="flex items-center text-sm text-slate-300">
-                      <div className="w-2 h-2 bg-white bg-opacity-60 rounded-full mr-3"></div>
-                      会员数量：<span className="font-semibold text-white ml-1">{memberCount}</span>
+                  {/* 奢华日期显示区域 */}
+                  <div className="ml-8">
+                    <div className="bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl p-6 text-center shadow-2xl border-2 border-amber-300 relative overflow-hidden">
+                      {/* 内部装饰 */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white from-opacity-20 to-transparent"></div>
+                      <div className="relative z-10">
+                        <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-black mb-2">{year}</div>
+                        <div className="text-sm text-black font-semibold mb-3">{season}</div>
+                        <div className="w-16 h-1 bg-black bg-opacity-30 mx-auto mb-3 rounded-full"></div>
+                        <div className="text-xs text-black font-bold">PREMIUM DAY</div>
+                      </div>
                     </div>
-                    <div className="flex items-center text-sm text-slate-300">
-                      <div className="w-2 h-2 bg-white bg-opacity-60 rounded-full mr-3"></div>
-                      加入日期：<span className="font-semibold text-white ml-1">{new Date().toLocaleDateString('zh-CN')}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* 日期显示区域 - 极简设计 */}
-                <div className="mt-6 lg:mt-0 lg:ml-8">
-                  <div className="bg-white bg-opacity-10 rounded-2xl p-6 text-center backdrop-blur-sm border border-white border-opacity-20">
-                    <div className="text-2xl sm:text-3xl lg:text-4xl font-light mb-2">{year}</div>
-                    <div className="text-sm text-slate-300 mb-3">{season}</div>
-                    <div className="w-12 h-px bg-white bg-opacity-30 mx-auto"></div>
-                    <div className="text-xs text-slate-400 mt-3 font-light">TODAY</div>
                   </div>
                 </div>
               </div>
               
-              {/* 装饰性几何元素 */}
-              <div className="absolute top-6 right-6 w-16 h-16 border border-white border-opacity-20 rounded-lg rotate-45"></div>
-              <div className="absolute bottom-6 left-6 w-12 h-12 bg-white bg-opacity-10 rounded-lg rotate-12"></div>
+              {/* 奢华装饰边框 */}
+              <div className="absolute inset-0 border-2 border-gradient-to-r from-amber-400 via-yellow-500 to-amber-400 rounded-2xl sm:rounded-3xl"></div>
+              
+              {/* 角落装饰 */}
+              <div className="absolute top-4 right-4 w-8 h-8 border-2 border-amber-400 rounded-lg rotate-45"></div>
+              <div className="absolute bottom-4 left-4 w-6 h-6 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-lg rotate-12"></div>
+              <div className="absolute top-1/2 left-4 w-2 h-16 bg-gradient-to-b from-amber-400 to-yellow-500 rounded-full"></div>
+              <div className="absolute top-1/2 right-4 w-2 h-16 bg-gradient-to-b from-yellow-500 to-amber-400 rounded-full"></div>
             </div>
 
             {/* Quick Actions */}
