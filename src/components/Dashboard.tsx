@@ -86,78 +86,6 @@ export default function Dashboard() {
       fetchDashboardData()
     }
     
-    // 高尔夫球动画
-    const ball = document.getElementById('golf-ball')
-    if (ball) {
-      // 获取绿色区域的父容器
-      const bannerContainer = ball.closest('.relative')
-      const bannerRect = bannerContainer?.getBoundingClientRect()
-      const bannerWidth = bannerRect?.width || 400
-      const bannerHeight = bannerRect?.height || 200
-      
-      let x = 20  // 从左边开始
-      let y = 30  // 从上方开始
-      let vx = 2
-      let vy = 0
-      const gravity = 0.2
-      const bounce = 0.7
-      const ground = bannerHeight * 0.6 // 根据实际高度计算地面
-      
-      function animate() {
-        vy += gravity
-        x += vx
-        y += vy
-        
-        // 碰到地面反弹
-        if (y > ground) {
-          y = ground
-          vy *= -bounce
-          
-          // 如果弹跳很小则开始滚动
-          if (Math.abs(vy) < 1.0) {
-            vy = 0
-            rollOut()
-            return
-          }
-        }
-        
-        ball.style.left = x + 'px'
-        ball.style.top = y + 'px'
-        
-        if (x < bannerWidth - 20) { // 使用实际绿色区域宽度
-          requestAnimationFrame(animate)
-        }
-      }
-      
-      function rollOut() {
-        let rollX = x
-        function roll() {
-          rollX += 1.5
-          ball.style.left = rollX + 'px'
-          ball.style.top = ground + 'px'
-          if (rollX < bannerWidth - 20) { // 使用实际绿色区域宽度
-            requestAnimationFrame(roll)
-          }
-        }
-        roll()
-      }
-      
-      // 每30秒启动一次动画
-      const interval = setInterval(() => {
-        x = 20
-        y = 30
-        vx = 2
-        vy = 0
-        ball.style.left = x + 'px'
-        ball.style.top = y + 'px'
-        animate()
-      }, 30000)
-      
-      // 立即启动一次
-      setTimeout(animate, 1000)
-      
-      return () => clearInterval(interval)
-    }
   }, [user])
 
   const fetchUserProfile = async () => {
@@ -783,19 +711,6 @@ export default function Dashboard() {
                 </svg>
               </div>
               
-              {/* 飞行动画的高尔夫球 */}
-              <div className="absolute inset-0 overflow-hidden">
-                <div 
-                  id="golf-ball"
-                  className="absolute w-4 h-4 rounded-full shadow-lg opacity-90"
-                  style={{
-                    background: 'radial-gradient(circle at 3px 3px, #ffffff, #e0e0e0)',
-                    boxShadow: 'inset -1px -1px 2px rgba(0,0,0,0.2)',
-                    left: '50px',
-                    top: '50px'
-                  }}
-                ></div>
-              </div>
               
               {/* 高尔夫球窝点装饰 */}
               <div className="absolute top-4 right-4 w-8 h-8 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
