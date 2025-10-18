@@ -671,27 +671,82 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {currentView === 'dashboard' ? (
           <>
-            {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-golf-600 to-golf-700 rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white relative overflow-hidden">
+            {/* Welcome Banner - 高尔夫主题设计 */}
+            <div className="relative rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-2xl">
+              {/* 背景渐变 + 草地纹理 */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-green-700 to-green-800"></div>
+              
+              {/* 草地纹理叠加层 */}
+              <div 
+                className="absolute inset-0 opacity-20"
+                style={{
+                  backgroundImage: `
+                    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 40% 20%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 60% 70%, rgba(255,255,255,0.1) 1px, transparent 1px)
+                  `,
+                  backgroundSize: '60px 60px, 80px 80px, 100px 100px, 70px 70px'
+                }}
+              ></div>
+              
+              {/* 高尔夫球轨迹线条 */}
+              <div className="absolute inset-0">
+                <svg className="w-full h-full opacity-30" viewBox="0 0 400 200">
+                  <path 
+                    d="M50,150 Q150,50 250,100 T350,80" 
+                    stroke="rgba(255,255,255,0.3)" 
+                    strokeWidth="2" 
+                    fill="none"
+                    strokeDasharray="5,5"
+                  />
+                  <path 
+                    d="M80,160 Q180,60 280,110 T380,90" 
+                    stroke="rgba(255,255,255,0.2)" 
+                    strokeWidth="1.5" 
+                    fill="none"
+                    strokeDasharray="3,7"
+                  />
+                </svg>
+              </div>
+              
+              {/* 高尔夫球窝点装饰 */}
+              <div className="absolute top-4 right-4 w-8 h-8 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 sm:w-6 sm:h-6 bg-white bg-opacity-40 rounded-full"></div>
+              </div>
+              
+              {/* 主要内容 */}
               <div className="relative z-10">
                 <div className="flex items-center mb-4">
                   <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mr-2 sm:mr-4">
                     欢迎回来，{userProfile?.full_name || '用户'}！
                   </h2>
-                  <span className="bg-white bg-opacity-20 px-2 py-1 rounded-full text-xs">
+                  <span className="bg-white bg-opacity-25 px-3 py-1 rounded-full text-xs font-medium shadow-lg">
                     {getMembershipTypeText(userProfile?.membership_type || 'standard')}
                   </span>
                 </div>
-                <p className="text-golf-100 text-sm sm:text-base lg:text-lg mb-3 sm:mb-4">
+                <p className="text-green-100 text-sm sm:text-base lg:text-lg mb-3 sm:mb-4 flex items-center">
+                  <span className="mr-2">⛳</span>
                   祝您今天有美好的高尔夫体验
                 </p>
-                <div className="text-xs text-golf-100">
-                  会员数量：{memberCount} | 加入日期：{new Date().toLocaleDateString('zh-CN')}
+                <div className="text-xs text-green-100 flex items-center space-x-4">
+                  <span className="flex items-center">
+                    <span className="mr-1">👥</span>
+                    会员数量：{memberCount}
+                  </span>
+                  <span className="flex items-center">
+                    <span className="mr-1">📅</span>
+                    加入日期：{new Date().toLocaleDateString('zh-CN')}
+                  </span>
                 </div>
               </div>
-              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white bg-opacity-20 rounded-lg p-2 sm:p-3 text-center">
+              
+              {/* 日期显示区域 - 重新设计 */}
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white bg-opacity-25 rounded-xl p-3 sm:p-4 text-center shadow-lg backdrop-blur-sm">
                 <div className="text-sm sm:text-lg lg:text-2xl font-bold">{year}</div>
-                <div className="text-xs">{season}</div>
+                <div className="text-xs text-green-100">{season}</div>
+                <div className="w-full h-0.5 bg-white bg-opacity-30 my-1"></div>
+                <div className="text-xs text-green-200">⛳ 高尔夫日</div>
               </div>
             </div>
 
