@@ -85,6 +85,73 @@ export default function Dashboard() {
       fetchMemberCount()
       fetchDashboardData()
     }
+    
+    // 高尔夫球动画
+    const ball = document.getElementById('golf-ball')
+    if (ball) {
+      let x = 50
+      let y = 50
+      let vx = 3
+      let vy = 0
+      const gravity = 0.3
+      const bounce = 0.6
+      const ground = 200 // 地面高度
+      
+      function animate() {
+        vy += gravity
+        x += vx
+        y += vy
+        
+        // 碰到地面反弹
+        if (y > ground) {
+          y = ground
+          vy *= -bounce
+          
+          // 如果弹跳很小则开始滚动
+          if (Math.abs(vy) < 0.5) {
+            vy = 0
+            rollOut()
+            return
+          }
+        }
+        
+        ball.style.left = x + 'px'
+        ball.style.top = y + 'px'
+        
+        if (x < window.innerWidth + 100) {
+          requestAnimationFrame(animate)
+        }
+      }
+      
+      function rollOut() {
+        let rollX = x
+        function roll() {
+          rollX += 2
+          ball.style.left = rollX + 'px'
+          ball.style.top = ground + 'px'
+          if (rollX < window.innerWidth + 60) {
+            requestAnimationFrame(roll)
+          }
+        }
+        roll()
+      }
+      
+      // 每30秒启动一次动画
+      const interval = setInterval(() => {
+        x = 50
+        y = 50
+        vx = 3
+        vy = 0
+        ball.style.left = x + 'px'
+        ball.style.top = y + 'px'
+        animate()
+      }, 30000)
+      
+      // 立即启动一次
+      setTimeout(animate, 1000)
+      
+      return () => clearInterval(interval)
+    }
   }, [user])
 
   const fetchUserProfile = async () => {
@@ -710,13 +777,16 @@ export default function Dashboard() {
                 </svg>
               </div>
               
-              {/* 飞行动画的高尔夫球 - 每30秒出现一次，飞行2秒 */}
+              {/* 飞行动画的高尔夫球 */}
               <div className="absolute inset-0 overflow-hidden">
                 <div 
-                  className="absolute w-4 h-4 bg-white rounded-full shadow-lg opacity-80"
+                  id="golf-ball"
+                  className="absolute w-4 h-4 rounded-full shadow-lg opacity-90"
                   style={{
-                    animation: 'golfFlight 30s ease-in-out infinite',
-                    animationDelay: '0s'
+                    background: 'radial-gradient(circle at 3px 3px, #ffffff, #e0e0e0)',
+                    boxShadow: 'inset -1px -1px 2px rgba(0,0,0,0.2)',
+                    left: '50px',
+                    top: '50px'
                   }}
                 ></div>
               </div>
@@ -726,16 +796,6 @@ export default function Dashboard() {
                 <div className="w-4 h-4 sm:w-6 sm:h-6 bg-white bg-opacity-40 rounded-full"></div>
               </div>
               
-              {/* 飞行动画的高尔夫球 */}
-              <div className="absolute inset-0 overflow-hidden">
-                <div 
-                  className="absolute w-4 h-4 bg-white rounded-full shadow-lg opacity-90"
-                  style={{
-                    animation: 'golfBallFlight 4s ease-in-out infinite',
-                    animationDelay: '0s'
-                  }}
-                ></div>
-              </div>
               
               {/* 主要内容 */}
               <div className="relative z-10">
