@@ -2,6 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 高尔夫球飞行动画 - 从左上角飞入，抛物线落地弹几下滚出右边 */
+@keyframes golfBallFlight {
+  0% {
+    transform: translateX(-50px) translateY(-50px) scale(0.8);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  15% {
+    transform: translateX(20%) translateY(30%) scale(1.2);
+    opacity: 1;
+  }
+  25% {
+    transform: translateX(40%) translateY(60%) scale(1.1);
+    opacity: 1;
+  }
+  35% {
+    transform: translateX(60%) translateY(75%) scale(1.0);
+    opacity: 1;
+  }
+  45% {
+    transform: translateX(75%) translateY(80%) scale(0.9);
+    opacity: 1;
+  }
+  55% {
+    transform: translateX(85%) translateY(82%) scale(0.8);
+    opacity: 1;
+  }
+  65% {
+    transform: translateX(90%) translateY(83%) scale(0.7);
+    opacity: 1;
+  }
+  75% {
+    transform: translateX(95%) translateY(84%) scale(0.6);
+    opacity: 1;
+  }
+  85% {
+    transform: translateX(100%) translateY(85%) scale(0.5);
+    opacity: 1;
+  }
+  95% {
+    transform: translateX(105%) translateY(86%) scale(0.4);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(110%) translateY(87%) scale(0.3);
+    opacity: 0;
+  }
+}
+
 
 /* 防止iOS自动缩放 */
 html {
