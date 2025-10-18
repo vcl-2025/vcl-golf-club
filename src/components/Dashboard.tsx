@@ -671,38 +671,33 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {currentView === 'dashboard' ? (
           <>
-            {/* Welcome Banner - 高尔夫主题设计 */}
+            {/* Welcome Banner - 高尔夫球场背景设计 */}
             <div className="relative rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-2xl">
-              {/* 背景渐变 + 草地纹理 */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-green-700 to-green-800"></div>
-              
-              {/* 草地纹理叠加层 */}
+              {/* 绿色草地背景图片 */}
               <div 
-                className="absolute inset-0 opacity-20"
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                 style={{
-                  backgroundImage: `
-                    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 1px, transparent 1px),
-                    radial-gradient(circle at 40% 20%, rgba(255,255,255,0.1) 1px, transparent 1px),
-                    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.1) 1px, transparent 1px),
-                    radial-gradient(circle at 60% 70%, rgba(255,255,255,0.1) 1px, transparent 1px)
-                  `,
-                  backgroundSize: '60px 60px, 80px 80px, 100px 100px, 70px 70px'
+                  backgroundImage: 'url("https://images.unsplash.com/photo-1593111774240-d529f12cf4b4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80")'
                 }}
               ></div>
               
+              {/* 深色遮罩层，确保文字可读性 */}
+              <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+              
+              
               {/* 高尔夫球轨迹线条 */}
               <div className="absolute inset-0">
-                <svg className="w-full h-full opacity-30" viewBox="0 0 400 200">
+                <svg className="w-full h-full opacity-50" viewBox="0 0 400 200">
                   <path 
                     d="M50,150 Q150,50 250,100 T350,80" 
-                    stroke="rgba(255,255,255,0.3)" 
+                    stroke="rgba(255,255,255,0.6)" 
                     strokeWidth="2" 
                     fill="none"
                     strokeDasharray="5,5"
                   />
                   <path 
                     d="M80,160 Q180,60 280,110 T380,90" 
-                    stroke="rgba(255,255,255,0.2)" 
+                    stroke="rgba(255,255,255,0.4)" 
                     strokeWidth="1.5" 
                     fill="none"
                     strokeDasharray="3,7"
