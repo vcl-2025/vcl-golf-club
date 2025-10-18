@@ -206,13 +206,30 @@ export default function Dashboard() {
       // console.log('成绩查询结果:', { scores, scoresError })
       setRecentScores(scores || [])
 
-      // 获取最近的投资项目 - 显示2个
+      // 获取最近的投资项目 - 显示2个，并计算实际筹集金额
       const { data: investments, error: investmentsError } = await supabase
         .from('investment_projects')
-        .select('*')
+        .select(`
+          *,
+          investments!inner (
+            amount,
+            status
+          )
+        `)
         .limit(2)
-      // console.log('投资项目查询结果:', { investments, investmentsError })
-      setRecentInvestments(investments || [])
+      
+      // 计算每个项目的实际筹集金额
+      const investmentsWithAmount = (investments || []).map(project => {
+        const confirmedInvestments = project.investments?.filter(inv => inv.status === 'confirmed') || []
+        const actualAmount = confirmedInvestments.reduce((sum, inv) => sum + inv.amount, 0)
+        return {
+          ...project,
+          current_amount: actualAmount
+        }
+      })
+      
+      // console.log('投资项目查询结果:', { investments: investmentsWithAmount, investmentsError })
+      setRecentInvestments(investmentsWithAmount)
 
       // 获取最近的费用公示 - 显示2个
       const { data: expenses, error: expensesError } = await supabase
@@ -1003,13 +1020,13 @@ export default function Dashboard() {
                           <div>
                             <div className="font-semibold text-gray-900 text-sm">{investment.title}</div>
                             <div className="text-xs text-gray-600">
-                              目标: ¥{investment.target_amount.toLocaleString()}
+                              目标: CA${investment.target_amount.toLocaleString()}
                             </div>
                           </div>
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-bold text-red-600">
-                            ¥{(investment.current_amount || 0).toLocaleString()}
+                            CA${(investment.current_amount || 0).toLocaleString()}
                           </div>
                           <div className="text-xs text-gray-600">
                             {Math.round(((investment.current_amount || 0) / investment.target_amount) * 100)}%
