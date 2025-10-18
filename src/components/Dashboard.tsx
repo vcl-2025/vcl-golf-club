@@ -710,16 +710,6 @@ export default function Dashboard() {
                 </svg>
               </div>
               
-              {/* 飞行动画的高尔夫球 - 每30秒出现一次，飞行2秒 */}
-              <div className="absolute inset-0 overflow-hidden">
-                <div 
-                  className="absolute w-4 h-4 bg-white rounded-full shadow-lg opacity-80"
-                  style={{
-                    animation: 'golfFlight 30s ease-in-out infinite',
-                    animationDelay: '0s'
-                  }}
-                ></div>
-              </div>
               
               {/* 高尔夫球窝点装饰 */}
               <div className="absolute top-4 right-4 w-8 h-8 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">

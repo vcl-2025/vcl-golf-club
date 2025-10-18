@@ -2,32 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 高尔夫球飞行动画 - 每30秒出现一次，飞行2秒 */
-@keyframes golfFlight {
-  0% {
-    transform: translateX(-20px) translateY(100px) scale(0.8);
-    opacity: 0;
-  }
-  6.67% { /* 2秒/30秒 = 6.67% */
-    transform: translateX(-20px) translateY(100px) scale(0.8);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  13.33% { /* 4秒/30秒 = 13.33% */
-    transform: translateX(50%) translateY(20px) scale(1.2);
-    opacity: 1;
-  }
-  16.67% { /* 5秒/30秒 = 16.67% */
-    transform: translateX(calc(100vw + 20px)) translateY(80px) scale(0.6);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(calc(100vw + 20px)) translateY(80px) scale(0.6);
-    opacity: 0;
-  }
-}
 
 /* 防止iOS自动缩放 */
 html {
