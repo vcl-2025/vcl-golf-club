@@ -82,6 +82,7 @@ export default function UserScoreQuery() {
       const eventIds = userEvents.map(er => er.event_id)
 
       // 获取这些活动的所有成绩记录
+      // 使用SQL筛选而不是RLS，确保能正常查询
       const { data: scoresData, error } = await supabase
         .from('scores')
         .select(`
@@ -99,6 +100,7 @@ export default function UserScoreQuery() {
           )
         `)
         .in('event_id', eventIds)
+        .eq('user_id', user.id) // 只查询当前用户的成绩
         .order('created_at', { ascending: false })
 
       if (error) throw error
