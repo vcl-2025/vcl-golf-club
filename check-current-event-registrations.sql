@@ -1,7 +1,4 @@
--- 查看 event_registrations 表的结构
-\d event_registrations;
-
--- 查看所有列的信息
+-- 查看当前 event_registrations 表的实际结构
 SELECT
     column_name,
     data_type,

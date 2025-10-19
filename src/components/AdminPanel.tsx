@@ -98,6 +98,20 @@ export default function AdminPanel() {
 
   useEffect(() => {
     fetchAdminData()
+    
+    // 监听来自AdminAnalytics的导航事件
+    const handleAdminNavigate = (event: CustomEvent) => {
+      const { view } = event.detail
+      if (view === 'events' || view === 'investments') {
+        setCurrentView(view)
+      }
+    }
+    
+    window.addEventListener('admin-navigate', handleAdminNavigate as EventListener)
+    
+    return () => {
+      window.removeEventListener('admin-navigate', handleAdminNavigate as EventListener)
+    }
   }, [])
 
   const toggleEventExpansion = (eventId: string) => {
@@ -401,7 +415,7 @@ export default function AdminPanel() {
   return (
     <div className="space-y-6">
       {/* 管理员导航 */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
+      <div className="bg-white rounded-2xl p-6 shadow-sm sticky top-0 z-50">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">管理员控制台</h1>
           <div className="flex space-x-2">
@@ -485,10 +499,18 @@ export default function AdminPanel() {
           </div>
         </div>
 
-        {/* 数据分析仪表板 */}
-        {currentView === 'dashboard' && <AdminAnalytics />}
-        
       </div>
+
+      {/* 数据统计 */}
+      {currentView === 'dashboard' && (
+        <div>
+          <div className="flex items-center mb-6">
+            <BarChart3 className="w-6 h-6 text-golf-600 mr-3" />
+            <h2 className="text-xl font-bold text-gray-900">数据统计</h2>
+          </div>
+          <AdminAnalytics />
+        </div>
+      )}
 
       {/* 活动管理 */}
       {currentView === 'events' && (
@@ -546,12 +568,12 @@ export default function AdminPanel() {
           </div>
 
           {/* 活动列表 */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
             <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
                   <th 
-                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('title')}
                   >
                     <div className="flex items-center space-x-1">
@@ -564,7 +586,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('start_time')}
                   >
                     <div className="flex items-center space-x-1">
@@ -577,7 +599,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('location')}
                   >
                     <div className="flex items-center space-x-1">
@@ -590,7 +612,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('fee')}
                   >
                     <div className="flex items-center space-x-1">
@@ -603,7 +625,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('registrations')}
                   >
                     <div className="flex items-center space-x-1">
@@ -616,7 +638,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="text-left py-3 px-4 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                     onClick={() => handleSort('status')}
                   >
                     <div className="flex items-center space-x-1">
@@ -628,10 +650,10 @@ export default function AdminPanel() {
                       )}
                     </div>
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">操作</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {getSortedEvents().filter(e => {
                   const status = getEventStatus(e)
                   const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -639,20 +661,20 @@ export default function AdminPanel() {
                   const matchesStatus = statusFilter === 'all' || status === statusFilter
                   return matchesSearch && matchesStatus
                 }).map((event) => (
-                  <tr key={event.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4">
+                  <tr key={event.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">{event.title}</div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {formatDate(event.start_time)}
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
-                      {event.location}
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[120px]">
+                      <div className="break-words">{event.location}</div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600">
                       {formatCurrency(event.fee)}
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {(() => {
                         const allRegistrations = eventRegistrations.filter(reg => reg.event_id === event.id)
                         const approvedRegistrations = allRegistrations.filter(reg => reg.approval_status === 'approved')
@@ -670,18 +692,18 @@ export default function AdminPanel() {
                         )
                       })()}
                     </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEventStatusStyles(getEventStatus(event))}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEventStatusStyles(getEventStatus(event))}`}>
                         {getEventStatusText(getEventStatus(event))}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => {
                             setSelectedEventForRegistration(event)
                           }}
-                          className="text-purple-600 hover:text-purple-800"
+                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
                           title="报名管理"
                         >
                           <Users className="w-4 h-4" />
@@ -691,14 +713,14 @@ export default function AdminPanel() {
                             setSelectedEvent(event)
                             setShowEventForm(true)
                           }}
-                          className="text-green-600 hover:text-green-800"
+                          className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
                           title="编辑"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteEvent(event.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
                           title="删除"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -840,11 +862,6 @@ export default function AdminPanel() {
                 <span className="text-blue-600 ml-2">
                   (已过滤，共 {events.filter(e => getEventStatus(e) === 'completed').length} 个活动)
                 </span>
-              )}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="text-xs text-gray-500 mt-1">
-                  调试: 总活动数 {events.length}, 已结束活动: {events.filter(e => getEventStatus(e) === 'completed').map(e => e.title).join(', ')}
-                </div>
               )}
             </div>
             <div className="space-y-2">

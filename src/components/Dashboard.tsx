@@ -15,7 +15,6 @@ import InvestmentList from './InvestmentList'
 import InvestmentDetail from './InvestmentDetail'
 import ExpenseList from './ExpenseList'
 import EventReviews from './EventReviews'
-import AdminAnalytics from './AdminAnalytics'
 import { Event } from '../types'
 
 interface Poster {

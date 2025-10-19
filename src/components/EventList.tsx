@@ -16,8 +16,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
   const [userRegistrations, setUserRegistrations] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
   const [statsLoading, setStatsLoading] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const eventsPerPage = 6
+  // 移除分页，显示所有活动
   
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('')
@@ -205,11 +204,8 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
     return { text: '立即报名', disabled: false, color: 'bg-golf-600' }
   }
 
-  // 分页逻辑
-  const indexOfLastEvent = currentPage * eventsPerPage
-  const indexOfFirstEvent = indexOfLastEvent - eventsPerPage
-  const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent)
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage)
+  // 显示所有活动，不分页
+  const currentEvents = filteredEvents
 
   if (loading) {
     return (
@@ -370,40 +366,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
         })}
       </div>
 
-      {/* 分页 */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center space-x-2">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            上一页
-          </button>
-          
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                currentPage === page
-                  ? 'bg-golf-600 text-white'
-                  : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-          
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            下一页
-          </button>
-        </div>
-      )}
+      {/* 移除分页，显示所有活动 */}
 
       {/* 空状态 */}
       {filteredEvents.length === 0 && (

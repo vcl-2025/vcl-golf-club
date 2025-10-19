@@ -37,6 +37,8 @@ const AdminAnalytics = () => {
   const [scoreScatterData, setScoreScatterData] = useState<any[]>([])
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [yearlyExpenseData, setYearlyExpenseData] = useState<any[]>([])
+  const [pendingRegistrations, setPendingRegistrations] = useState(0)
+  const [pendingInvestments, setPendingInvestments] = useState(0)
   const [loading, setLoading] = useState(true)
 
   // ECharts 实例引用
@@ -61,12 +63,34 @@ const AdminAnalytics = () => {
       await Promise.all([
         fetchLoginTrends(),
         fetchScoreTrends(),
-        fetchExpenseCategories()
+        fetchExpenseCategories(),
+        fetchPendingTasks()
       ])
     } catch (error) {
       console.error('获取数据失败:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPendingTasks = async () => {
+    try {
+      // 获取待审批的报名数量
+      const { count: pendingRegCount } = await supabase
+        .from('event_registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('approval_status', 'pending')
+
+      // 获取待确认的投资数量
+      const { count: pendingInvCount } = await supabase
+        .from('investments')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+
+      setPendingRegistrations(pendingRegCount || 0)
+      setPendingInvestments(pendingInvCount || 0)
+    } catch (error) {
+      console.error('获取待处理任务失败:', error)
     }
   }
 
@@ -643,29 +667,90 @@ const AdminAnalytics = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 第一行：用户活跃度趋势 + 成绩趋势分析 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6 bg-white p-6 rounded-2xl">
+      {/* 第一行：用户活跃度趋势 + 待处理任务 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 用户活跃度趋势 */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
           <div className="h-80" ref={loginChartRef}></div>
         </div>
 
-        {/* 成绩趋势分析 */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="h-80" ref={scoreChartRef}></div>
+        {/* 待处理任务 */}
+        <div className="lg:col-span-1 bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
+          <div className="flex items-center mb-4">
+            <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
+            <h3 className="text-lg font-semibold text-gray-900">待处理任务</h3>
+          </div>
+          <div className="space-y-4">
+            {/* 活动报名待批 */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                  <span className="text-sm font-medium text-gray-700">活动报名待批</span>
+                </div>
+                <span className="text-2xl font-bold text-blue-600">{pendingRegistrations}</span>
+              </div>
+              <p className="text-xs text-gray-500">需要审核的报名申请</p>
+            </div>
+
+            {/* 投资确认待批 */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  <span className="text-sm font-medium text-gray-700">投资确认待批</span>
+                </div>
+                <span className="text-2xl font-bold text-green-600">{pendingInvestments}</span>
+              </div>
+              <p className="text-xs text-gray-500">需要确认的投资申请</p>
+            </div>
+
+            {/* 快速操作按钮 */}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button 
+                onClick={() => {
+                  // 触发父组件的导航事件
+                  const event = new CustomEvent('admin-navigate', { 
+                    detail: { view: 'events' } 
+                  })
+                  window.dispatchEvent(event)
+                }}
+                className="px-3 py-2 text-xs bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+              >
+                处理报名
+              </button>
+              <button 
+                onClick={() => {
+                  // 触发父组件的导航事件
+                  const event = new CustomEvent('admin-navigate', { 
+                    detail: { view: 'investments' } 
+                  })
+                  window.dispatchEvent(event)
+                }}
+                className="px-3 py-2 text-xs bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+              >
+                处理投资
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 第二行：今年费用分析 + 历年费用趋势分析 */}
+      {/* 第二行：成绩趋势分析 */}
+      <div className="bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
+        <div className="h-80" ref={scoreChartRef}></div>
+      </div>
+
+      {/* 第三行：今年费用分析 + 历年费用趋势分析 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 今年费用分析 */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
+        <div className="bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
           <div className="h-80" ref={pieChartRef}></div>
         </div>
 
         {/* 历年费用趋势分析 */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
+        <div className="bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
           <div className="h-80" ref={barChartRef}></div>
         </div>
       </div>
