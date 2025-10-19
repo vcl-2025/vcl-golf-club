@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { uploadImageToSupabase, validateImageFile } from "../utils/imageUpload";
 
 interface TinyMCEEditorProps {
@@ -18,6 +18,37 @@ export default function TinyMCEEditor({
 }: TinyMCEEditorProps) {
   const editorId = useRef(propEditorId || `editor-${Math.random().toString(36).substr(2, 9)}`);
   const initialized = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测是否为移动设备
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isMobileDevice);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // 如果是移动设备，使用简单的textarea
+  if (isMobile) {
+    return (
+      <div className="w-full">
+        <textarea
+          value={content}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full p-3 border border-gray-300 rounded-lg resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          style={{ height: `${height}px` }}
+        />
+        <div className="text-xs text-gray-500 mt-2">
+          💡 移动设备上使用简化编辑器，如需富文本编辑请在电脑上操作
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (initialized.current) return;
@@ -26,21 +57,28 @@ export default function TinyMCEEditor({
     script.src = '/tinymce/tinymce.min.js';
     script.onload = () => {
       if (window.tinymce) {
+        // 检测是否为移动设备，使用不同的配置
+        const isMobileDevice = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
         window.tinymce.init({
           selector: `#${editorId.current}`,
           height: height,
-          plugins: [
+          plugins: isMobileDevice ? [
+            'lists', 'link', 'image', 'emoticons', 'wordcount'
+          ] : [
             'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
             'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
             'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
             'template', 'codesample', 'hr', 'pagebreak', 'nonbreaking', 'toc',
             'imagetools', 'textpattern', 'noneditable', 'quickbars', 'accordion'
           ],
-          toolbar: [
+          toolbar: isMobileDevice ? [
+            'undo redo | bold italic underline | bullist numlist | link image | emoticons'
+          ] : [
             'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify',
             'bullist numlist outdent indent | removeformat | help | link image media table | emoticons charmap | code fullscreen preview | searchreplace | wordcount'
           ],
-          toolbar_mode: 'sliding',
+          toolbar_mode: isMobileDevice ? 'wrap' : 'sliding',
           contextmenu: 'link image imagetools table spellchecker configurepermanentpen',
           menubar: 'file edit view insert format tools table help',
           menu: {
