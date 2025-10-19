@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Heart, DollarSign, Calendar, Check, X, Eye, ChevronDown, ChevronRight, TrendingUp } from 'lucide-react'
+import { Plus, Edit, Trash2, Heart, DollarSign, Calendar, Check, X, Eye, ChevronDown, ChevronRight, TrendingUp, Search, Filter } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import InvestmentProjectForm from './InvestmentProjectForm'
@@ -44,10 +44,35 @@ export default function InvestmentAdmin() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
   const { confirmDelete, showSuccess, showError } = useModal()
   const [loading, setLoading] = useState(true)
+  
+  // 搜索和筛选状态
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [filteredProjects, setFilteredProjects] = useState<InvestmentProject[]>([])
 
   useEffect(() => {
     fetchData()
   }, [])
+
+  // 筛选项目
+  useEffect(() => {
+    let filtered = projects
+
+    // 搜索筛选
+    if (searchTerm) {
+      filtered = filtered.filter(project =>
+        project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.description.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // 状态筛选
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(project => project.status === statusFilter)
+    }
+
+    setFilteredProjects(filtered)
+  }, [projects, searchTerm, statusFilter])
 
   const fetchData = async () => {
     try {
@@ -216,6 +241,11 @@ export default function InvestmentAdmin() {
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-600">
             共 {projects.length} 个项目，{investments.length} 条投资记录
+            {(searchTerm || statusFilter !== 'all') && (
+              <span className="text-blue-600 ml-2">
+                (已过滤，共 {filteredProjects.length} 个项目)
+              </span>
+            )}
           </div>
           {(() => {
             const totalPending = investments.filter(inv => inv.status === 'pending').length
@@ -227,8 +257,51 @@ export default function InvestmentAdmin() {
           })()}
         </div>
 
+        {/* 搜索和筛选 */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="搜索项目名称或描述..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
+              >
+                <option value="all">所有状态</option>
+                <option value="active">进行中</option>
+                <option value="completed">已完成</option>
+                <option value="cancelled">已取消</option>
+              </select>
+            </div>
+          </div>
+          
+          {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
+          {(searchTerm || statusFilter !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('all')
+              }}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              清除所有筛选
+            </button>
+          )}
+        </div>
+
         <div className="space-y-2">
-          {projects.map((project) => {
+          {filteredProjects.map((project) => {
             const actualAmount = calculateProjectAmount(project.id)
             const progress = calculateProgress(actualAmount, project.target_amount)
             const projectInvestments = getProjectInvestments(project.id)

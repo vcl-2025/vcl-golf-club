@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Users, Calendar, Trophy, Receipt, BarChart3, TrendingUp, Smartphone, Monitor } from 'lucide-react'
+import { Users, Calendar, Trophy, Receipt, BarChart3, TrendingUp, Smartphone, Monitor, Clock, DollarSign } from 'lucide-react'
 import * as echarts from 'echarts'
 import { supabase } from '../lib/supabase'
 
@@ -676,38 +676,57 @@ const AdminAnalytics = () => {
         </div>
 
         {/* 待处理任务 */}
-        <div className="lg:col-span-1 bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
-            <h3 className="text-lg font-semibold text-gray-900">待处理任务</h3>
+        <div className="lg:col-span-1 bg-gradient-to-br from-orange-25 to-orange-50 rounded-2xl p-6 shadow-lg border border-orange-100">
+          <div className="flex items-center mb-6">
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mr-3 shadow-md">
+              <Clock className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">待处理任务</h3>
+              <p className="text-xs text-orange-600 font-medium">需要您关注的事项</p>
+            </div>
           </div>
           <div className="space-y-4">
             {/* 活动报名待批 */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-2">
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-blue-200 shadow-sm hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                  <span className="text-sm font-medium text-gray-700">活动报名待批</span>
+                  <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3 shadow-sm">
+                    <Users className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-800">活动报名待批</span>
+                    <p className="text-xs text-gray-500">需要审核的报名申请</p>
+                  </div>
                 </div>
-                <span className="text-2xl font-bold text-blue-600">{pendingRegistrations}</span>
+                <div className="text-right">
+                  <span className="text-3xl font-bold text-blue-600">{pendingRegistrations}</span>
+                  <p className="text-xs text-blue-500 font-medium">待处理</p>
+                </div>
               </div>
-              <p className="text-xs text-gray-500">需要审核的报名申请</p>
             </div>
 
             {/* 投资确认待批 */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-2">
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-green-200 shadow-sm hover:shadow-md transition-all duration-200">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                  <span className="text-sm font-medium text-gray-700">投资确认待批</span>
+                  <div className="w-7 h-7 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3 shadow-sm">
+                    <DollarSign className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-gray-800">投资确认待批</span>
+                    <p className="text-xs text-gray-500">需要确认的投资申请</p>
+                  </div>
                 </div>
-                <span className="text-2xl font-bold text-green-600">{pendingInvestments}</span>
+                <div className="text-right">
+                  <span className="text-3xl font-bold text-green-600">{pendingInvestments}</span>
+                  <p className="text-xs text-green-500 font-medium">待处理</p>
+                </div>
               </div>
-              <p className="text-xs text-gray-500">需要确认的投资申请</p>
             </div>
 
             {/* 快速操作按钮 */}
-            <div className="grid grid-cols-2 gap-2 pt-2">
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <button 
                 onClick={() => {
                   // 触发父组件的导航事件
@@ -716,7 +735,7 @@ const AdminAnalytics = () => {
                   })
                   window.dispatchEvent(event)
                 }}
-                className="px-3 py-2 text-xs bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                className="px-4 py-2.5 text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
               >
                 处理报名
               </button>
@@ -728,7 +747,7 @@ const AdminAnalytics = () => {
                   })
                   window.dispatchEvent(event)
                 }}
-                className="px-3 py-2 text-xs bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+                className="px-4 py-2.5 text-sm bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
               >
                 处理投资
               </button>
@@ -743,14 +762,14 @@ const AdminAnalytics = () => {
       </div>
 
       {/* 第三行：今年费用分析 + 历年费用趋势分析 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 今年费用分析 */}
-        <div className="bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 今年费用分析 - 1/3 宽度 */}
+        <div className="lg:col-span-1 bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
           <div className="h-80" ref={pieChartRef}></div>
         </div>
 
-        {/* 历年费用趋势分析 */}
-        <div className="bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
+        {/* 历年费用趋势分析 - 2/3 宽度 */}
+        <div className="lg:col-span-2 bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
           <div className="h-80" ref={barChartRef}></div>
         </div>
       </div>

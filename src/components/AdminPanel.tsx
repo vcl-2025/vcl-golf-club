@@ -13,7 +13,6 @@ import InvestmentAdmin from './InvestmentAdmin'
 import ExpenseAdmin from './ExpenseAdmin'
 import MemberAdmin from './MemberAdmin'
 import AdminAnalytics from './AdminAnalytics'
-import UnifiedSearch from './UnifiedSearch'
 import { useModal } from './ModalProvider'
 import { getEventStatus, getEventStatusText, getEventStatusStyles } from '../utils/eventStatus'
 
@@ -415,7 +414,7 @@ export default function AdminPanel() {
   return (
     <div className="space-y-6">
       {/* 管理员导航 */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm sticky top-0 z-50">
+      <div className="bg-green-50 rounded-2xl p-6 shadow-sm sticky top-0 z-50">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">管理员控制台</h1>
           <div className="flex space-x-2">
@@ -556,7 +555,7 @@ export default function AdminPanel() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
               >
                 <option value="all">所有状态</option>
                 <option value="upcoming">未开始</option>
@@ -565,7 +564,37 @@ export default function AdminPanel() {
                 <option value="cancelled">已取消</option>
               </select>
             </div>
+            
+            {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
+            {(searchTerm || statusFilter !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchTerm('')
+                  setStatusFilter('all')
+                }}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                清除所有筛选
+              </button>
+            )}
           </div>
+
+          {/* 筛选状态提示 */}
+          {(searchTerm || statusFilter !== 'all') && (
+            <div className="text-sm text-gray-600 mb-4">
+              共 {getSortedEvents().filter(e => {
+                const status = getEventStatus(e)
+                const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                     e.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                     e.location?.toLowerCase().includes(searchTerm.toLowerCase())
+                const matchesStatus = statusFilter === 'all' || status === statusFilter
+                return matchesSearch && matchesStatus
+              }).length} 个活动
+              <span className="text-blue-600 ml-2">
+                (已过滤，共 {events.length} 个活动)
+              </span>
+            </div>
+          )}
 
           {/* 活动列表 */}
           <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
@@ -573,7 +602,7 @@ export default function AdminPanel() {
               <thead className="bg-gray-50">
                 <tr>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none w-48"
                     onClick={() => handleSort('title')}
                   >
                     <div className="flex items-center space-x-1">
@@ -586,7 +615,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none w-32"
                     onClick={() => handleSort('start_time')}
                   >
                     <div className="flex items-center space-x-1">
@@ -599,7 +628,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none w-64"
                     onClick={() => handleSort('location')}
                   >
                     <div className="flex items-center space-x-1">
@@ -657,18 +686,22 @@ export default function AdminPanel() {
                 {getSortedEvents().filter(e => {
                   const status = getEventStatus(e)
                   const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                       e.description?.toLowerCase().includes(searchTerm.toLowerCase())
+                                       e.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                       e.location?.toLowerCase().includes(searchTerm.toLowerCase())
                   const matchesStatus = statusFilter === 'all' || status === statusFilter
                   return matchesSearch && matchesStatus
                 }).map((event) => (
                   <tr key={event.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{event.title}</div>
+                    <td className="px-6 py-4 w-48">
+                      <div className="font-medium text-gray-900 truncate" title={event.title}>{event.title}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatDate(event.start_time)}
+                    <td className="px-6 py-4 text-sm text-gray-600 w-32">
+                      <div className="text-center">
+                        <div className="text-xs font-medium">{new Date(event.start_time).toLocaleDateString('zh-CN')}</div>
+                        <div className="text-xs text-gray-500">{new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[120px]">
+                    <td className="px-6 py-4 text-sm text-gray-600 w-64">
                       <div className="break-words">{event.location}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600">
@@ -830,25 +863,79 @@ export default function AdminPanel() {
               </h2>
             </div>
 
-            {/* 统一搜索组件 */}
-            <UnifiedSearch
-              searchTerm={scoreSearchTerm}
-              onSearchChange={setScoreSearchTerm}
-              selectedYear={selectedYear}
-              onYearChange={setSelectedYear}
-              selectedMonth={selectedMonth}
-              onMonthChange={setSelectedMonth}
-              availableYears={availableYears}
-              placeholder="按活动名称或地点搜索..."
-              showLocationFilter={true}
-              locationTerm={scoreSearchTerm}
-              onLocationChange={setScoreSearchTerm}
-              onClearFilters={() => {
-                setScoreSearchTerm('')
-                setSelectedYear('')
-                setSelectedMonth('')
-              }}
-            />
+            {/* 搜索和筛选 */}
+            <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 mb-6">
+              {/* 搜索框 */}
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="按活动名称或地点搜索..."
+                    value={scoreSearchTerm}
+                    onChange={(e) => setScoreSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* 年份选择 */}
+              <div className="w-32">
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+                  >
+                    <option value="">全部年份</option>
+                    {availableYears.map(year => (
+                      <option key={year} value={year.toString()}>{year}年</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 月份选择 */}
+              <div className="w-32">
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+                  >
+                    <option value="">全部月份</option>
+                    <option value="1">1月</option>
+                    <option value="2">2月</option>
+                    <option value="3">3月</option>
+                    <option value="4">4月</option>
+                    <option value="5">5月</option>
+                    <option value="6">6月</option>
+                    <option value="7">7月</option>
+                    <option value="8">8月</option>
+                    <option value="9">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
+              {(scoreSearchTerm || selectedYear || selectedMonth) && (
+                <button
+                  onClick={() => {
+                    setScoreSearchTerm('')
+                    setSelectedYear('')
+                    setSelectedMonth('')
+                  }}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  清除所有筛选
+                </button>
+              )}
+            </div>
 
             {loading ? (
               <div className="flex justify-center items-center py-12">
@@ -857,11 +944,15 @@ export default function AdminPanel() {
             ) : (
             <>
             <div className="text-sm text-gray-600 mb-4">
-              共 {filteredEvents.length} 个已结束的活动
-              {filteredEvents.length !== events.filter(e => getEventStatus(e) === 'completed').length && (
-                <span className="text-blue-600 ml-2">
-                  (已过滤，共 {events.filter(e => getEventStatus(e) === 'completed').length} 个活动)
-                </span>
+              {scoreSearchTerm || selectedYear || selectedMonth ? (
+                <>
+                  共 {filteredEvents.length} 个已结束的活动
+                  <span className="text-blue-600 ml-2">
+                    (已过滤，共 {events.filter(e => getEventStatus(e) === 'completed').length} 个活动)
+                  </span>
+                </>
+              ) : (
+                `共 ${events.filter(e => getEventStatus(e) === 'completed').length} 个已结束的活动`
               )}
             </div>
             <div className="space-y-2">

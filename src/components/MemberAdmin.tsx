@@ -4,7 +4,6 @@ import {
   User, Crown, Star, CheckCircle, XCircle, UserCog, ToggleLeft, ToggleRight
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import UnifiedSearch from './UnifiedSearch'
 
 interface Member {
   id: string
@@ -335,51 +334,19 @@ export default function MemberAdmin() {
 
   return (
     <div className="space-y-6">
-      {/* 搜索和筛选 */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border">
-        <UnifiedSearch
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-          selectedMonth={selectedMonth}
-          onMonthChange={setSelectedMonth}
-          availableYears={availableYears}
-          placeholder="搜索会员姓名、手机号或邮箱..."
-          showLocationFilter={false}
-          showRoleFilter={true}
-          selectedRole={selectedRole}
-          onRoleChange={setSelectedRole}
-          onClearFilters={() => {
-            setSearchTerm('')
-            setSelectedRole('all')
-            setSelectedYear('all')
-            setSelectedMonth('all')
-            setShowInactive(false)
-          }}
-        />
-        
-        <div className="flex flex-wrap gap-4 mt-4">
-          <div className="flex items-center space-x-2">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-sm text-gray-600">显示所有会员 (包括非活跃)</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
       {/* 会员列表 */}
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium text-gray-900">
-            会员列表 ({filteredMembers.length})
-          </h3>
+          <div className="flex items-center space-x-4">
+            <h3 className="text-lg font-medium text-gray-900">
+              会员列表 ({filteredMembers.length})
+            </h3>
+            {(searchTerm || selectedRole !== 'all' || selectedYear !== 'all' || selectedMonth !== 'all' || !showInactive) && (
+              <span className="text-sm text-blue-600">
+                (已过滤，共 {members.length} 个会员)
+              </span>
+            )}
+          </div>
           <button
             onClick={exportToCSV}
             className="flex items-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-md hover:bg-golf-700 transition-colors"
@@ -387,6 +354,112 @@ export default function MemberAdmin() {
             <Download className="w-4 h-4" />
             <span>导出CSV</span>
           </button>
+        </div>
+
+        {/* 搜索和筛选 */}
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
+            {/* 搜索框 */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="搜索会员姓名、手机号或邮箱..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* 年份选择 */}
+            <div className="w-32">
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+                >
+                  <option value="all">全部年份</option>
+                  {availableYears.map(year => (
+                    <option key={year} value={year.toString()}>{year}年</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 月份选择 */}
+            <div className="w-32">
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+                >
+                  <option value="all">全部月份</option>
+                  <option value="1">1月</option>
+                  <option value="2">2月</option>
+                  <option value="3">3月</option>
+                  <option value="4">4月</option>
+                  <option value="5">5月</option>
+                  <option value="6">6月</option>
+                  <option value="7">7月</option>
+                  <option value="8">8月</option>
+                  <option value="9">9月</option>
+                  <option value="10">10月</option>
+                  <option value="11">11月</option>
+                  <option value="12">12月</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 角色选择 */}
+            <div className="w-32">
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+                >
+                  <option value="all">所有角色</option>
+                  <option value="admin">管理员</option>
+                  <option value="member">普通会员</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
+            {(searchTerm || selectedRole !== 'all' || selectedYear !== 'all' || selectedMonth !== 'all' || !showInactive) && (
+              <button
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedRole('all')
+                  setSelectedYear('all')
+                  setSelectedMonth('all')
+                  setShowInactive(true)
+                }}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                清除所有筛选
+              </button>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap gap-4 mt-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm text-gray-600">显示所有会员 (包括非活跃)</span>
+            </div>
+          </div>
         </div>
         
         <div className="overflow-x-auto">
