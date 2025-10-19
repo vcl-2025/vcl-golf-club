@@ -69,3 +69,4 @@ LEFT JOIN public.user_profiles up ON au.id = up.id
 WHERE up.id IS NULL;
 
 
+

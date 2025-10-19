@@ -21,3 +21,4 @@ CREATE POLICY "Admins can view all login logs" ON login_logs
   );
 
 
+

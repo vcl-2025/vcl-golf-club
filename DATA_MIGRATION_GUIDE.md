@@ -71,3 +71,4 @@ SELECT 'investment_projects', COUNT(*) FROM investment_projects WHERE qrcode_url
 2. **数据库更新失败** - 检查 SQL 语法和表结构
 3. **图片不显示** - 检查路径和权限设置
 4. **上传失败** - 检查新存储桶权限
+

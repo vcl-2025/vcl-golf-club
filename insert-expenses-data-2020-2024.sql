@@ -86,3 +86,4 @@ SELECT
 FROM expenses
 WHERE expense_date >= '2020-01-01'
 ORDER BY expense_date DESC;
+

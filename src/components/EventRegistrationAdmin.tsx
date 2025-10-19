@@ -353,7 +353,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                           className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm transition-colors disabled:opacity-50"
                         >
                           <Check className="w-4 h-4 mr-1" />
-                          {processingId === registration.id ? '处理中...' : '批准'}
+                          {processingId === registration.id ? '处理中...' : '批准报名'}
                         </button>
                         <button
                           onClick={() => handleApproval(registration.id, false)}
@@ -361,7 +361,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                           className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm transition-colors disabled:opacity-50"
                         >
                           <X className="w-4 h-4 mr-1" />
-                          {processingId === registration.id ? '处理中...' : '取消'}
+                          {processingId === registration.id ? '处理中...' : '取消报名'}
                         </button>
                       </>
                     )}
@@ -375,7 +375,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
 
       {/* 详情模态框 */}
       {selectedRegistration && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
@@ -473,7 +473,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                           className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
                         >
                           <Check className="w-4 h-4 mr-2" />
-                          {processingId === selectedRegistration.id ? '处理中...' : '批准'}
+                          {processingId === selectedRegistration.id ? '处理中...' : '批准报名'}
                         </button>
                         <button
                           onClick={() => handleApproval(selectedRegistration.id, false)}
@@ -481,7 +481,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                           className="flex-1 flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
                         >
                           <X className="w-4 h-4 mr-2" />
-                          {processingId === selectedRegistration.id ? '处理中...' : '取消'}
+                          {processingId === selectedRegistration.id ? '处理中...' : '取消报名'}
                         </button>
                       </div>
                     </div>
@@ -495,7 +495,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
 
       {/* 批量审批警告模态框 */}
       {showBatchApprovalModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-2xl w-full max-w-md">
             <div className="p-6">
               <div className="flex items-center mb-4">

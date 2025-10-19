@@ -21,3 +21,4 @@ CREATE TRIGGER update_events_updated_at
 
 -- 添加注释
 COMMENT ON COLUMN events.updated_at IS '记录最后更新时间';
+

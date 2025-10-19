@@ -48,3 +48,4 @@ UNION ALL
 SELECT 'event_registrations', COUNT(*) FROM event_registrations WHERE payment_proof_url LIKE '%golf-club-images%'
 UNION ALL
 SELECT 'investment_projects', COUNT(*) FROM investment_projects WHERE qrcode_url LIKE '%golf-club-images%';
+

@@ -87,3 +87,4 @@ SELECT * FROM table_analysis
 ORDER BY table_name, query_type, column_name;
 
 
+

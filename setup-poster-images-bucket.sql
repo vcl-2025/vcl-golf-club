@@ -39,3 +39,4 @@ SELECT
   created_at
 FROM storage.buckets 
 WHERE id = 'poster-images';
+

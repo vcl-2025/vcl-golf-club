@@ -8,3 +8,4 @@ AND conname LIKE '%payment_method%';
 
 -- 或者查看表结构
 \d investment_projects;
+

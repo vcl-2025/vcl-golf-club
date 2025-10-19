@@ -27,3 +27,4 @@ FOR DELETE USING (
 -- 验证策略
 SELECT policyname, cmd, qual FROM pg_policies 
 WHERE tablename = 'objects' AND policyname LIKE '%event-images%';
+

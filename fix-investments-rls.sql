@@ -69,3 +69,4 @@ CREATE POLICY "Anyone can view investment projects"
 
 -- 确保投资项目表启用RLS
 ALTER TABLE investment_projects ENABLE ROW LEVEL SECURITY;
+

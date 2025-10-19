@@ -37,7 +37,7 @@ export default function PosterDetail({ poster, onClose }: PosterDetailProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[70] p-4">
       <div className="w-full max-w-6xl max-h-[95vh] overflow-y-auto">
         {/* 头部 */}
         <div className="sticky top-0 bg-black bg-opacity-80 backdrop-blur-sm p-4 flex items-center justify-between mb-4 rounded-t-2xl">

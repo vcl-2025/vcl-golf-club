@@ -43,13 +43,13 @@ export default function ExpenseList() {
     
     // 调试筛选逻辑
     if (filterType !== 'all') {
-      console.log('筛选调试:', {
-        filterType,
-        expenseType: expense.expense_type,
-        matchesType,
-        expenseTitle: expense.title,
-        allMatches: matchesSearch && matchesYear && matchesMonth && matchesType
-      })
+      // console.log('筛选调试:', {
+      //   filterType,
+      //   expenseType: expense.expense_type,
+      //   matchesType,
+      //   expenseTitle: expense.title,
+      //   allMatches: matchesSearch && matchesYear && matchesMonth && matchesType
+      // })
     }
     
     return matchesSearch && matchesYear && matchesMonth && matchesType
@@ -67,12 +67,12 @@ export default function ExpenseList() {
         .order('expense_date', { ascending: false })
 
       if (error) throw error
-      console.log('费用数据:', data)
+      // console.log('费用数据:', data)
       if (data && data.length > 0) {
-        console.log('第一个费用记录:', data[0])
-        console.log('所有字段名:', Object.keys(data[0]))
-        console.log('费用类型字段:', data[0].type)
-        console.log('可能的类型字段:', data[0].category || data[0].expense_type || data[0].type)
+        // console.log('第一个费用记录:', data[0])
+        // console.log('所有字段名:', Object.keys(data[0]))
+        // console.log('费用类型字段:', data[0].type)
+        // console.log('可能的类型字段:', data[0].category || data[0].expense_type || data[0].type)
       }
       setExpenses(data || [])
     } catch (error) {

@@ -46,6 +46,14 @@ const AdminAnalytics = () => {
   const scoreChartRef = useRef<HTMLDivElement>(null)
   const pieChartRef = useRef<HTMLDivElement>(null)
   const barChartRef = useRef<HTMLDivElement>(null)
+  
+  // ECharts 实例存储
+  const chartInstances = useRef<{
+    loginChart?: echarts.ECharts
+    scoreChart?: echarts.ECharts
+    pieChart?: echarts.ECharts
+    barChart?: echarts.ECharts
+  }>({})
 
   useEffect(() => {
     fetchAllData()
@@ -56,6 +64,23 @@ const AdminAnalytics = () => {
       initCharts()
     }
   }, [loading, loginData, scoreScatterData, expenseCategories, yearlyExpenseData])
+
+  // 清理图表实例
+  const disposeCharts = () => {
+    Object.values(chartInstances.current).forEach(chart => {
+      if (chart) {
+        chart.dispose()
+      }
+    })
+    chartInstances.current = {}
+  }
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      disposeCharts()
+    }
+  }, [])
 
   const fetchAllData = async () => {
     setLoading(true)
@@ -380,9 +405,13 @@ const AdminAnalytics = () => {
   }
 
   const initCharts = () => {
+    // 先清理之前的图表实例
+    disposeCharts()
+    
     // 初始化登录趋势图表
     if (loginChartRef.current && loginData.length > 0) {
       const chart = echarts.init(loginChartRef.current)
+      chartInstances.current.loginChart = chart
       const option = {
         title: {
           text: '用户活跃度趋势',
@@ -451,6 +480,7 @@ const AdminAnalytics = () => {
     // 初始化成绩趋势图表
     if (scoreChartRef.current && scoreScatterData.length > 0) {
       const chart = echarts.init(scoreChartRef.current)
+      chartInstances.current.scoreChart = chart
       const option = {
         title: {
           text: '成绩趋势分析',
@@ -544,6 +574,7 @@ const AdminAnalytics = () => {
     // 初始化南丁格尔玫瑰图
     if (pieChartRef.current && expenseCategories.length > 0) {
       const chart = echarts.init(pieChartRef.current)
+      chartInstances.current.pieChart = chart
       const option = {
         title: {
           text: '今年费用分析',
@@ -598,6 +629,7 @@ const AdminAnalytics = () => {
     // 初始化柱状图
     if (barChartRef.current && yearlyExpenseData.length > 0) {
       const chart = echarts.init(barChartRef.current)
+      chartInstances.current.barChart = chart
       
       // 获取所有费用类型
       const allExpenseTypes = new Set<string>()

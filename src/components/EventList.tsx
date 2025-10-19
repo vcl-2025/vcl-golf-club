@@ -175,12 +175,12 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
     }
 
     if (registration) {
-      console.log('活动列表状态调试:', {
-        eventId: eventId,
-        approval_status: registration.approval_status,
-        payment_status: registration.payment_status,
-        status: registration.status
-      })
+      // console.log('活动列表状态调试:', {
+      //   eventId: eventId,
+      //   approval_status: registration.approval_status,
+      //   payment_status: registration.payment_status,
+      //   status: registration.status
+      // })
       
       if (registration.approval_status === 'approved') {
         return { text: '已报名', disabled: true, color: 'bg-green-500' }

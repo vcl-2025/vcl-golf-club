@@ -40,3 +40,4 @@ SELECT 'Storage bucket created' as status, id, name, public FROM storage.buckets
 SELECT 'RLS policies created' as status, policyname, cmd FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage' AND policyname LIKE '%avatars%';
 
 
+

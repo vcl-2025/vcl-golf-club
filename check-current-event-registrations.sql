@@ -10,3 +10,4 @@ WHERE
     table_schema = 'public' AND table_name = 'event_registrations'
 ORDER BY
     ordinal_position;
+

@@ -16,3 +16,4 @@ CREATE INDEX IF NOT EXISTS idx_login_logs_login_time ON login_logs(login_time);
 -- ALTER TABLE login_logs ENABLE ROW LEVEL SECURITY;
 
 
+

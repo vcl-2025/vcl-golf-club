@@ -116,7 +116,7 @@ export default function MemberAdmin() {
       
       if (!supabase) return
       
-      console.log('🔍 开始获取会员数据...')
+      // console.log('🔍 开始获取会员数据...')
       
       // 获取所有会员信息（包含邮箱和最后登录时间）
       const response = await supabase
@@ -145,15 +145,15 @@ export default function MemberAdmin() {
         `)
         .order('created_at', { ascending: false })
 
-      console.log('📊 查询结果:', response)
+      // console.log('📊 查询结果:', response)
       
       if (response.error) {
         console.error('❌ 查询错误:', response.error)
         throw response.error
       }
 
-      console.log('✅ 获取到的会员数据:', response.data?.length, '条记录')
-      console.log('📋 会员详情:', response.data)
+      // console.log('✅ 获取到的会员数据:', response.data?.length, '条记录')
+      // console.log('📋 会员详情:', response.data)
 
       // 处理会员数据
       const membersWithStatus = response.data?.map((member: any) => ({
@@ -161,7 +161,7 @@ export default function MemberAdmin() {
         is_active: !!member.last_sign_in_at
       })) || []
 
-      console.log('🎯 处理后的会员数据:', membersWithStatus.length, '条记录')
+      // console.log('🎯 处理后的会员数据:', membersWithStatus.length, '条记录')
       setMembers(membersWithStatus)
     } catch (error) {
       console.error('获取会员信息失败:', error)
@@ -175,15 +175,15 @@ export default function MemberAdmin() {
   const filterMembers = () => {
     let filtered = [...members]
     
-    console.log('🔍 开始筛选会员数据...')
-    console.log('📊 原始会员数据:', members.length, '条')
-    console.log('🎯 筛选条件:', {
-      searchTerm,
-      selectedRole,
-      selectedYear,
-      selectedMonth,
-      showInactive
-    })
+    // console.log('🔍 开始筛选会员数据...')
+    // console.log('📊 原始会员数据:', members.length, '条')
+    // console.log('🎯 筛选条件:', {
+    //   searchTerm,
+    //   selectedRole,
+    //   selectedYear,
+    //   selectedMonth,
+    //   showInactive
+    // })
 
     // 搜索过滤
     if (searchTerm) {
@@ -194,14 +194,14 @@ export default function MemberAdmin() {
         member.phone?.includes(searchTerm) ||
         member.email?.toLowerCase().includes(searchTerm.toLowerCase())
       )
-      console.log('🔍 搜索过滤:', beforeSearch, '->', filtered.length)
+      // console.log('🔍 搜索过滤:', beforeSearch, '->', filtered.length)
     }
 
     // 角色过滤
     if (selectedRole !== 'all') {
       const beforeRole = filtered.length
       filtered = filtered.filter(member => member.role === selectedRole)
-      console.log('👥 角色过滤:', beforeRole, '->', filtered.length)
+      // console.log('👥 角色过滤:', beforeRole, '->', filtered.length)
     }
 
     // 年份过滤
@@ -210,7 +210,7 @@ export default function MemberAdmin() {
       filtered = filtered.filter(member => 
         new Date(member.created_at).getFullYear() === parseInt(selectedYear)
       )
-      console.log('📅 年份过滤:', beforeYear, '->', filtered.length)
+      // console.log('📅 年份过滤:', beforeYear, '->', filtered.length)
     }
 
     // 月份过滤
@@ -219,7 +219,7 @@ export default function MemberAdmin() {
       filtered = filtered.filter(member => 
         new Date(member.created_at).getMonth() === parseInt(selectedMonth) - 1
       )
-      console.log('📆 月份过滤:', beforeMonth, '->', filtered.length)
+      // console.log('📆 月份过滤:', beforeMonth, '->', filtered.length)
     }
 
     // 活跃状态过滤
@@ -227,14 +227,14 @@ export default function MemberAdmin() {
       const beforeActive = filtered.length
       const activeMembers = filtered.filter(member => member.is_active)
       const inactiveMembers = filtered.filter(member => !member.is_active)
-      console.log('⚡ 活跃状态过滤前:', beforeActive, '条 (活跃:', activeMembers.length, ', 非活跃:', inactiveMembers.length, ')')
+      // console.log('⚡ 活跃状态过滤前:', beforeActive, '条 (活跃:', activeMembers.length, ', 非活跃:', inactiveMembers.length, ')')
       filtered = activeMembers
-      console.log('⚡ 活跃状态过滤后:', filtered.length, '条')
+      // console.log('⚡ 活跃状态过滤后:', filtered.length, '条')
     } else {
-      console.log('⚡ 显示所有会员 (包括非活跃)')
+      // console.log('⚡ 显示所有会员 (包括非活跃)')
     }
 
-    console.log('✅ 最终筛选结果:', filtered.length, '条')
+    // console.log('✅ 最终筛选结果:', filtered.length, '条')
     setFilteredMembers(filtered)
   }
 

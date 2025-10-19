@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
@@ -86,6 +87,26 @@ export default function Dashboard() {
     }
     
   }, [user])
+
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuOpen) {
+        const target = event.target as Element
+        if (!target.closest('.user-dropdown-container')) {
+          setUserMenuOpen(false)
+        }
+      }
+    }
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [userMenuOpen])
 
   const fetchUserProfile = async () => {
     if (!user) return
@@ -396,7 +417,7 @@ export default function Dashboard() {
               </button>
               
               {/* Desktop User Dropdown */}
-              <div className="relative hidden md:block">
+              <div className="relative hidden md:block user-dropdown-container">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-2 transition-colors"
@@ -424,8 +445,15 @@ export default function Dashboard() {
                 </button>
 
                 {/* Dropdown Menu */}
-                {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                {userMenuOpen && createPortal(
+                  <div 
+                    className="fixed w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[100] max-h-96 overflow-y-auto" 
+                    style={{ 
+                      top: '70px',
+                      right: '200px'
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {/* User Info Section */}
                     <div className="px-4 py-3 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
@@ -489,14 +517,15 @@ export default function Dashboard() {
                         退出登录
                       </button>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
 
               {/* Click outside to close dropdown */}
               {userMenuOpen && (
                 <div 
-                  className="fixed inset-0 z-40" 
+                  className="fixed inset-0 z-[90]" 
                   onClick={() => setUserMenuOpen(false)}
                 ></div>
               )}

@@ -6,25 +6,25 @@ export default function ImageUploadTest() {
   const [previewUrl, setPreviewUrl] = useState<string>('')
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('文件选择事件触发')
+    // console.log('文件选择事件触发')
     const file = e.target.files?.[0]
-    console.log('选择的文件:', file)
+    // console.log('选择的文件:', file)
     
     if (file) {
-      console.log('开始处理文件')
+      // console.log('开始处理文件')
       setSelectedFile(file)
       
       const reader = new FileReader()
       reader.onloadend = () => {
         const result = reader.result as string
-        console.log('文件读取完成，设置预览')
-        console.log('预览URL长度:', result.length)
+        // console.log('文件读取完成，设置预览')
+        // console.log('预览URL长度:', result.length)
         setPreviewUrl(result)
-        console.log('预览状态已设置')
+        // console.log('预览状态已设置')
       }
       reader.readAsDataURL(file)
     } else {
-      console.log('没有选择文件')
+      // console.log('没有选择文件')
     }
   }
 
@@ -69,3 +69,4 @@ export default function ImageUploadTest() {
     </div>
   )
 }
+

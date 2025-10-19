@@ -27,11 +27,11 @@ export async function logUserLogin() {
     // 获取当前用户ID
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      console.log('用户未登录，跳过日志记录')
+      // console.log('用户未登录，跳过日志记录')
       return
     }
     
-    console.log('准备记录登录日志:', { userId: user.id, deviceType, userAgent })
+    // console.log('准备记录登录日志:', { userId: user.id, deviceType, userAgent })
     
     // 插入登录日志
     const { data, error } = await supabase
@@ -46,7 +46,7 @@ export async function logUserLogin() {
     if (error) {
       console.error('记录登录日志失败:', error)
     } else {
-      console.log('登录日志记录成功:', data)
+      // console.log('登录日志记录成功:', data)
     }
   } catch (error) {
     console.error('登录日志记录异常:', error)

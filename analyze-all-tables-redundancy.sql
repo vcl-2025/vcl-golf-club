@@ -119,3 +119,4 @@ WHERE table_name IN ('events', 'event_registrations', 'scores', 'investments', '
 ORDER BY table_name, column_name;
 
 
+

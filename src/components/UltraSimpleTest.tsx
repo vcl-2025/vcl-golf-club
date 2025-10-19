@@ -4,15 +4,15 @@ export default function UltraSimpleTest() {
   const [imageUrl, setImageUrl] = useState('')
 
   const handleFileChange = (e: any) => {
-    console.log('=== 超简单文件选择 ===')
+    // console.log('=== 超简单文件选择 ===')
     const file = e.target.files[0]
-    console.log('文件:', file)
+    // console.log('文件:', file)
     
     if (file) {
       const reader = new FileReader()
       reader.onload = (e) => {
         const result = e.target?.result as string
-        console.log('读取结果:', result.substring(0, 50))
+        // console.log('读取结果:', result.substring(0, 50))
         setImageUrl(result)
       }
       reader.readAsDataURL(file)
@@ -48,3 +48,4 @@ export default function UltraSimpleTest() {
     </div>
   )
 }
+

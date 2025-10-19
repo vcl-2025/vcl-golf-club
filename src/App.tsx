@@ -24,7 +24,7 @@ function App() {
           if (error) {
             console.error('Auth callback error:', error)
           } else if (data.user) {
-            console.log('User authenticated successfully:', data.user.email)
+            // console.log('User authenticated successfully:', data.user.email)
             
             // 检查是否有待保存的用户资料
             const pendingProfile = localStorage.getItem('pendingUserProfile')

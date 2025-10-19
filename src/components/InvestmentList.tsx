@@ -75,9 +75,9 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
 
   const fetchInvestments = async () => {
     try {
-      console.log('开始获取投资记录...')
-      console.log('当前用户ID:', user?.id)
-      console.log('用户邮箱:', user?.email)
+      // console.log('开始获取投资记录...')
+      // console.log('当前用户ID:', user?.id)
+      // console.log('用户邮箱:', user?.email)
       
       // 直接获取所有已确认的投资记录，用于计算项目筹款进度
       // 这个查询应该返回所有用户的已确认投资记录
@@ -92,12 +92,12 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
         throw error
       }
       
-      console.log('获取到的已确认投资记录数量:', data?.length || 0)
-      console.log('已确认投资记录详情:', data)
+      // console.log('获取到的已确认投资记录数量:', data?.length || 0)
+      // console.log('已确认投资记录详情:', data)
       
       // 如果获取不到数据，尝试不同的查询方式
       if (!data || data.length === 0) {
-        console.log('尝试获取所有投资记录...')
+        // console.log('尝试获取所有投资记录...')
         const { data: allData, error: allError } = await supabase
           .from('investments')
           .select('*')
@@ -105,16 +105,16 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
         if (allError) {
           console.error('获取所有投资记录错误:', allError)
         } else {
-          console.log('所有投资记录数量:', allData?.length || 0)
-          console.log('所有投资记录详情:', allData)
+          // console.log('所有投资记录数量:', allData?.length || 0)
+          // console.log('所有投资记录详情:', allData)
           
           if (allData && allData.length > 0) {
-            console.log('投资记录状态分布:')
+            // console.log('投资记录状态分布:')
             const statusCount = allData.reduce((acc, inv) => {
               acc[inv.status] = (acc[inv.status] || 0) + 1
               return acc
             }, {})
-            console.log(statusCount)
+            // console.log(statusCount)
           }
         }
       }
@@ -133,8 +133,8 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
   const calculateProjectAmount = (projectId: string) => {
     const projectInvestments = investments.filter(inv => inv.project_id === projectId && inv.status === 'confirmed')
     const totalAmount = projectInvestments.reduce((sum, inv) => sum + inv.amount, 0)
-    console.log(`项目 ${projectId} 的投资记录:`, projectInvestments)
-    console.log(`项目 ${projectId} 已筹集金额:`, totalAmount)
+    // console.log(`项目 ${projectId} 的投资记录:`, projectInvestments)
+    // console.log(`项目 ${projectId} 已筹集金额:`, totalAmount)
     return totalAmount
   }
 

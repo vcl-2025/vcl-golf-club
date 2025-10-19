@@ -30,3 +30,4 @@ SELECT
 FROM information_schema.columns 
 WHERE table_name = 'events' 
 ORDER BY ordinal_position;
+

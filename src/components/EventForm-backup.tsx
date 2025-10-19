@@ -461,9 +461,9 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
               <button
                 type="button"
                 onClick={() => {
-                  console.log('表单数据:', formData)
-                  console.log('二维码文件:', qrCodeFile)
-                  console.log('二维码预览:', qrCodePreview)
+                  // console.log('表单数据:', formData)
+                  // console.log('二维码文件:', qrCodeFile)
+                  // console.log('二维码预览:', qrCodePreview)
                 }}
                 className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >

@@ -87,3 +87,4 @@ JOIN
     user_profiles up ON s.user_id = up.id
 ORDER BY
     e.start_time DESC, s.event_id, s.rank ASC;
+

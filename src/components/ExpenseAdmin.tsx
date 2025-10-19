@@ -193,13 +193,13 @@ export default function ExpenseAdmin() {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        console.log('正在上传文件:', file.name, '大小:', file.size, '类型:', file.type)
+        // console.log('正在上传文件:', file.name, '大小:', file.size, '类型:', file.type)
 
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
         const filePath = `receipts/${fileName}`
 
-        console.log('上传路径:', filePath)
+        // console.log('上传路径:', filePath)
 
         const { data, error: uploadError } = await supabase.storage
           .from('golf-club-images')
@@ -211,13 +211,13 @@ export default function ExpenseAdmin() {
           continue
         }
 
-        console.log('上传成功:', data)
+        // console.log('上传成功:', data)
 
         const { data: { publicUrl } } = supabase.storage
           .from('golf-club-images')
           .getPublicUrl(`expenses/${filePath}`)
 
-        console.log('公开URL:', publicUrl)
+        // console.log('公开URL:', publicUrl)
 
         newUploadedFiles.push({
           name: file.name,
@@ -689,7 +689,7 @@ export default function ExpenseAdmin() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">

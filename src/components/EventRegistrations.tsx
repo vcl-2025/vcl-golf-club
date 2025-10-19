@@ -43,7 +43,7 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
       if (registrationResponse.error) throw registrationResponse.error
       
       const registrations = registrationResponse.data
-      console.log('🔍 获取到的报名数据:', registrations)
+      // console.log('🔍 获取到的报名数据:', registrations)
       
       if (!registrations || registrations.length === 0) {
         setRegistrations([])
@@ -152,7 +152,7 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
   const totalRevenue = paidCount * event.fee
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">

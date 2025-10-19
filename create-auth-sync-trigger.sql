@@ -27,3 +27,4 @@ CREATE TRIGGER trigger_sync_auth_to_profile
 COMMENT ON FUNCTION public.sync_auth_to_profile() IS '当用户登录时自动同步最后登录时间到 user_profiles';
 
 
+

@@ -32,3 +32,4 @@ GRANT EXECUTE ON FUNCTION get_user_emails(UUID[]) TO anon;
 -- SELECT * FROM get_user_emails(ARRAY['user-id-1', 'user-id-2']);
 
 
+

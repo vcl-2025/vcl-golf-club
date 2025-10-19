@@ -39,3 +39,4 @@ GROUP BY s.competition_name
 ORDER BY score_count DESC;
 
 
+

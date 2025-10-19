@@ -28,3 +28,4 @@ SELECT
 FROM information_schema.table_privileges 
 WHERE table_name = 'events' 
 AND grantee = current_user;
+

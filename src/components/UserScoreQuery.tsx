@@ -124,18 +124,18 @@ export default function UserScoreQuery() {
     const topThreeCount = scoresData.filter(s => s.rank && s.rank <= 3).length
 
     // 调试信息
-    console.log('📊 用户成绩统计调试:', {
-      totalRounds,
-      totalStrokes,
-      averageStrokes,
-      bestScore,
-      topThreeCount,
-      allScores: scoresData.map(s => ({ 
-        event: s.events.title, 
-        strokes: s.total_strokes, 
-        rank: s.rank 
-      }))
-    })
+    // console.log('📊 用户成绩统计调试:', {
+    //   totalRounds,
+    //   totalStrokes,
+    //   averageStrokes,
+    //   bestScore,
+    //   topThreeCount,
+    //   allScores: scoresData.map(s => ({ 
+    //     event: s.events.title, 
+    //     strokes: s.total_strokes,
+    //     rank: s.rank
+    //   }))
+    // })
 
     setUserStats({
       totalRounds,

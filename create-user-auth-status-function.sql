@@ -66,3 +66,4 @@ COMMENT ON TABLE public.admin_logs IS '管理员操作日志表';
 SELECT proname, prosrc FROM pg_proc WHERE proname = 'update_user_auth_status';
 
 
+

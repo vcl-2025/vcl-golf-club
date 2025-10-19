@@ -53,3 +53,4 @@ CREATE POLICY "Admins update investments"
       AND user_profiles.role = 'admin'
     )
   );
+

@@ -68,12 +68,12 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
     try {
       setSavingArticle(true)
       
-      console.log('开始保存文章...', {
-        eventId: event.id,
-        articleContent: articleContent?.substring(0, 100) + '...',
-        articleExcerpt: articleExcerpt,
-        userId: user?.id
-      })
+      // console.log('开始保存文章...', {
+      //   eventId: event.id,
+      //   articleContent: articleContent?.substring(0, 100) + '...',
+      //   articleExcerpt: articleExcerpt,
+      //   userId: user?.id
+      // })
       
       const { error } = await supabase
         .from('events')
@@ -95,7 +95,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
       setArticleExcerpt(articleExcerpt)
       setIsEditingArticle(false)
       
-      console.log('文章保存成功')
+      // console.log('文章保存成功')
       showError('文章保存成功！')
     } catch (error) {
       console.error('保存文章失败:', error)
@@ -109,12 +109,12 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
     try {
       setSavingArticle(true)
       
-      console.log('开始发布文章...', {
-        eventId: event.id,
-        articleContent: articleContent?.substring(0, 100) + '...',
-        articleExcerpt: articleExcerpt,
-        userId: user?.id
-      })
+      // console.log('开始发布文章...', {
+      //   eventId: event.id,
+      //   articleContent: articleContent?.substring(0, 100) + '...',
+      //   articleExcerpt: articleExcerpt,
+      //   userId: user?.id
+      // })
       
       const { error } = await supabase
         .from('events')
@@ -140,7 +140,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
       setArticlePublishedAt(new Date().toISOString())
       setIsEditingArticle(false)
       
-      console.log('文章发布成功')
+      // console.log('文章发布成功')
       showError('文章发布成功！')
     } catch (error) {
       console.error('发布文章失败:', error)
@@ -176,13 +176,13 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
     const isSameDay = startDate.toDateString() === endDate.toDateString()
     
     // 调试信息
-    console.log('活动时间调试:', {
-      start_time: event.start_time,
-      end_time: event.end_time,
-      startDate: startDate.toDateString(),
-      endDate: endDate.toDateString(),
-      isSameDay
-    })
+    // console.log('活动时间调试:', {
+    //   start_time: event.start_time,
+    //   end_time: event.end_time,
+    //   startDate: startDate.toDateString(),
+    //   endDate: endDate.toDateString(),
+    //   isSameDay
+    // })
     
     if (isSameDay) {
       // 同一天：显示日期 + 时间范围
@@ -231,7 +231,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
 
     confirmAction('确定要取消报名吗？', async () => {
       try {
-        console.log('开始删除报名记录，ID:', userRegistration.id)
+        // console.log('开始删除报名记录，ID:', userRegistration.id)
         
         // 直接删除报名记录，就像没操作过一样
         const deleteResponse = await supabase
@@ -239,9 +239,9 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
           .delete()
           .eq('id', userRegistration.id)
 
-        console.log('删除响应:', deleteResponse)
-        console.log('删除的数据:', deleteResponse?.data)
-        console.log('删除的计数:', deleteResponse?.count)
+        // console.log('删除响应:', deleteResponse)
+        // console.log('删除的数据:', deleteResponse?.data)
+        // console.log('删除的计数:', deleteResponse?.count)
 
         if (deleteResponse?.error) {
           console.error('删除失败:', deleteResponse.error)
@@ -255,7 +255,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
           throw new Error('删除失败：没有找到要删除的记录')
         }
 
-        console.log('删除成功，清空本地状态')
+        // console.log('删除成功，清空本地状态')
         // 清空本地状态
         setUserRegistration(null)
       } catch (error) {
@@ -271,11 +271,11 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
     }
     
     if (userRegistration) {
-      console.log('当前报名状态:', {
-        approval_status: userRegistration.approval_status,
-        payment_status: userRegistration.payment_status,
-        status: userRegistration.status
-      })
+      // console.log('当前报名状态:', {
+      //   approval_status: userRegistration.approval_status,
+      //   payment_status: userRegistration.payment_status,
+      //   status: userRegistration.status
+      // })
       if (userRegistration.approval_status === 'approved') {
         return { text: '完成报名', color: 'text-green-600', icon: CheckCircle }
       } else if (userRegistration.approval_status === 'pending') {
@@ -300,7 +300,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
   const StatusIcon = status.icon
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         {/* 头部 */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">

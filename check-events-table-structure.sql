@@ -54,3 +54,4 @@ SELECT
     rowsecurity
 FROM pg_tables 
 WHERE tablename = 'events';
+

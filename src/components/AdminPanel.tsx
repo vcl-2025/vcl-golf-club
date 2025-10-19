@@ -269,7 +269,7 @@ export default function AdminPanel() {
         .select('event_id, user_id, payment_status, approval_status')
 
       if (registrationsError) throw registrationsError
-      console.log('获取到的报名记录:', registrationsData)
+      // console.log('获取到的报名记录:', registrationsData)
       setEventRegistrations(registrationsData || [])
 
       // 获取所有成绩
@@ -414,7 +414,7 @@ export default function AdminPanel() {
   return (
     <div className="space-y-6">
       {/* 管理员导航 */}
-      <div className="bg-green-50 rounded-2xl p-6 shadow-sm sticky top-0 z-50">
+      <div className="bg-green-50 rounded-2xl p-6 shadow-sm sticky top-0 z-[60]">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">管理员控制台</h1>
           <div className="flex space-x-2">
@@ -1223,7 +1223,7 @@ export default function AdminPanel() {
 
       {/* 活动报名管理模态框 */}
       {selectedEventForRegistration && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-end mb-6">

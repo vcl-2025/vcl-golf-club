@@ -40,7 +40,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         .maybeSingle()
       
       if (error) throw error
-      console.log('用户资料加载:', data)
+      // console.log('用户资料加载:', data)
       setUserProfile(data)
     } catch (error) {
       console.error('获取用户资料失败:', error)
@@ -76,13 +76,13 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('handleSubmit 被调用')
+    // console.log('handleSubmit 被调用')
     e.preventDefault()
     setLoading(true)
     setMessage('')
 
     try {
-      console.log('开始检查报名状态')
+      // console.log('开始检查报名状态')
       // 检查是否已经报名过
       const { data: existingRegistration, error: checkError } = await supabase
         .from('event_registrations')
@@ -94,7 +94,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       if (checkError) throw checkError
 
       if (existingRegistration) {
-        console.log('发现现有报名记录:', existingRegistration)
+        // console.log('发现现有报名记录:', existingRegistration)
         if (existingRegistration.approval_status === 'approved' && existingRegistration.payment_status === 'paid') {
           throw new Error('您已经成功报名过这个活动了')
         } else if (existingRegistration.approval_status === 'pending') {
@@ -106,7 +106,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         }
       }
 
-      console.log('没有现有报名记录，进入支付步骤')
+      // console.log('没有现有报名记录，进入支付步骤')
       // 进入支付步骤（不创建报名记录）
       setStep('payment')
     } catch (error: any) {
@@ -118,7 +118,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
   }
 
   const handleRegistrationSubmit = async () => {
-    console.log('开始提交报名申请')
+    // console.log('开始提交报名申请')
     setMessage('')
 
     try {
@@ -136,7 +136,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       }
 
       if (existingRegistration) {
-        console.log('已存在报名记录:', existingRegistration)
+        // console.log('已存在报名记录:', existingRegistration)
         setMessage('您已经报名过此活动了')
         return
       }
@@ -163,7 +163,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
             .getPublicUrl(`payment-proofs/${filePath}`)
           
           paymentProofUrl = publicUrl
-          console.log('支付证明上传成功:', paymentProofUrl)
+          // console.log('支付证明上传成功:', paymentProofUrl)
         } catch (uploadError) {
           console.error('上传支付证明失败:', uploadError)
           setMessage('上传支付证明失败，请重试')
@@ -181,7 +181,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         payment_proof: paymentProofUrl
       }
       
-      console.log('插入数据:', insertData)
+      // console.log('插入数据:', insertData)
       
       const { error: insertError } = await supabase
         .from('event_registrations')
@@ -290,7 +290,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
     const StatusIcon = statusInfo.icon
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
         <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
@@ -380,7 +380,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
 
   // 如果没有报名记录，显示报名表单
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -430,13 +430,13 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                   disabled={loading || !userProfile?.full_name}
                   className="flex-1 py-3 px-4 bg-golf-600 text-white rounded-lg hover:bg-golf-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   onClick={() => {
-                    console.log('按钮点击调试信息:', {
-                      loading,
-                      userProfile,
-                      full_name: userProfile?.full_name,
-                      phone: userProfile?.phone,
-                      disabled: loading || !userProfile?.full_name || !userProfile?.phone
-                    })
+                    // console.log('按钮点击调试信息:', {
+                    //   loading,
+                    //   userProfile,
+                    //   full_name: userProfile?.full_name,
+                    //   phone: userProfile?.phone,
+                    //   disabled: loading || !userProfile?.full_name || !userProfile?.phone
+                    // })
                   }}
                 >
                   {loading ? '提交中...' : '下一步：支付信息'}
@@ -562,7 +562,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
               <div className="flex space-x-3">
                 <button
                   onClick={(e) => {
-                    console.log('按钮被点击')
+                    // console.log('按钮被点击')
                     // 立即禁用按钮并改变样式
                     const button = e.currentTarget
                     button.disabled = true

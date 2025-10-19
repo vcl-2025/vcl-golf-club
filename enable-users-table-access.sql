@@ -16,3 +16,4 @@ CREATE POLICY "Allow authenticated users to view basic user info" ON auth.users
 FOR SELECT USING (auth.uid() IS NOT NULL);
 
 
+

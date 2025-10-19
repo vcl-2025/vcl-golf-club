@@ -27,3 +27,4 @@ WHERE table_name = 'user_profiles'
 AND column_name = 'is_active';
 
 
+

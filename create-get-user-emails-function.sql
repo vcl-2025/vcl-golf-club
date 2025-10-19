@@ -21,3 +21,4 @@ $$;
 GRANT EXECUTE ON FUNCTION get_user_emails(UUID[]) TO authenticated;
 
 
+

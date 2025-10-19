@@ -193,3 +193,4 @@ LEFT JOIN event_registrations er ON e.id = er.event_id
 WHERE e.title LIKE '%赛%' OR e.title LIKE '%锦标赛%' OR e.title LIKE '%公开赛%' OR e.title LIKE '%友谊赛%' OR e.title LIKE '%慈善赛%'
 GROUP BY e.id, e.title, e.start_time
 ORDER BY e.start_time;
+

@@ -40,3 +40,4 @@ async function checkStorage() {
 
 // 执行检查
 checkStorage().catch(console.error)
+

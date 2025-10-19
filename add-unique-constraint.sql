@@ -27,3 +27,4 @@ SELECT
     contype as constraint_type
 FROM pg_constraint 
 WHERE conname = 'event_registrations_user_event_unique';
+

@@ -34,10 +34,10 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
         setMessage('登录成功！')
         setTimeout(() => onClose(), 1000)
       } else {
-        console.log('=== 开始注册流程 ===')
-        console.log('邮箱:', email)
-        console.log('姓名:', fullName)
-        console.log('电话:', phone)
+        // console.log('=== 开始注册流程 ===')
+        // console.log('邮箱:', email)
+        // console.log('姓名:', fullName)
+        // console.log('电话:', phone)
 
         const signUpPayload = {
           email,
@@ -51,7 +51,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
           }
         }
 
-        console.log('发送到 Supabase 的数据:', JSON.stringify(signUpPayload.options.data, null, 2))
+        // console.log('发送到 Supabase 的数据:', JSON.stringify(signUpPayload.options.data, null, 2))
 
         const { data, error } = await supabase.auth.signUp(signUpPayload)
 
@@ -60,14 +60,14 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
           throw error
         }
 
-        console.log('注册成功，返回的数据:')
-        console.log('- User ID:', data.user?.id)
-        console.log('- User metadata:', JSON.stringify(data.user?.user_metadata, null, 2))
-        console.log('- 是否有 session:', !!data.session)
+        // console.log('注册成功，返回的数据:')
+        // console.log('- User ID:', data.user?.id)
+        // console.log('- User metadata:', JSON.stringify(data.user?.user_metadata, null, 2))
+        // console.log('- 是否有 session:', !!data.session)
 
         // 如果有 session，说明邮箱验证已禁用，需要更新 user_profiles
         if (data.user && data.session) {
-          console.log('邮箱验证已禁用，尝试更新 user_profiles...')
+          // console.log('邮箱验证已禁用，尝试更新 user_profiles...')
 
           const { error: updateError } = await supabase
             .from('user_profiles')
@@ -80,10 +80,10 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
           if (updateError) {
             console.error('更新用户资料失败:', updateError)
           } else {
-            console.log('用户资料更新成功')
+            // console.log('用户资料更新成功')
           }
         } else {
-          console.log('有 session，触发器应该已经创建了用户资料')
+          // console.log('有 session，触发器应该已经创建了用户资料')
         }
 
         if (data.user && !data.session) {
@@ -105,7 +105,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange }: AuthM
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]">
       <div className="bg-white rounded-2xl p-8 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">

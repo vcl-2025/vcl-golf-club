@@ -65,3 +65,4 @@ SELECT
 FROM pg_policies 
 WHERE tablename IN ('event_registrations', 'user_profiles', 'events')
 ORDER BY tablename, policyname;
+

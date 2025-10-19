@@ -49,3 +49,4 @@ WHERE table_name = 'scores'
 ORDER BY ordinal_position;
 
 
+

@@ -18,3 +18,4 @@ ALTER TABLE scores DISABLE ROW LEVEL SECURITY;
 SELECT schemaname, tablename, rowsecurity 
 FROM pg_tables 
 WHERE tablename = 'scores';
+

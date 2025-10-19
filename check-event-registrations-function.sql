@@ -8,3 +8,4 @@ WHERE routine_name = 'get_event_registrations'
 AND routine_schema = 'public';
 
 
+

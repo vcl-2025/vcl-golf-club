@@ -202,7 +202,7 @@ export default function UnifiedSearch({
               <select
                 value={selectedExpenseType}
                 onChange={(e) => {
-                  console.log('费用类型筛选变化:', e.target.value)
+                  // console.log('费用类型筛选变化:', e.target.value)
                   onExpenseTypeChange(e.target.value)
                 }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"

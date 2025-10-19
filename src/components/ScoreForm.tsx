@@ -266,15 +266,15 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       }
 
       // 添加调试信息
-      console.log('🏌️ 准备保存成绩数据:', {
-        user_id: selectedParticipant.user_id,
-        event_id: selectedEvent.id,
-        total_strokes: insertData.total_strokes,
-        net_strokes: insertData.net_strokes,
-        handicap: insertData.handicap,
-        rank: insertData.rank,
-        notes: insertData.notes
-      })
+      // console.log('🏌️ 准备保存成绩数据:', {
+      //   user_id: selectedParticipant.user_id,
+      //   event_id: selectedEvent.id,
+      //   total_strokes: insertData.total_strokes,
+      //   net_strokes: insertData.net_strokes,
+      //   handicap: insertData.handicap,
+      //   rank: insertData.rank,
+      //   notes: insertData.notes
+      // })
 
       // 检查是否已存在记录
       const { data: existingScore } = await supabase
@@ -305,7 +305,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         throw error
       }
 
-      console.log('✅ 成绩保存成功')
+      // console.log('✅ 成绩保存成功')
       setSavedParticipants(new Set([...savedParticipants, selectedParticipant.user_id]))
 
       showSuccess(existingScore ? '成绩更新成功' : '成绩保存成功')
@@ -338,7 +338,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <div>

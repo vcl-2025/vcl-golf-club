@@ -69,3 +69,4 @@ FROM user_profiles;
 -- ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
 
+

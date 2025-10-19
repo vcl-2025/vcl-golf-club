@@ -101,13 +101,13 @@ export default function Dashboard() {
 
   const fetchMemberCount = async () => {
     try {
-      // console.log('开始查询会员数量...')
+      // // console.log('开始查询会员数量...')
       
       // 使用专门的函数获取会员总数
       const { data, error } = await supabase
         .rpc('get_member_count')
       
-      // console.log('会员数量查询结果:', { data, error })
+      // // console.log('会员数量查询结果:', { data, error })
       
       if (error) {
         console.error('查询失败:', error)
@@ -124,7 +124,7 @@ export default function Dashboard() {
           setMemberCount(viewData.total_members)
         }
       } else {
-        // console.log('会员数量查询成功:', data)
+        // // console.log('会员数量查询成功:', data)
         setMemberCount(data || 0)
       }
     } catch (error) {
@@ -140,7 +140,7 @@ export default function Dashboard() {
     try {
       // 获取即将举行的活动 - 显示2个
       // 查询状态为 'upcoming' 的活动，或者查询未来日期的活动
-      // console.log('查询即将举行的活动...')
+      // // console.log('查询即将举行的活动...')
       
       const today = new Date().toISOString().split('T')[0]
       
@@ -151,12 +151,12 @@ export default function Dashboard() {
         .eq('status', 'upcoming')
         .limit(2)
       
-      // console.log('upcoming状态活动查询结果:', { events, eventsError })
+      // // console.log('upcoming状态活动查询结果:', { events, eventsError })
       
       // 如果没有找到，尝试查询未来日期的活动
       if (!events || events.length === 0) {
-        // console.log('没有找到upcoming状态的活动，尝试查询未来日期的活动...')
-        // console.log('今天日期:', today)
+        // // console.log('没有找到upcoming状态的活动，尝试查询未来日期的活动...')
+        // // console.log('今天日期:', today)
         
         const { data: futureEvents, error: futureError } = await supabase
           .from('events')
@@ -164,21 +164,21 @@ export default function Dashboard() {
           .gte('start_time', today)
           .limit(2)
         
-        // console.log('未来日期活动查询结果:', { futureEvents, futureError })
+        // // console.log('未来日期活动查询结果:', { futureEvents, futureError })
         events = futureEvents
         eventsError = futureError
       }
       
       // 如果还是没有找到，尝试查询所有活动看看数据结构
       if (!events || events.length === 0) {
-        // console.log('没有找到未来日期的活动，查询所有活动看看数据结构...')
+        // // console.log('没有找到未来日期的活动，查询所有活动看看数据结构...')
         const { data: allEvents, error: allError } = await supabase
           .from('events')
           .select('*')
           .limit(5)
         
-        // console.log('所有活动查询结果:', { allEvents, allError })
-        // console.log('所有活动的状态和日期:', allEvents?.map(e => ({ 
+        // // console.log('所有活动查询结果:', { allEvents, allError })
+        // // console.log('所有活动的状态和日期:', allEvents?.map(e => ({ 
         //   id: e.id, 
         //   title: e.title, 
         //   status: e.status, 
@@ -189,11 +189,11 @@ export default function Dashboard() {
       
       // 如果还是没有找到，就不显示任何活动
       if (!events || events.length === 0) {
-        // console.log('没有找到即将举行的活动')
+        // // console.log('没有找到即将举行的活动')
         events = []
       }
       
-      // console.log('活动查询结果:', { events, eventsError })
+      // // console.log('活动查询结果:', { events, eventsError })
       setUpcomingEvents(events || [])
 
       // 获取用户最近的成绩 - 显示2个
@@ -202,7 +202,7 @@ export default function Dashboard() {
         .select('*')
         .eq('user_id', user.id)
         .limit(2)
-      // console.log('成绩查询结果:', { scores, scoresError })
+      // // console.log('成绩查询结果:', { scores, scoresError })
       setRecentScores(scores || [])
 
       // 获取最近的投资项目 - 显示2个
@@ -210,7 +210,7 @@ export default function Dashboard() {
         .from('investment_projects')
         .select('*')
         .limit(2)
-      // console.log('投资项目查询结果:', { investments, investmentsError })
+      // // console.log('投资项目查询结果:', { investments, investmentsError })
       setRecentInvestments(investments || [])
 
       // 获取最近的费用公示 - 显示2个
@@ -218,7 +218,7 @@ export default function Dashboard() {
         .from('expenses')
         .select('*')
         .limit(2)
-      // console.log('费用公示查询结果:', { expenses, expensesError })
+      // // console.log('费用公示查询结果:', { expenses, expensesError })
       setRecentExpenses(expenses || [])
 
       // 获取最近的海报 - 显示2个
@@ -226,7 +226,7 @@ export default function Dashboard() {
         .from('posters')
         .select('*')
         .limit(2)
-      // console.log('海报查询结果:', { posters, postersError })
+      // // console.log('海报查询结果:', { posters, postersError })
       setRecentPosters(posters || [])
 
     } catch (error) {

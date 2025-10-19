@@ -190,12 +190,12 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         }
         
         // 显示登录后的 session 数据
-        console.log('=== 登录成功，获取活跃会话数据 ===')
+        // console.log('=== 登录成功，获取活跃会话数据 ===')
         
         // 使用 RPC 函数获取当前用户的活跃会话
         const { data: sessions, error: sessionsError } = await supabase.rpc('get_user_active_sessions')
-        console.log('当前用户活跃会话:', sessions)
-        console.log('会话查询错误:', sessionsError)
+        // console.log('当前用户活跃会话:', sessions)
+        // console.log('会话查询错误:', sessionsError)
         
         // 使用 RPC 函数返回的真实数据记录到 login_logs
         if (sessions && sessions.length > 0) {
@@ -214,11 +214,11 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
           if (insertError) {
             console.error('记录登录日志失败:', insertError)
           } else {
-            console.log('使用真实数据记录登录日志成功')
+            // console.log('使用真实数据记录登录日志成功')
           }
         }
         
-        console.log('=====================================')
+        // console.log('=====================================')
         
         onLoginSuccess()
       }

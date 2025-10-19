@@ -44,3 +44,4 @@ console.log('请查看Network标签页中的API请求，特别是events相关的
 // 方法4：检查控制台错误
 console.log('\n=== 检查控制台错误 ===')
 console.log('请查看是否有任何JavaScript错误或网络请求失败')
+

@@ -161,3 +161,4 @@ INSERT INTO events (
     NOW(),
     NOW()
 );
+

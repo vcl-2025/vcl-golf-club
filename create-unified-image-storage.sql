@@ -48,3 +48,4 @@ SELECT
   created_at
 FROM storage.buckets 
 WHERE id = 'golf-club-images';
+

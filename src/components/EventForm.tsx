@@ -38,7 +38,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
   useEffect(() => {
     if (event) {
       // 编辑模式 - 填充现有数据
-      console.log('编辑事件数据:', event)
+      // console.log('编辑事件数据:', event)
       isInitializing.current = true
       
       // 格式化日期为 datetime-local 格式
@@ -71,9 +71,9 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         status: event.status || 'active'
       })
       
-      console.log('EventForm 设置表单数据，description:', event.description);
-  console.log('EventForm 设置表单数据，description 长度:', event.description?.length);
-  console.log('EventForm 设置表单数据，description 前100字符:', event.description?.substring(0, 100));
+      // console.log('EventForm 设置表单数据，description:', event.description);
+  // console.log('EventForm 设置表单数据，description 长度:', event.description?.length);
+  // console.log('EventForm 设置表单数据，description 前100字符:', event.description?.substring(0, 100));
       
       // 延迟设置初始化完成标志
       setTimeout(() => {
@@ -157,8 +157,8 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
       }
 
       // 准备事件数据
-      console.log('提交时的 formData.description:', formData.description);
-      console.log('提交时的 formData.description 长度:', formData.description?.length);
+      // console.log('提交时的 formData.description:', formData.description);
+      // console.log('提交时的 formData.description 长度:', formData.description?.length);
       
       const eventData = {
         title: formData.title,
@@ -226,7 +226,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -268,7 +268,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                   <TinyMCEEditor
                     content={formData.description}
                     onChange={(content) => {
-                      console.log('TinyMCE onChange:', content);
+                      // console.log('TinyMCE onChange:', content);
                       setFormData(prevData => ({ ...prevData, description: content }))
                     }}
                     placeholder="请输入活动描述..."
@@ -481,8 +481,8 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                             src={qrCodePreview}
                             alt="二维码预览"
                             className="max-w-full max-h-48 mx-auto mb-2 rounded-lg"
-                            onLoad={() => console.log('图片加载成功')}
-                            onError={() => console.log('图片加载失败')}
+                            onLoad={() => {/* console.log('图片加载成功') */}}
+                            onError={() => {/* console.log('图片加载失败') */}}
                           />
                           <p className="text-sm text-gray-600">点击更换二维码</p>
                         </div>

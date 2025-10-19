@@ -52,3 +52,4 @@ async function checkBuckets() {
 
 // 执行检查
 checkBuckets().catch(console.error)
+

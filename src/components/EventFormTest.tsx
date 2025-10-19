@@ -22,23 +22,23 @@ export default function EventFormTest() {
   })
 
   const handleQRCodeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('=== 二维码文件选择事件触发 ===')
+    // // console.log('=== 二维码文件选择事件触发 ===')
     const file = e.target.files?.[0]
-    console.log('选择的二维码文件:', file)
+    // // console.log('选择的二维码文件:', file)
     
     if (file) {
-      console.log('开始处理二维码文件')
+      // // console.log('开始处理二维码文件')
       setQrCodeFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {
         const result = reader.result as string
-        console.log('二维码文件读取完成，设置预览')
+        // console.log('二维码文件读取完成，设置预览')
         setQrCodePreview(result)
-        console.log('二维码预览状态已设置')
+        // console.log('二维码预览状态已设置')
       }
       reader.readAsDataURL(file)
     } else {
-      console.log('没有选择二维码文件')
+      // console.log('没有选择二维码文件')
     }
   }
 
@@ -52,7 +52,7 @@ export default function EventFormTest() {
               创建活动
             </h2>
             <button
-              onClick={() => console.log('关闭')}
+              onClick={() => // console.log('关闭')}
               className="text-gray-400 hover:text-gray-600"
             >
               <X className="w-6 h-6" />
@@ -330,7 +330,7 @@ export default function EventFormTest() {
             <div className="flex space-x-4">
               <button
                 type="button"
-                onClick={() => console.log('关闭')}
+                onClick={() => // console.log('关闭')}
                 className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 取消
@@ -338,10 +338,10 @@ export default function EventFormTest() {
               <button
                 type="button"
                 onClick={() => {
-                  console.log('=== 表单数据测试 ===')
-                  console.log('表单数据:', formData)
-                  console.log('二维码文件:', qrCodeFile)
-                  console.log('二维码预览:', qrCodePreview)
+                  // console.log('=== 表单数据测试 ===')
+                  // console.log('表单数据:', formData)
+                  // console.log('二维码文件:', qrCodeFile)
+                  // console.log('二维码预览:', qrCodePreview)
                 }}
                 className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
