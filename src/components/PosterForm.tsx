@@ -211,32 +211,33 @@ export default function PosterForm({ poster, onClose, onSuccess }: PosterFormPro
                 海报图片 *
               </label>
 
-              {/* 图片预览 */}
-              {imagePreview && (
-                <div className="mb-4">
-                  <img
-                    src={imagePreview}
-                    alt="预览"
-                    className="w-full max-h-96 object-contain rounded-lg border border-gray-200"
-                  />
-                </div>
-              )}
-
-              {/* 上传按钮 */}
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 cursor-pointer transition-colors">
-                  <Upload className="w-4 h-4 mr-2" />
-                  {imagePreview ? '更换图片' : '上传图片'}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
+              {/* 上传区域 */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="poster-form-image-upload"
+                />
+                <label htmlFor="poster-form-image-upload" className="cursor-pointer block">
+                  {imagePreview ? (
+                    <div>
+                      <img
+                        src={imagePreview}
+                        alt="海报预览"
+                        className="max-w-full max-h-48 mx-auto mb-2 rounded-lg"
+                      />
+                      <p className="text-sm text-gray-600">点击更换海报</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600 mb-1">点击上传海报图片</p>
+                      <p className="text-xs text-gray-500">支持 JPG、PNG、GIF 格式，最大 5MB</p>
+                    </div>
+                  )}
                 </label>
-                <span className="text-sm text-gray-500">
-                  支持 JPG, PNG, GIF 格式，最大 5MB
-                </span>
               </div>
             </div>
 
