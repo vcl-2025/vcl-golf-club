@@ -15,6 +15,9 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
   const [qrCodeFile, setQrCodeFile] = useState<File | null>(null)
   const [qrCodePreview, setQrCodePreview] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imageUploadMethod, setImageUploadMethod] = useState<'url' | 'upload'>('url')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>('')
   const isInitializing = useRef(true)
   const [formData, setFormData] = useState({
     title: '',
@@ -128,6 +131,20 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
     }
   }
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    
+    if (file) {
+      setImageFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const result = reader.result as string
+        setImagePreview(result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -156,6 +173,28 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         qrCodeUrl = publicUrl
       }
 
+      // 处理活动图片
+      let imageUrl = formData.image_url
+      if (imageUploadMethod === 'upload' && imageFile && supabase) {
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `events/${Date.now()}.${fileExt}`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('golf-club-images')
+          .upload(fileName, imageFile)
+
+        if (uploadError) {
+          console.error('上传活动图片失败:', uploadError)
+          throw new Error('上传活动图片失败')
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('golf-club-images')
+          .getPublicUrl(fileName)
+
+        imageUrl = publicUrl
+      }
+
       // 准备事件数据
       // console.log('提交时的 formData.description:', formData.description);
       // console.log('提交时的 formData.description 长度:', formData.description?.length);
@@ -170,7 +209,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         max_participants: typeof formData.max_participants === 'string' ? parseInt(formData.max_participants) || 50 : formData.max_participants,
         registration_deadline: formData.registration_deadline ? new Date(formData.registration_deadline + ':00').toISOString() : null,
         rules: formData.rules,
-        image_url: formData.image_url,
+        image_url: imageUrl,
         payment_qr_code: qrCodeUrl,
         payment_emt_email: formData.payment_emt_email,
         payment_instructions: formData.payment_instructions,
@@ -397,22 +436,89 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                 />
               </div>
 
-              {/* 活动图片URL */}
+              {/* 活动图片 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <ImageIcon className="w-4 h-4 inline mr-2" />
-                  活动图片URL
+                  活动图片
                 </label>
-                <input
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="input-field"
-                  placeholder="https://example.com/image.jpg"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  留空将使用默认图片
-                </p>
+                
+                {/* Radio按钮选择上传方式 */}
+                <div className="mb-4">
+                  <div className="flex space-x-6">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="imageUploadMethod"
+                        value="url"
+                        checked={imageUploadMethod === 'url'}
+                        onChange={(e) => setImageUploadMethod(e.target.value as 'url' | 'upload')}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">URL输入</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="imageUploadMethod"
+                        value="upload"
+                        checked={imageUploadMethod === 'upload'}
+                        onChange={(e) => setImageUploadMethod(e.target.value as 'url' | 'upload')}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700">文件上传</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* URL输入方式 */}
+                {imageUploadMethod === 'url' && (
+                  <div>
+                    <input
+                      type="url"
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                      className="input-field"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      留空将使用默认图片
+                    </p>
+                  </div>
+                )}
+
+                {/* 文件上传方式 - 与上传证明相同样式 */}
+                {imageUploadMethod === 'upload' && (
+                  <div>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileChange}
+                        className="hidden"
+                        id="event-image-upload"
+                      />
+                      <label htmlFor="event-image-upload" className="cursor-pointer block">
+                        {imagePreview ? (
+                          <div>
+                            <img
+                              src={imagePreview}
+                              alt="活动图片预览"
+                              className="max-w-full max-h-48 mx-auto mb-2 rounded-lg"
+                            />
+                            <p className="text-sm text-gray-600">点击更换图片</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                            <p className="text-gray-600 mb-1">点击上传活动图片</p>
+                            <p className="text-xs text-gray-500">支持 JPG、PNG、GIF 格式，建议尺寸 800x600</p>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -437,14 +543,27 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   活动状态
                 </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="active">正常活动</option>
-                  <option value="cancelled">已取消</option>
-                </select>
+                {event ? (
+                  // 编辑模式：可以选择状态
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="input-field"
+                  >
+                    <option value="active">正常活动</option>
+                    <option value="cancelled">已取消</option>
+                  </select>
+                ) : (
+                  // 新建模式：只显示状态，不可选择
+                  <div className="input-field bg-gray-50 text-gray-700 cursor-not-allowed">
+                    正常活动
+                  </div>
+                )}
+                {!event && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    新建活动默认为正常状态
+                  </p>
+                )}
               </div>
               <div>
                 {/* 空占位符，保持布局平衡 */}
