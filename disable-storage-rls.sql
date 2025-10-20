@@ -6,3 +6,5 @@ SELECT schemaname, tablename, rowsecurity
 FROM pg_tables 
 WHERE tablename = 'objects' AND schemaname = 'storage';
 
+
+

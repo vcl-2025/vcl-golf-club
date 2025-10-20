@@ -90,3 +90,5 @@ SELECT 'investment_projects', COUNT(*) FROM investment_projects WHERE qrcode_url
 3. **图片不显示** - 检查路径和权限设置
 4. **上传失败** - 检查新存储桶权限
 
+
+

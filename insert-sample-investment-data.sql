@@ -151,3 +151,5 @@ UPDATE investment_projects SET current_amount = 7300.00 WHERE title = '环保绿
 UPDATE investment_projects SET current_amount = 18000.00 WHERE title = '会员活动中心建设';
 UPDATE investment_projects SET current_amount = 4500.00 WHERE title = '智能管理系统';
 
+
+

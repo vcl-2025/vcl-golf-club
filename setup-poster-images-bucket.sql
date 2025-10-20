@@ -40,3 +40,5 @@ SELECT
 FROM storage.buckets 
 WHERE id = 'poster-images';
 
+
+

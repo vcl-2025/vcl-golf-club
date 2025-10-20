@@ -194,3 +194,5 @@ WHERE e.title LIKE '%赛%' OR e.title LIKE '%锦标赛%' OR e.title LIKE '%公�
 GROUP BY e.id, e.title, e.start_time
 ORDER BY e.start_time;
 
+
+

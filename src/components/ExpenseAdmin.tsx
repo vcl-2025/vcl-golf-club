@@ -299,6 +299,17 @@ export default function ExpenseAdmin() {
     }
   }
 
+  const getExpenseTypeColor = (type: string) => {
+    switch (type) {
+      case 'equipment': return 'bg-blue-100 text-blue-800'
+      case 'maintenance': return 'bg-green-100 text-green-800'
+      case 'activity': return 'bg-purple-100 text-purple-800'
+      case 'salary': return 'bg-orange-100 text-orange-800'
+      case 'other': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   const getPaymentMethodText = (method: string) => {
     switch (method) {
       case 'cash': return '现金'
@@ -399,7 +410,7 @@ export default function ExpenseAdmin() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
+      <div className="bg-white rounded-3xl p-6 shadow-sm">
         {/* 页面标题和添加按钮 */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -545,12 +556,12 @@ export default function ExpenseAdmin() {
         </div>
 
         {/* 费用列表 */}
-        <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-200">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                   onClick={() => handleSort('expense_type')}
                 >
                   <div className="flex items-center space-x-1">
@@ -563,7 +574,7 @@ export default function ExpenseAdmin() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                   onClick={() => handleSort('title')}
                 >
                   <div className="flex items-center space-x-1">
@@ -576,7 +587,7 @@ export default function ExpenseAdmin() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                   onClick={() => handleSort('amount')}
                 >
                   <div className="flex items-center space-x-1">
@@ -589,7 +600,7 @@ export default function ExpenseAdmin() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                   onClick={() => handleSort('expense_date')}
                 >
                   <div className="flex items-center space-x-1">
@@ -601,9 +612,9 @@ export default function ExpenseAdmin() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">支付方式</th>
+                <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">支付方式</th>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center space-x-1">
@@ -615,31 +626,31 @@ export default function ExpenseAdmin() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">操作</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {getSortedExpenses().map((expense) => (
-                <tr key={expense.id} className="hover:bg-gray-50">
+                <tr key={expense.id} className="hover:bg-green-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getExpenseTypeColor(expense.expense_type)}`}>
                       {getExpenseTypeText(expense.expense_type)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{expense.title}</div>
+                    <div className="text-base font-medium text-gray-900">{expense.title}</div>
                     {expense.notes && (
-                      <div className="text-sm text-gray-500 truncate max-w-xs">{expense.notes}</div>
+                      <div className="text-base text-gray-500 truncate max-w-xs">{expense.notes}</div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600">
+                  <td className="px-6 py-4 whitespace-nowrap text-base font-bold text-red-600">
                     {formatAmount(parseFloat(expense.amount.toString()))}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-6 py-4 whitespace-nowrap text-base text-gray-600">
                     {formatDate(expense.expense_date)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
                       {getPaymentMethodText(expense.payment_method)}
                     </span>
                   </td>

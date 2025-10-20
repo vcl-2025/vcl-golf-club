@@ -9,3 +9,5 @@ SELECT
 FROM pg_tables 
 WHERE tablename = 'events' AND schemaname = 'public';
 
+
+

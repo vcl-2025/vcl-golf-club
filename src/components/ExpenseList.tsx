@@ -93,6 +93,17 @@ export default function ExpenseList() {
     }
   }
 
+  const getExpenseTypeColor = (type: string) => {
+    switch (type) {
+      case 'equipment': return 'bg-blue-100 text-blue-800'
+      case 'maintenance': return 'bg-green-100 text-green-800'
+      case 'activity': return 'bg-purple-100 text-purple-800'
+      case 'salary': return 'bg-orange-100 text-orange-800'
+      case 'other': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   const getPaymentMethodText = (method: string) => {
     switch (method) {
       case 'cash': return '现金'
@@ -248,7 +259,7 @@ export default function ExpenseList() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getExpenseTypeColor(expense.expense_type)}`}>
                       {getExpenseTypeText(expense.expense_type)}
                     </span>
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

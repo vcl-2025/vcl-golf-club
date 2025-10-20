@@ -12,3 +12,5 @@ FROM pg_tables
 WHERE tablename IN ('events', 'event_registrations', 'user_profiles') 
 AND schemaname = 'public';
 
+
+

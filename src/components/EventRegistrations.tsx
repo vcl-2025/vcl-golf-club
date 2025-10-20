@@ -231,18 +231,18 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">参赛者</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">联系方式</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">会员号</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">报名时间</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">支付状态</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">备注</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">操作</th>
+                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">参赛者</th>
+                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">联系方式</th>
+                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">会员号</th>
+                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">报名时间</th>
+                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">支付状态</th>
+                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">备注</th>
+                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRegistrations.map((registration) => (
-                      <tr key={registration.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={registration.id} className="border-b border-gray-100 hover:bg-green-50">
                         <td className="py-3 px-4">
                           <div className="font-medium text-gray-900">{registration.user_name}</div>
                           <div className="text-sm text-gray-500">{registration.user_email}</div>

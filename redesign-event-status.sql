@@ -71,3 +71,5 @@ ORDER BY start_time;
 COMMENT ON FUNCTION get_display_status IS '根据时间和存储状态计算显示状态';
 COMMENT ON VIEW events_with_display_status IS '包含计算后显示状态的活动视图';
 
+
+

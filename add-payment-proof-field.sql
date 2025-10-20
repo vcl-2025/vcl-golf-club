@@ -32,3 +32,5 @@ FROM information_schema.columns
 WHERE table_name = 'event_registrations' 
 AND column_name = 'payment_proof';
 
+
+

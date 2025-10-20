@@ -28,8 +28,15 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
     fetchRegistrations()
   }, [eventId])
 
+
   const fetchRegistrations = async () => {
     try {
+      // 检查 supabase 连接
+      if (!supabase) {
+        showError('数据库连接不可用')
+        return
+      }
+      
       // 先获取报名记录
       const { data: registrationsData, error: registrationsError } = await supabase
         .from('event_registrations')
@@ -75,6 +82,13 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
 
   const handleApproval = async (registrationId: string, approved: boolean) => {
     setProcessingId(registrationId)
+    
+    // 检查 supabase 连接
+    if (!supabase) {
+      showError('数据库连接不可用')
+      return
+    }
+    
     try {
       if (approved) {
         // 批准：更新状态
@@ -99,7 +113,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
           .eq('id', registrationId)
 
         if (error) throw error
-        showSuccess('报名申请已取消，用户可以重新报名')
+        showSuccess('报名申请已取消')
       }
 
       setApprovalNotes('')
@@ -122,6 +136,13 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
     if (selectedIds.length === 0) return
 
     setProcessingId('batch')
+    
+    // 检查 supabase 连接
+    if (!supabase) {
+      showError('数据库连接不可用')
+      return
+    }
+    
     try {
       const { error } = await supabase
         .from('event_registrations')
@@ -135,7 +156,6 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
         .in('id', selectedIds)
 
       if (error) throw error
-
       showSuccess(`已批量批准 ${selectedIds.length} 个报名申请`)
       setShowBatchApprovalModal(false)
       setSelectedIds([])

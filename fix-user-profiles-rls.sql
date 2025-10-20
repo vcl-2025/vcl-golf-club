@@ -28,3 +28,5 @@ CREATE POLICY "Authenticated users can update profiles" ON user_profiles
 -- 验证策略
 SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = 'user_profiles' ORDER BY policyname;
 
+
+

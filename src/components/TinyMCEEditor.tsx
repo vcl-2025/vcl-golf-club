@@ -158,7 +158,7 @@ export default function TinyMCEEditor({
               progress(0)
               
               // 上传到 Supabase
-              const result = await uploadImageToSupabase(file, 'poster-images', 'articles')
+              const result = await uploadImageToSupabase(file, 'golf-club-images', 'articles')
               
               if (result.success && result.url) {
                 progress(100)

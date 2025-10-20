@@ -70,3 +70,5 @@ async function testRegistrationData() {
 // 运行测试
 testRegistrationData()
 
+
+

@@ -55,3 +55,5 @@ COMMENT ON POLICY "允许所有人查看poster-images" ON storage.objects IS '�
 COMMENT ON POLICY "允许用户更新poster-images中的文章图片" ON storage.objects IS '允许用户更新 poster-images/articles 目录中的图片';
 COMMENT ON POLICY "允许用户删除poster-images中的文章图片" ON storage.objects IS '允许用户删除 poster-images/articles 目录中的图片';
 
+
+

@@ -33,3 +33,5 @@ GRANT EXECUTE ON FUNCTION get_batch_event_stats() TO authenticated;
 COMMENT ON FUNCTION get_batch_event_stats() IS
 '批量获取所有活动的统计信息，用于优化EventList组件性能';
 
+
+

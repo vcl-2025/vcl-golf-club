@@ -165,3 +165,5 @@ LEFT JOIN investments i ON p.id = i.project_id
 GROUP BY p.id, p.title, p.target_amount, p.current_amount
 ORDER BY p.created_at DESC;
 
+
+

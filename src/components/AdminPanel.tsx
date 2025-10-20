@@ -67,7 +67,11 @@ interface Poster {
   created_at: string
 }
 
-export default function AdminPanel() {
+interface AdminPanelProps {
+  adminMenuVisible?: boolean
+}
+
+export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps) {
   const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members'>('dashboard')
   const [selectedEventForRegistration, setSelectedEventForRegistration] = useState<Event | null>(null)
   const [events, setEvents] = useState<Event[]>([])
@@ -414,90 +418,106 @@ export default function AdminPanel() {
   return (
     <div className="space-y-6">
       {/* 管理员导航 */}
-      <div className="bg-green-50 rounded-2xl p-6 shadow-sm sticky top-0 z-[60]">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">管理员控制台</h1>
-          <div className="flex space-x-2">
+      <div 
+        className={`bg-gradient-to-r from-green-700 to-green-800 rounded-3xl p-4 shadow-lg sticky top-0 z-[60] transition-all duration-400 ease-in-out ${
+          adminMenuVisible 
+            ? 'opacity-100 transform translate-y-0 scale-100' 
+            : 'opacity-0 transform -translate-y-4 scale-95 pointer-events-none'
+        }`}
+        style={{
+          transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out'
+        }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-green-500/30 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+              <BarChart3 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">管理员控制台</h1>
+              <p className="text-xs text-green-200 font-medium">系统管理中心</p>
+            </div>
+          </div>
+          <div className="flex space-x-3">
             <button
               onClick={() => setCurrentView('dashboard')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'dashboard' 
-                  ? 'bg-golf-600 text-white' 
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105' 
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
               }`}
             >
-              <BarChart3 className="w-4 h-4 inline mr-2" />
+              <BarChart3 className="w-4 h-4 mr-2" />
               数据统计
             </button>
             <button
               onClick={() => setCurrentView('events')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'events'
-                  ? 'bg-golf-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
               }`}
             >
-              <Calendar className="w-4 h-4 inline mr-2" />
+              <Calendar className="w-4 h-4 mr-2" />
               活动管理
             </button>
             <button
               onClick={() => setCurrentView('posters')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'posters'
-                  ? 'bg-golf-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
               }`}
             >
-              <ImageIcon className="w-4 h-4 inline mr-2" />
+              <ImageIcon className="w-4 h-4 mr-2" />
               海报管理
             </button>
             <button
               onClick={() => setCurrentView('scores')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'scores'
-                  ? 'bg-golf-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
               }`}
             >
-              <Trophy className="w-4 h-4 inline mr-2" />
+              <Trophy className="w-4 h-4 mr-2" />
               成绩管理
             </button>
             <button
               onClick={() => setCurrentView('investments')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'investments'
-                  ? 'bg-golf-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
               }`}
             >
-              <DollarSign className="w-4 h-4 inline mr-2" />
+              <DollarSign className="w-4 h-4 mr-2" />
               投资管理
             </button>
             <button
               onClick={() => setCurrentView('expenses')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'expenses'
-                  ? 'bg-golf-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
               }`}
             >
-              <Receipt className="w-4 h-4 inline mr-2" />
+              <Receipt className="w-4 h-4 mr-2" />
               费用管理
             </button>
             <button
               onClick={() => setCurrentView('members')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'members'
-                  ? 'bg-golf-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
               }`}
             >
-              <Users className="w-4 h-4 inline mr-2" />
+              <Users className="w-4 h-4 mr-2" />
               会员管理
             </button>
           </div>
         </div>
-
       </div>
 
       {/* 数据统计 */}
@@ -597,12 +617,12 @@ export default function AdminPanel() {
           )}
 
           {/* 活动列表 */}
-          <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-200">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none w-48"
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-48"
                     onClick={() => handleSort('title')}
                   >
                     <div className="flex items-center space-x-1">
@@ -615,7 +635,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none w-32"
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-32"
                     onClick={() => handleSort('start_time')}
                   >
                     <div className="flex items-center space-x-1">
@@ -628,7 +648,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none w-64"
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-64"
                     onClick={() => handleSort('location')}
                   >
                     <div className="flex items-center space-x-1">
@@ -641,7 +661,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                     onClick={() => handleSort('fee')}
                   >
                     <div className="flex items-center space-x-1">
@@ -654,7 +674,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                     onClick={() => handleSort('registrations')}
                   >
                     <div className="flex items-center space-x-1">
@@ -667,7 +687,7 @@ export default function AdminPanel() {
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                     onClick={() => handleSort('status')}
                   >
                     <div className="flex items-center space-x-1">
@@ -679,7 +699,7 @@ export default function AdminPanel() {
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                  <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">操作</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -691,7 +711,7 @@ export default function AdminPanel() {
                   const matchesStatus = statusFilter === 'all' || status === statusFilter
                   return matchesSearch && matchesStatus
                 }).map((event) => (
-                  <tr key={event.id} className="hover:bg-gray-50">
+                  <tr key={event.id} className="hover:bg-green-50">
                     <td className="px-6 py-4 w-48">
                       <div className="font-medium text-gray-900 truncate" title={event.title}>{event.title}</div>
                     </td>

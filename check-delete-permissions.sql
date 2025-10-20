@@ -29,3 +29,5 @@ FROM information_schema.table_privileges
 WHERE table_name = 'event_registrations' 
 AND grantee = current_user;
 
+
+

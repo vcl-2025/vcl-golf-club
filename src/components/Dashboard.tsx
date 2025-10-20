@@ -67,7 +67,15 @@ export default function Dashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [adminMenuVisible, setAdminMenuVisible] = useState(true)
   const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'admin'>('dashboard')
+
+  // 监听用户菜单状态变化
+  useEffect(() => {
+    if (!userMenuOpen && currentView === 'admin') {
+      setAdminMenuVisible(true)
+    }
+  }, [userMenuOpen, currentView])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedPoster, setSelectedPoster] = useState<Poster | null>(null)
   const [selectedScore, setSelectedScore] = useState<Score | null>(null)
@@ -393,7 +401,10 @@ export default function Dashboard() {
               </button>
               {isAdmin && (
                 <button 
-                  onClick={() => setCurrentView('admin')}
+                  onClick={() => {
+                    setCurrentView('admin')
+                    setAdminMenuVisible(true)
+                  }}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                     currentView === 'admin' 
                       ? 'bg-golf-600 text-white' 
@@ -419,7 +430,13 @@ export default function Dashboard() {
               {/* Desktop User Dropdown */}
               <div className="relative hidden md:block user-dropdown-container">
                 <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  onClick={() => {
+                    // 如果在管理后台，打开用户菜单时隐藏管理员菜单
+                    if (currentView === 'admin' && !userMenuOpen) {
+                      setAdminMenuVisible(false)
+                    }
+                    setUserMenuOpen(!userMenuOpen)
+                  }}
                   className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-2 transition-colors"
                 >
                   <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden">
@@ -445,13 +462,9 @@ export default function Dashboard() {
                 </button>
 
                 {/* Dropdown Menu */}
-                {userMenuOpen && createPortal(
+                {userMenuOpen && (
                   <div 
-                    className="fixed w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[100] max-h-96 overflow-y-auto" 
-                    style={{ 
-                      top: '70px',
-                      right: '200px'
-                    }}
+                    className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[99999] max-h-96 overflow-y-auto transition-all duration-300 ease-out transform animate-in slide-in-from-top-2 fade-in" 
                     onClick={(e) => e.stopPropagation()}
                   >
                     {/* User Info Section */}
@@ -485,9 +498,15 @@ export default function Dashboard() {
                     {/* Menu Items */}
                     <div className="py-1">
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
                           setProfileModalOpen(true)
                           setUserMenuOpen(false)
+                          // 恢复管理员菜单显示
+                          if (currentView === 'admin') {
+                            setAdminMenuVisible(true)
+                          }
                         }}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
@@ -496,9 +515,12 @@ export default function Dashboard() {
                       </button>
                       {isAdmin && (
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
                             setCurrentView('admin')
                             setUserMenuOpen(false)
+                            setAdminMenuVisible(true)
                           }}
                           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                         >
@@ -507,9 +529,15 @@ export default function Dashboard() {
                         </button>
                       )}
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
                           handleSignOut()
                           setUserMenuOpen(false)
+                          // 恢复管理员菜单显示
+                          if (currentView === 'admin') {
+                            setAdminMenuVisible(true)
+                          }
                         }}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
@@ -517,16 +545,22 @@ export default function Dashboard() {
                         退出登录
                       </button>
                     </div>
-                  </div>,
-                  document.body
+                  </div>
                 )}
               </div>
 
               {/* Click outside to close dropdown */}
               {userMenuOpen && (
                 <div 
-                  className="fixed inset-0 z-[90]" 
-                  onClick={() => setUserMenuOpen(false)}
+                  className="fixed inset-0 z-[99998]" 
+                  style={{ pointerEvents: 'auto' }}
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    // 恢复管理员菜单显示
+                    if (currentView === 'admin') {
+                      setAdminMenuVisible(true)
+                    }
+                  }}
                 ></div>
               )}
             </div>
@@ -632,6 +666,7 @@ export default function Dashboard() {
                     onClick={() => {
                       setCurrentView('admin')
                       setMobileMenuOpen(false)
+                      setAdminMenuVisible(true)
                     }}
                     className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
                       currentView === 'admin' 
@@ -1254,7 +1289,7 @@ export default function Dashboard() {
             <EventReviews />
           </div>
         ) : currentView === 'admin' && isAdmin ? (
-          <AdminPanel />
+          <AdminPanel adminMenuVisible={adminMenuVisible} />
         ) : null}
       </main>
 

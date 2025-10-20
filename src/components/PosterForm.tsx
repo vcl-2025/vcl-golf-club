@@ -75,7 +75,7 @@ export default function PosterForm({ poster, onClose, onSuccess }: PosterFormPro
   const uploadImage = async (file: File): Promise<string> => {
     const fileExt = file.name.split('.').pop()
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-    const filePath = fileName
+    const filePath = `posters/${fileName}` // 存储到 posters 文件夹
 
     const { error: uploadError } = await supabase.storage
       .from('golf-club-images')

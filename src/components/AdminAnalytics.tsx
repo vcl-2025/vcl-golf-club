@@ -699,36 +699,45 @@ const AdminAnalytics = () => {
   }
 
   return (
-    <div className="space-y-6 bg-white p-6 rounded-2xl">
+    <div className="space-y-6 bg-gradient-to-br from-slate-50 to-gray-100 p-6 rounded-3xl shadow-xl border border-slate-200">
       {/* 第一行：用户活跃度趋势 + 待处理任务 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 用户活跃度趋势 */}
-        <div className="lg:col-span-2 bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
+        <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-teal-200 hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">用户活跃度趋势</h3>
+              <p className="text-sm text-teal-600 font-medium">登录数据统计</p>
+            </div>
+          </div>
           <div className="h-80" ref={loginChartRef}></div>
         </div>
 
         {/* 待处理任务 */}
-        <div className="lg:col-span-1 bg-gradient-to-br from-orange-25 to-orange-50 rounded-2xl p-6 shadow-lg border border-orange-100">
+        <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300">
           <div className="flex items-center mb-6">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mr-3 shadow-md">
-              <Clock className="w-4 h-4 text-white" />
+            <div className="w-10 h-10 bg-gray-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+              <Clock className="w-5 h-5 text-white" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-gray-900">待处理任务</h3>
-              <p className="text-xs text-orange-600 font-medium">需要您关注的事项</p>
+              <p className="text-xs text-gray-600 font-medium">需要您关注的事项</p>
             </div>
           </div>
           <div className="space-y-4">
             {/* 活动报名待批 */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-blue-200 shadow-sm hover:shadow-md transition-all duration-200">
+            <div className="bg-white rounded-2xl p-4 border border-blue-200 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mr-3 shadow-sm">
-                    <Users className="w-3.5 h-3.5 text-white" />
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3 shadow-md">
+                    <Users className="w-4 h-4 text-white" />
                   </div>
                   <div>
                     <span className="text-sm font-semibold text-gray-800">活动报名待批</span>
-                    <p className="text-xs text-gray-500">需要审核的报名申请</p>
+                    <p className="text-xs text-blue-600">需要审核的报名申请</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -739,20 +748,20 @@ const AdminAnalytics = () => {
             </div>
 
             {/* 投资确认待批 */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-green-200 shadow-sm hover:shadow-md transition-all duration-200">
+            <div className="bg-white rounded-2xl p-4 border border-purple-400 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="w-7 h-7 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mr-3 shadow-sm">
-                    <DollarSign className="w-3.5 h-3.5 text-white" />
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center mr-3 shadow-md">
+                    <DollarSign className="w-4 h-4 text-white" />
                   </div>
                   <div>
                     <span className="text-sm font-semibold text-gray-800">投资确认待批</span>
-                    <p className="text-xs text-gray-500">需要确认的投资申请</p>
+                    <p className="text-xs text-purple-800">需要确认的投资申请</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-3xl font-bold text-green-600">{pendingInvestments}</span>
-                  <p className="text-xs text-green-500 font-medium">待处理</p>
+                  <span className="text-3xl font-bold text-purple-800">{pendingInvestments}</span>
+                  <p className="text-xs text-purple-700 font-medium">待处理</p>
                 </div>
               </div>
             </div>
@@ -789,19 +798,46 @@ const AdminAnalytics = () => {
       </div>
 
       {/* 第二行：成绩趋势分析 */}
-      <div className="bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
+      <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-teal-200 hover:shadow-lg transition-all duration-300">
+        <div className="flex items-center mb-4">
+          <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+            <Trophy className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">成绩趋势分析</h3>
+            <p className="text-sm text-teal-600 font-medium">比赛成绩统计</p>
+          </div>
+        </div>
         <div className="h-80" ref={scoreChartRef}></div>
       </div>
 
       {/* 第三行：今年费用分析 + 历年费用趋势分析 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 今年费用分析 - 1/3 宽度 */}
-        <div className="lg:col-span-1 bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
+        <div className="lg:col-span-1 bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-teal-200 hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+              <Receipt className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">今年费用分析</h3>
+              <p className="text-sm text-teal-600 font-medium">费用分类统计</p>
+            </div>
+          </div>
           <div className="h-80" ref={pieChartRef}></div>
         </div>
 
         {/* 历年费用趋势分析 - 2/3 宽度 */}
-        <div className="lg:col-span-2 bg-gray-25 rounded-2xl p-6 shadow-md border border-gray-200">
+        <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-sm border border-teal-200 hover:shadow-lg transition-all duration-300">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+              <BarChart3 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">历年费用趋势</h3>
+              <p className="text-sm text-teal-600 font-medium">费用变化趋势</p>
+            </div>
+          </div>
           <div className="h-80" ref={barChartRef}></div>
         </div>
       </div>

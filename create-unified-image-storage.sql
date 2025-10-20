@@ -49,3 +49,5 @@ SELECT
 FROM storage.buckets 
 WHERE id = 'golf-club-images';
 
+
+

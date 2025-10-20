@@ -31,3 +31,5 @@ COMMENT ON COLUMN events.article_author_id IS '文章作者ID';
 COMMENT ON COLUMN events.article_excerpt IS '文章摘要（用于列表展示）';
 COMMENT ON COLUMN events.article_featured_image_url IS '文章特色图片URL';
 
+
+

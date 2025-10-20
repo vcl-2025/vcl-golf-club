@@ -41,3 +41,5 @@ SELECT 'RLS policies created' as status, policyname, cmd FROM pg_policies WHERE 
 
 
 
+
+

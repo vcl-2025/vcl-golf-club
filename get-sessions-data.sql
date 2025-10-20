@@ -38,3 +38,5 @@ GRANT EXECUTE ON FUNCTION get_sessions_data() TO authenticated;
 
 
 
+
+

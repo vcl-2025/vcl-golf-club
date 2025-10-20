@@ -32,3 +32,5 @@ FOR ALL USING (
 CREATE POLICY "允许所有人查看 event-images" ON storage.objects
 FOR SELECT USING (bucket_id = 'event-images');
 
+
+
