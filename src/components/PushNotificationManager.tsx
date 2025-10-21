@@ -12,6 +12,22 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
 
+  // VAPID公钥转换函数
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
   useEffect(() => {
     checkSupport();
     checkPermission();
@@ -89,9 +105,13 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
         return;
       }
       
+      // 将VAPID公钥转换为Uint8Array
+      const vapidPublicKey = 'BD185vkWB_7UMBz0jv2HYU3KvTL2s8vkMEy7_7b6fyVT67Ob3JLP-x5CMl926DVN-NJs5y7EK7TSJfc0QMuSWVE';
+      const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+      
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: 'BD185vkWB_7UMBz0jv2HYU3KvTL2s8vkMEy7_7b6fyVT67Ob3JLP-x5CMl926DVN-NJs5y7EK7TSJfc0QMuSWVE'
+        applicationServerKey: applicationServerKey
       });
 
       setSubscription(subscription);
