@@ -91,7 +91,7 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
       
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: process.env.REACT_APP_VAPID_PUBLIC_KEY
+        applicationServerKey: 'BD185vkWB_7UMBz0jv2HYU3KvTL2s8vkMEy7_7b6fyVT67Ob3JLP-x5CMl926DVN-NJs5y7EK7TSJfc0QMuSWVE'
       });
 
       setSubscription(subscription);
@@ -114,9 +114,26 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
   };
 
   const saveSubscription = async (subscription: PushSubscription) => {
-    // 这里需要调用API保存订阅信息
-    // 可以使用Supabase Edge Function
-    console.log('保存订阅信息:', subscription);
+    try {
+      if (!supabase) {
+        throw new Error('Supabase客户端未初始化');
+      }
+
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .insert({
+          user_id: userId,
+          subscription: subscription.toJSON()
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('订阅信息保存成功');
+    } catch (error) {
+      console.error('保存订阅信息失败:', error);
+    }
   };
 
   const unsubscribeFromPush = async () => {
