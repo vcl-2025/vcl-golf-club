@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单邮件测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #16a34a;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        button {
+            background: #16a34a;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background: #15803d;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .success {
+            background: #dcfce7;
+            border: 1px solid #16a34a;
+            color: #15803d;
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #ef4444;
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 简单邮件测试</h1>
+        
+        <form id="emailForm">
+            <div class="form-group">
+                <label for="to">收件人邮箱:</label>
+                <input type="email" id="to" placeholder="输入收件人邮箱" required>
+            </div>
+
+            <div class="form-group">
+                <label for="subject">邮件主题:</label>
+                <input type="text" id="subject" placeholder="输入邮件主题" required>
+            </div>
+
+            <div class="form-group">
+                <label for="content">邮件内容:</label>
+                <textarea id="content" rows="4" placeholder="输入邮件内容" required></textarea>
+            </div>
+
+            <button type="submit">发送测试邮件</button>
+        </form>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('emailForm');
+        const result = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const to = document.getElementById('to').value;
+            const subject = document.getElementById('subject').value;
+            const content = document.getElementById('content').value;
+
+            try {
+                // 模拟邮件发送（实际项目中需要调用真实的邮件服务）
+                const emailData = {
+                    to: to,
+                    subject: subject,
+                    content: content,
+                    timestamp: new Date().toISOString()
+                };
+
+                // 模拟发送延迟
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                showResult(`
+                    ✅ 邮件发送成功！<br>
+                    <strong>收件人:</strong> ${to}<br>
+                    <strong>主题:</strong> ${subject}<br>
+                    <strong>内容:</strong> ${content}<br>
+                    <strong>发送时间:</strong> ${new Date().toLocaleString()}<br>
+                    <br>
+                    <em>注意：这是模拟发送，实际项目中需要配置真实的邮件服务。</em>
+                `, 'success');
+
+            } catch (error) {
+                showResult('❌ 发送失败！' + error.message, 'error');
+            }
+        });
+
+        function showResult(message, type) {
+            result.innerHTML = message;
+            result.className = 'result ' + type;
+            result.style.display = 'block';
+        }
+
+        // 页面加载时填充示例数据
+        window.addEventListener('load', () => {
+            document.getElementById('to').value = 'test@example.com';
+            document.getElementById('subject').value = '测试邮件 - 审批通知';
+            document.getElementById('content').value = '这是一封测试邮件，用于验证邮件发送功能。如果您收到这封邮件，说明系统工作正常。';
+        });
+    </script>
+</body>
+</html>

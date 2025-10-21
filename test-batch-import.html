@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批量导入测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background-color: #f8fafc;
+        }
+        .section h2 {
+            color: #4a5568;
+            margin-top: 0;
+        }
+        .csv-example {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        .download-btn {
+            background: #38a169;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .download-btn:hover {
+            background: #2f855a;
+        }
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 批量导入用户测试</h1>
+        
+        <div class="section">
+            <h2>📝 CSV文件格式要求</h2>
+            <p><strong>必需字段：</strong></p>
+            <ul>
+                <li><code>email</code> - 用户邮箱（唯一标识）</li>
+                <li><code>password</code> - 用户密码（至少6位）</li>
+                <li><code>full_name</code> - 用户姓名</li>
+                <li><code>phone</code> - 手机号码</li>
+                <li><code>membership_type</code> - 会员类型（standard/premium/vip）</li>
+            </ul>
+            
+            <p><strong>可选字段：</strong></p>
+            <ul>
+                <li><code>real_name</code> - 真实姓名</li>
+                <li><code>role</code> - 角色（默认member）</li>
+                <li><code>handicap</code> - 差点</li>
+                <li><code>clothing_size</code> - 服装尺寸</li>
+                <li><code>vancouver_residence</code> - 温哥华居住地</li>
+                <li><code>domestic_residence</code> - 国内居住地</li>
+                <li><code>main_club_membership</code> - 主要俱乐部会员</li>
+                <li><code>industry</code> - 行业</li>
+                <li><code>golf_preferences</code> - 高尔夫偏好</li>
+                <li><code>golf_motto</code> - 高尔夫座右铭</li>
+                <li><code>other_interests</code> - 其他兴趣</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>📄 CSV示例</h2>
+            <div class="csv-example">email,password,full_name,real_name,phone,membership_type,role,handicap,clothing_size,vancouver_residence,domestic_residence,main_club_membership,industry,golf_preferences,golf_motto,other_interests
+user13@example.com,password123,张三,张三,13800138013,standard,member,18,L,温哥华,北京,温哥华高尔夫俱乐部,IT,喜欢挑战性球场,永不放弃,摄影
+user14@example.com,password123,李四,李四,13800138014,premium,member,12,M,温哥华,上海,温哥华高尔夫俱乐部,金融,喜欢风景优美的球场,享受高尔夫,旅游
+user15@example.com,password123,王五,王五,13800138015,vip,member,8,XL,温哥华,广州,温哥华高尔夫俱乐部,房地产,喜欢竞技性球场,追求完美,音乐</div>
+            
+            <a href="sample-users-import.csv" class="download-btn" download>📥 下载示例CSV文件</a>
+        </div>
+
+        <div class="section">
+            <h2>🚀 使用步骤</h2>
+            <ol>
+                <li>准备CSV文件（使用上面的示例格式）</li>
+                <li>进入用户管理界面</li>
+                <li>点击"批量导入"按钮（绿色按钮）</li>
+                <li>选择准备好的CSV文件</li>
+                <li>等待导入完成，查看结果</li>
+            </ol>
+        </div>
+
+        <div class="note">
+            <strong>💡 提示：</strong>
+            <ul>
+                <li>确保CSV文件使用UTF-8编码</li>
+                <li>邮箱地址必须唯一，重复邮箱会被跳过</li>
+                <li>密码长度至少6位</li>
+                <li>建议单次导入不超过100个用户</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ 注意事项：</strong>
+            <ul>
+                <li>导入前请备份现有数据</li>
+                <li>确保CSV文件格式正确</li>
+                <li>检查必需字段是否完整</li>
+                <li>导入过程中请勿关闭页面</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🔗 相关链接</h2>
+            <p>
+                <a href="http://localhost:5173" target="_blank">🏠 返回主页</a> | 
+                <a href="http://localhost:5173/admin" target="_blank">👥 用户管理</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

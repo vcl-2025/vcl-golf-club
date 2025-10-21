@@ -19,6 +19,8 @@ interface EventParticipant {
     email: string
   }
   registration_number: string
+  total_strokes?: number
+  rank?: number
 }
 
 interface ScoreData {
@@ -141,14 +143,33 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
       if (profileError) throw profileError
 
+      // 获取成绩数据
+      const { data: scores, error: scoresError } = await supabase
+        .from('scores')
+        .select('user_id, total_strokes, rank')
+        .eq('event_id', eventId)
+
+      if (scoresError) console.error('获取成绩数据失败:', scoresError)
+      
+      // 创建成绩映射
+      const scoreMap = new Map()
+      if (scores) {
+        scores.forEach((score: any) => {
+          scoreMap.set(score.user_id, score)
+        })
+      }
+
       // 合并数据
       const participants = registrations.map((reg, index) => {
         const profile = profiles?.find(p => p.id === reg.user_id)
+        const score = scoreMap.get(reg.user_id)
         return {
           id: reg.id,
           user_id: reg.user_id,
           registration_number: `M${String(index + 1).padStart(3, '0')}`, // 使用序号作为编号
-          user_profiles: profile || { full_name: 'Unknown' }
+          user_profiles: profile || { full_name: 'Unknown' },
+          total_strokes: score?.total_strokes,
+          rank: score?.rank
         }
       })
 
@@ -307,6 +328,19 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
       // console.log('✅ 成绩保存成功')
       setSavedParticipants(new Set([...savedParticipants, selectedParticipant.user_id]))
+
+      // 立即更新左侧列表中的成绩信息
+      setParticipants(prevParticipants => 
+        prevParticipants.map(participant => 
+          participant.user_id === selectedParticipant.user_id
+            ? {
+                ...participant,
+                total_strokes: insertData.total_strokes,
+                rank: insertData.rank
+              }
+            : participant
+        )
+      )
 
       showSuccess(existingScore ? '成绩更新成功' : '成绩保存成功')
       
@@ -476,6 +510,12 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                           <div className="text-xs text-gray-500">
                             #{participant.registration_number}
                           </div>
+                          {participant.total_strokes && (
+                            <div className="text-xs text-blue-600 mt-1">
+                              总杆数: {participant.total_strokes}
+                              {participant.rank && ` | 排名: #${participant.rank}`}
+                            </div>
+                          )}
                         </div>
                         {savedParticipants.has(participant.user_id) && (
                           <CheckCircle className="w-5 h-5 text-green-500" />

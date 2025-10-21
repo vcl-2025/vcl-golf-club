@@ -1,0 +1,24 @@
+{
+  "name": "batch-register-users",
+  "version": "1.0.0",
+  "description": "批量注册用户工具",
+  "main": "batch-register-users.js",
+  "scripts": {
+    "start": "node batch-register-users.js",
+    "generate-sample": "node batch-register-users.js --generate-sample"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "csv-parser": "^3.0.0",
+    "xlsx": "^0.18.5",
+    "bcryptjs": "^2.4.3"
+  },
+  "keywords": [
+    "supabase",
+    "batch",
+    "register",
+    "users"
+  ],
+  "author": "Golf Club Admin",
+  "license": "MIT"
+}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import {
   Users, Search, Filter, Edit, Trash2, Download, Mail, Phone, Calendar,
-  User, Crown, Star, CheckCircle, XCircle, UserCog, ToggleLeft, ToggleRight
+  User, Crown, Star, CheckCircle, XCircle, UserCog, ToggleLeft, ToggleRight, Upload
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useModal } from './ModalProvider'
 
 interface Member {
   id: string
@@ -34,6 +35,7 @@ export default function MemberAdmin() {
   const [members, setMembers] = useState<Member[]>([])
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
+  const modal = useModal()
   
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('')
@@ -45,6 +47,15 @@ export default function MemberAdmin() {
   // 排序状态
   const [sortField, setSortField] = useState<string>('')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  
+  // 批量导入状态
+  const [isImporting, setIsImporting] = useState(false)
+  const [importProgress, setImportProgress] = useState(0)
+  const [importResults, setImportResults] = useState<{
+    success: number
+    failed: number
+    errors: string[]
+  } | null>(null)
 
   // 获取可用年份
   const availableYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
@@ -165,7 +176,7 @@ export default function MemberAdmin() {
       setMembers(membersWithStatus)
     } catch (error) {
       console.error('获取会员信息失败:', error)
-      alert('获取会员信息失败: ' + (error as any)?.message || '未知错误')
+      modal.showError('获取会员信息失败: ' + (error as any)?.message || '未知错误')
     } finally {
       setLoading(false)
     }
@@ -269,10 +280,10 @@ export default function MemberAdmin() {
       ))
 
       const statusText = newStatus ? '启用' : '禁用'
-      alert(`会员已${statusText}！${!newStatus ? '该用户将无法登录系统。' : ''}`)
+      modal.showSuccess(`会员已${statusText}！${!newStatus ? '该用户将无法登录系统。' : ''}`)
     } catch (error) {
       console.error('更新会员状态失败:', error)
-      alert('更新失败，请重试')
+      modal.showError('更新失败，请重试')
     }
   }
 
@@ -298,6 +309,102 @@ export default function MemberAdmin() {
     link.href = URL.createObjectURL(blob)
     link.download = `会员列表_${new Date().toISOString().split('T')[0]}.csv`
     link.click()
+  }
+
+  // 处理CSV文件上传
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.csv')) {
+      modal.showError('请选择CSV文件')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const csvText = e.target?.result as string
+      parseAndImportCSV(csvText)
+    }
+    reader.readAsText(file, 'utf-8')
+  }
+
+  // 解析CSV并批量导入
+  const parseAndImportCSV = async (csvText: string) => {
+    try {
+      setIsImporting(true)
+      setImportProgress(0)
+      setImportResults(null)
+
+      const lines = csvText.split('\n').filter(line => line.trim())
+      if (lines.length < 2) {
+        modal.showError('CSV文件格式不正确，至少需要标题行和一行数据')
+        return
+      }
+
+      // 解析CSV数据
+      const headers = lines[0].split(',').map(h => h.trim())
+      const requiredHeaders = ['email', 'password', 'full_name', 'phone', 'membership_type']
+      
+      // 检查必需字段
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
+      if (missingHeaders.length > 0) {
+        modal.showError(`CSV文件缺少必需字段: ${missingHeaders.join(', ')}`)
+        return
+      }
+
+      const users = []
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim())
+        if (values.length !== headers.length) continue
+
+        const user: any = {}
+        headers.forEach((header, index) => {
+          user[header] = values[index]
+        })
+
+        // 验证必需字段
+        if (user.email && user.password && user.full_name && user.phone && user.membership_type) {
+          users.push(user)
+        }
+      }
+
+      if (users.length === 0) {
+        modal.showError('没有找到有效的用户数据')
+        return
+      }
+
+      // 调用批量导入API
+      if (!supabase) {
+        throw new Error('Supabase客户端未初始化')
+      }
+      
+      const { data, error } = await supabase.functions.invoke('batch-import-users', {
+        body: { users }
+      })
+
+      if (error) {
+        throw error
+      }
+
+      setImportResults({
+        success: data.success || 0,
+        failed: data.failed || 0,
+        errors: data.errors || []
+      })
+
+      // 刷新会员列表
+      await fetchMembers()
+      
+      modal.showSuccess(`批量导入完成！成功: ${data.success || 0}，失败: ${data.failed || 0}`)
+
+    } catch (error) {
+      console.error('批量导入失败:', error)
+      modal.showError('批量导入失败: ' + (error as any)?.message)
+    } finally {
+      setIsImporting(false)
+      setImportProgress(0)
+    }
   }
 
   const getMembershipTypeIcon = (type: string) => {
@@ -347,14 +454,65 @@ export default function MemberAdmin() {
               </span>
             )}
           </div>
-          <button
-            onClick={exportToCSV}
-            className="flex items-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-md hover:bg-golf-700 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            <span>导出CSV</span>
-          </button>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={exportToCSV}
+              className="flex items-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-md hover:bg-golf-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              <span>导出CSV</span>
+            </button>
+            
+            <label className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors cursor-pointer">
+              <Upload className="w-4 h-4" />
+              <span>{isImporting ? '导入中...' : '批量导入'}</span>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                disabled={isImporting}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
+
+        {/* 导入结果显示 */}
+        {importResults && (
+          <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span className="text-green-700 font-medium">成功: {importResults.success}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <XCircle className="w-5 h-5 text-red-500" />
+                  <span className="text-red-700 font-medium">失败: {importResults.failed}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setImportResults(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            {importResults.errors.length > 0 && (
+              <div className="mt-2 text-sm text-red-600">
+                <div className="font-medium">错误详情:</div>
+                <ul className="list-disc list-inside ml-4">
+                  {importResults.errors.slice(0, 5).map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                  {importResults.errors.length > 5 && (
+                    <li>...还有 {importResults.errors.length - 5} 个错误</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 搜索和筛选 */}
         <div className="px-6 py-4 border-b border-gray-200">

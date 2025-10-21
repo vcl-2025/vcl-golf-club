@@ -12,6 +12,8 @@ interface EventRegistration {
   user_email: string
   user_name: string
   user_phone: string
+  total_strokes?: number
+  rank?: number
 }
 
 interface EventRegistrationsProps {
@@ -70,9 +72,26 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
         })
       }
       
+      // 获取成绩数据
+      const scoresResponse = await supabase
+        .from('scores')
+        .select('user_id, total_strokes, rank')
+        .eq('event_id', event.id)
+
+      if (scoresResponse.error) console.error('获取成绩数据失败:', scoresResponse.error)
+      
+      // 创建成绩映射
+      const scoreMap = new Map()
+      if (scoresResponse.data) {
+        scoresResponse.data.forEach((score: any) => {
+          scoreMap.set(score.user_id, score)
+        })
+      }
+
       // 转换数据格式
       const formattedData = registrations.map((reg: any) => {
         const profile = profileMap.get(reg.user_id)
+        const score = scoreMap.get(reg.user_id)
         
         return {
           id: reg.id,
@@ -81,7 +100,9 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
           payment_status: reg.payment_status,
           registration_time: reg.created_at || new Date().toISOString(),
           notes: reg.notes,
-          user_email: profile?.email || ''
+          user_email: profile?.email || '',
+          total_strokes: score?.total_strokes,
+          rank: score?.rank
         }
       })
       
@@ -140,8 +161,8 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
   }
 
   const filteredRegistrations = registrations.filter(reg => {
-    const matchesSearch = reg.participant_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         reg.phone.includes(searchTerm) ||
+    const matchesSearch = reg.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         reg.user_phone.includes(searchTerm) ||
                          reg.user_email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesPayment = paymentFilter === 'all' || reg.payment_status === paymentFilter
     return matchesSearch && matchesPayment
@@ -233,7 +254,7 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">参赛者</th>
                       <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">联系方式</th>
-                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">会员号</th>
+                      <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">成绩信息</th>
                       <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">报名时间</th>
                       <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">支付状态</th>
                       <th className="text-left py-4 px-4 text-base font-semibold text-gray-700">备注</th>
@@ -254,10 +275,20 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
                           </div>
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-600">
-                          <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            {new Date(registration.registration_time).toLocaleString('zh-CN')}
-                          </div>
+                          {registration.total_strokes ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center">
+                                <span className="font-medium text-gray-900">总杆数: {registration.total_strokes}</span>
+                              </div>
+                              {registration.rank && (
+                                <div className="flex items-center">
+                                  <span className="text-blue-600 font-medium">排名: #{registration.rank}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-gray-400">暂无成绩</div>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${

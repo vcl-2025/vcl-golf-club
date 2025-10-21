@@ -29,6 +29,48 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
   }, [eventId])
 
 
+  // 发送审批邮件通知
+  const sendApprovalEmail = async (registrationId: string, approved: boolean) => {
+    try {
+      // 获取报名记录信息
+      const registration = registrations.find(reg => reg.id === registrationId)
+      if (!registration) return
+
+      // 获取用户邮箱
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('email')
+        .eq('id', registration.user_id)
+        .single()
+
+      if (!userProfile?.email) {
+        console.log('用户邮箱不存在，跳过邮件发送')
+        return
+      }
+
+      // 调用邮件发送函数
+      const { data, error } = await supabase.functions.invoke('send-approval-notification', {
+        body: {
+          user_id: registration.user_id,
+          event_title: eventTitle,
+          approval_status: approved ? 'approved' : 'rejected',
+          approval_notes: approvalNotes || (approved ? '审批通过' : '审批拒绝'),
+          test_email: userProfile.email
+        }
+      })
+
+      if (error) {
+        console.error('邮件发送失败:', error)
+        // 邮件发送失败不影响审批流程，只记录错误
+      } else {
+        console.log('邮件发送成功:', data)
+      }
+    } catch (error) {
+      console.error('邮件发送异常:', error)
+      // 邮件发送失败不影响审批流程
+    }
+  }
+
   const fetchRegistrations = async () => {
     try {
       // 检查 supabase 连接
@@ -105,6 +147,9 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
 
         if (error) throw error
         showSuccess('报名申请已批准')
+        
+        // 发送批准邮件通知
+        await sendApprovalEmail(registrationId, true)
       } else {
         // 取消：删除报名记录
         const { error } = await supabase
@@ -114,6 +159,9 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
 
         if (error) throw error
         showSuccess('报名申请已取消')
+        
+        // 发送取消邮件通知
+        await sendApprovalEmail(registrationId, false)
       }
 
       setApprovalNotes('')
@@ -157,6 +205,12 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
 
       if (error) throw error
       showSuccess(`已批量批准 ${selectedIds.length} 个报名申请`)
+      
+      // 批量发送邮件通知
+      for (const registrationId of selectedIds) {
+        await sendApprovalEmail(registrationId, true)
+      }
+      
       setShowBatchApprovalModal(false)
       setSelectedIds([])
       fetchRegistrations()

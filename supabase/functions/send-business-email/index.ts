@@ -84,6 +84,7 @@ serve(async (req) => {
 
         result = await response.json()
         console.log('📧 Resend 邮件发送成功:', result)
+        console.log('📨 Email response from Resend:', JSON.stringify(result, null, 2))
         
       } else if (sendgridApiKey) {
         // 使用 SendGrid

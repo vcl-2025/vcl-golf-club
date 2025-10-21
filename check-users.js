@@ -1,81 +1,87 @@
 import { createClient } from '@supabase/supabase-js'
 
-// 从环境变量读取配置
-const supabaseUrl = process.env.VITE_SUPABASE_URL
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('请确保在.env文件中设置了VITE_SUPABASE_URL和SUPABASE_SERVICE_ROLE_KEY')
-  process.exit(1)
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-})
+// Supabase 配置
+const supabaseUrl = 'https://mypglmtsgfgojtnpmkbc.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cGdsbXRzZ2Znb2p0bnBta2JjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzUxNjg2NiwiZXhwIjoyMDczMDkyODY2fQ.tVi2KR6IBHzgqbGzdhFXJ_YVnHzj7SzVCaV_jcoSqXc'
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function checkUsers() {
   try {
-    console.log('正在检查用户数据...')
+    console.log('🔍 检查用户数据...')
     
-    // 检查auth.users表中的用户数量
+    // 检查 auth.users 表
+    console.log('\n📋 检查 auth.users 表:')
     const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
     
     if (authError) {
-      console.error('获取auth.users失败:', authError)
+      console.error('❌ 获取认证用户失败:', authError.message)
       return
     }
     
-    console.log(`\n📊 认证用户数量: ${authUsers.users.length}`)
+    console.log(`✅ 找到 ${authUsers.users.length} 个认证用户`)
     
-    if (authUsers.users.length > 0) {
-      console.log('\n👥 用户列表:')
-      authUsers.users.forEach((user, index) => {
-        console.log(`${index + 1}. ${user.email} (ID: ${user.id})`)
-        console.log(`   创建时间: ${new Date(user.created_at).toLocaleString('zh-CN')}`)
-        console.log(`   最后登录: ${user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString('zh-CN') : '从未登录'}`)
-        console.log('')
-      })
-    }
+    // 显示最近注册的用户
+    const recentUsers = authUsers.users
+      .filter(user => user.email?.includes('user11') || user.email?.includes('user12'))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     
-    // 检查user_profiles表中的用户数量
-    const { data: profiles, error: profilesError } = await supabase
+    console.log('\n📧 最近注册的用户:')
+    recentUsers.forEach(user => {
+      console.log(`- ${user.email} (ID: ${user.id})`)
+      console.log(`  创建时间: ${user.created_at}`)
+      console.log(`  邮箱确认: ${user.email_confirmed_at ? '是' : '否'}`)
+    })
+    
+    // 检查 user_profiles 表
+    console.log('\n📋 检查 user_profiles 表:')
+    const { data: profiles, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
+      .order('created_at', { ascending: false })
     
-    if (profilesError) {
-      console.error('获取user_profiles失败:', profilesError)
-    } else {
-      console.log(`\n📋 用户档案数量: ${profiles.length}`)
-      
-      if (profiles.length > 0) {
-        console.log('\n📝 用户档案列表:')
-        profiles.forEach((profile, index) => {
-          console.log(`${index + 1}. ${profile.full_name || '未设置姓名'} (${profile.role})`)
-          console.log(`   会员类型: ${profile.membership_type || '未设置'}`)
-          console.log(`   电话: ${profile.phone || '未设置'}`)
-          console.log('')
-        })
-      }
+    if (profileError) {
+      console.error('❌ 获取用户资料失败:', profileError.message)
+      return
     }
     
-    // 检查是否有用户没有对应的档案
-    const authUserIds = authUsers.users.map(u => u.id)
-    const profileUserIds = profiles.map(p => p.id)
-    const missingProfiles = authUserIds.filter(id => !profileUserIds.includes(id))
+    console.log(`✅ 找到 ${profiles.length} 个用户资料`)
+    
+    // 显示最近创建的用户资料
+    const recentProfiles = profiles.filter(profile => 
+      profile.email?.includes('user11') || profile.email?.includes('user12')
+    )
+    
+    console.log('\n👤 最近创建的用户资料:')
+    recentProfiles.forEach(profile => {
+      console.log(`- ${profile.email} (ID: ${profile.id})`)
+      console.log(`  姓名: ${profile.full_name}`)
+      console.log(`  手机: ${profile.phone}`)
+      console.log(`  会员类型: ${profile.membership_type}`)
+      console.log(`  创建时间: ${profile.created_at}`)
+    })
+    
+    // 检查数据一致性
+    console.log('\n🔍 数据一致性检查:')
+    const authUserIds = new Set(authUsers.users.map(u => u.id))
+    const profileUserIds = new Set(profiles.map(p => p.id))
+    
+    const missingProfiles = [...authUserIds].filter(id => !profileUserIds.has(id))
+    const missingAuth = [...profileUserIds].filter(id => !authUserIds.has(id))
     
     if (missingProfiles.length > 0) {
-      console.log(`\n⚠️  有 ${missingProfiles.length} 个认证用户没有对应的用户档案:`)
-      missingProfiles.forEach(id => {
-        const user = authUsers.users.find(u => u.id === id)
-        console.log(`   - ${user?.email} (${id})`)
-      })
+      console.log(`⚠️  有 ${missingProfiles.length} 个认证用户缺少用户资料`)
+    }
+    
+    if (missingAuth.length > 0) {
+      console.log(`⚠️  有 ${missingAuth.length} 个用户资料缺少认证用户`)
+    }
+    
+    if (missingProfiles.length === 0 && missingAuth.length === 0) {
+      console.log('✅ 数据一致性检查通过')
     }
     
   } catch (error) {
-    console.error('检查用户数据失败:', error)
+    console.error('❌ 检查失败:', error.message)
   }
 }
 

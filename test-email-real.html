@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮件发送测试 - 真实环境</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #16a34a;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #16a34a;
+        }
+        button {
+            background: #16a34a;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #15803d;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .success {
+            background: #dcfce7;
+            border: 1px solid #16a34a;
+            color: #15803d;
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #ef4444;
+            color: #dc2626;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            color: #16a34a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 邮件发送测试 - 真实环境</h1>
+        
+        <form id="emailForm">
+            <div class="form-group">
+                <label for="emailType">邮件类型:</label>
+                <select id="emailType" required>
+                    <option value="">请选择邮件类型</option>
+                    <option value="business">商务邮件</option>
+                    <option value="approval">审批通知</option>
+                    <option value="notification">系统通知</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="recipientEmail">收件人邮箱:</label>
+                <input type="email" id="recipientEmail" placeholder="请输入收件人邮箱" required>
+            </div>
+
+            <div class="form-group">
+                <label for="subject">邮件主题:</label>
+                <input type="text" id="subject" placeholder="请输入邮件主题" required>
+            </div>
+
+            <div class="form-group">
+                <label for="content">邮件内容:</label>
+                <textarea id="content" rows="6" placeholder="请输入邮件内容" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="eventId">活动ID (可选):</label>
+                <input type="text" id="eventId" placeholder="如果发送活动相关邮件，请输入活动ID">
+            </div>
+
+            <button type="submit" id="sendBtn">发送邮件</button>
+            <button type="button" id="testBtn">测试连接</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <p>🔄 正在发送邮件，请稍候...</p>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('emailForm');
+        const sendBtn = document.getElementById('sendBtn');
+        const testBtn = document.getElementById('testBtn');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+
+        // 测试连接
+        testBtn.addEventListener('click', async () => {
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/health', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    showResult('✅ 连接正常！服务器响应正常', 'success');
+                } else {
+                    showResult('❌ 连接失败！服务器响应异常', 'error');
+                }
+            } catch (error) {
+                showResult('❌ 连接失败！' + error.message, 'error');
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+
+        // 发送邮件
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const emailType = document.getElementById('emailType').value;
+            const recipientEmail = document.getElementById('recipientEmail').value;
+            const subject = document.getElementById('subject').value;
+            const content = document.getElementById('content').value;
+            const eventId = document.getElementById('eventId').value;
+
+            sendBtn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+
+            try {
+                let endpoint = '';
+                let payload = {
+                    to: recipientEmail,
+                    subject: subject,
+                    content: content
+                };
+
+                // 根据邮件类型选择不同的端点
+                switch(emailType) {
+                    case 'business':
+                        endpoint = '/api/send-business-email';
+                        break;
+                    case 'approval':
+                        endpoint = '/api/send-approval-notification';
+                        break;
+                    case 'notification':
+                        endpoint = '/api/send-email';
+                        break;
+                    default:
+                        throw new Error('请选择邮件类型');
+                }
+
+                // 如果是活动相关邮件，添加活动ID
+                if (eventId) {
+                    payload.eventId = eventId;
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('✅ 邮件发送成功！<br>响应: ' + JSON.stringify(data, null, 2), 'success');
+                } else {
+                    showResult('❌ 邮件发送失败！<br>错误: ' + JSON.stringify(data, null, 2), 'error');
+                }
+            } catch (error) {
+                showResult('❌ 发送失败！' + error.message, 'error');
+            } finally {
+                sendBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        function showResult(message, type) {
+            result.innerHTML = message;
+            result.className = 'result ' + type;
+            result.style.display = 'block';
+        }
+
+        // 页面加载时显示当前环境信息
+        window.addEventListener('load', () => {
+            console.log('📧 邮件测试页面已加载');
+            console.log('🌐 当前环境: 真实生产环境');
+            console.log('🔗 API端点: /api/send-*');
+        });
+    </script>
+</body>
+</html>

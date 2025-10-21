@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审批通知测试（简化版）</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #16a34a;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        button {
+            background: #16a34a;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #15803d;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .success {
+            background: #dcfce7;
+            border: 1px solid #16a34a;
+            color: #15803d;
+        }
+        .error {
+            background: #fef2f2;
+            border: 1px solid #ef4444;
+            color: #dc2626;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .test-btn {
+            background: #3b82f6;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .test-btn:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 审批通知测试（简化版）</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+            预览邮件内容 + 模拟发送测试
+        </p>
+        
+        <div class="test-buttons">
+            <button class="test-btn" onclick="fillTestData('approved')">测试批准邮件</button>
+            <button class="test-btn" onclick="fillTestData('rejected')">测试拒绝邮件</button>
+            <button class="test-btn" onclick="clearForm()">清空表单</button>
+        </div>
+        
+        <form id="notificationForm">
+            <div class="form-group">
+                <label for="userId">用户ID:</label>
+                <input type="text" id="userId" placeholder="输入用户ID" value="test-user-id">
+            </div>
+
+            <div class="form-group">
+                <label for="testEmail">测试邮箱:</label>
+                <input type="email" id="testEmail" placeholder="输入测试邮箱地址" required>
+            </div>
+
+            <div class="form-group">
+                <label for="eventTitle">活动标题:</label>
+                <input type="text" id="eventTitle" placeholder="输入活动标题" required>
+            </div>
+
+            <div class="form-group">
+                <label for="approvalStatus">审批状态:</label>
+                <select id="approvalStatus" required>
+                    <option value="">请选择审批状态</option>
+                    <option value="approved">批准</option>
+                    <option value="rejected">拒绝</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="approvalNotes">审批备注:</label>
+                <textarea id="approvalNotes" rows="3" placeholder="输入审批备注（可选）"></textarea>
+            </div>
+
+            <button type="submit">预览邮件内容</button>
+            <button type="button" onclick="sendEmail()" style="background: #3b82f6;">发送测试邮件</button>
+        </form>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('notificationForm');
+        const result = document.getElementById('result');
+
+        // 填充测试数据
+        function fillTestData(status) {
+            document.getElementById('testEmail').value = 'test@example.com';
+            document.getElementById('eventTitle').value = '2024春季高尔夫锦标赛';
+            document.getElementById('approvalStatus').value = status;
+            document.getElementById('approvalNotes').value = status === 'approved' 
+                ? '恭喜您！您的报名申请已通过审核，请按时参加活动。'
+                : '很抱歉，由于名额有限，您的报名申请未能通过。';
+        }
+
+        // 清空表单
+        function clearForm() {
+            document.getElementById('notificationForm').reset();
+            document.getElementById('userId').value = 'test-user-id';
+        }
+
+        // 生成邮件内容预览
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('userId').value;
+            const testEmail = document.getElementById('testEmail').value;
+            const eventTitle = document.getElementById('eventTitle').value;
+            const approvalStatus = document.getElementById('approvalStatus').value;
+            const approvalNotes = document.getElementById('approvalNotes').value;
+
+            const isApproved = approvalStatus === 'approved';
+            const subject = isApproved 
+                ? `🎉 活动报名已批准 - ${eventTitle}`
+                : `❌ 活动报名未通过 - ${eventTitle}`;
+
+            const emailContent = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                        <h1 style="margin: 0; font-size: 24px;">
+                            ${isApproved ? '🎉 报名申请已批准' : '❌ 报名申请未通过'}
+                        </h1>
+                    </div>
+                    
+                    <div style="background: #f9fafb; padding: 20px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb;">
+                        <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
+                            亲爱的 测试用户，
+                        </p>
+                        
+                        <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px;">
+                            您的活动报名申请已处理完成：
+                        </p>
+                        
+                        <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid ${isApproved ? '#10b981' : '#ef4444'}; margin: 16px 0;">
+                            <h3 style="margin: 0 0 8px 0; color: #111827; font-size: 18px;">
+                                ${eventTitle}
+                            </h3>
+                            <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">
+                                状态：<strong style="color: ${isApproved ? '#10b981' : '#ef4444'}">${isApproved ? '已批准' : '未通过'}</strong>
+                            </p>
+                            ${approvalNotes ? `
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                                    备注：${approvalNotes}
+                                </p>
+                            ` : ''}
+                        </div>
+                        
+                        ${isApproved ? `
+                            <p style="margin: 16px 0; color: #374151; font-size: 16px;">
+                                🎉 恭喜！您已成功报名参加此活动。请按时参加活动，如有任何问题请及时联系我们。
+                            </p>
+                        ` : `
+                            <p style="margin: 16px 0; color: #374151; font-size: 16px;">
+                                很抱歉，您的报名申请未能通过。您可以查看其他活动或联系管理员了解更多信息。
+                            </p>
+                        `}
+                        
+                        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                                此邮件由系统自动发送，请勿回复。
+                            </p>
+                            <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">
+                                如有疑问，请联系俱乐部管理员。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            showResult(`
+                <h3>📧 邮件预览</h3>
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: #f9fafb;">
+                    <p><strong>收件人:</strong> ${testEmail}</p>
+                    <p><strong>主题:</strong> ${subject}</p>
+                    <p><strong>状态:</strong> ${isApproved ? '已批准' : '已拒绝'}</p>
+                    <p><strong>备注:</strong> ${approvalNotes || '无'}</p>
+                </div>
+                
+                <h4 style="margin-top: 20px;">邮件内容预览:</h4>
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: white; max-height: 400px; overflow-y: auto;">
+                    ${emailContent}
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e0f2fe; border-radius: 8px; border-left: 4px solid #0284c7;">
+                    <p style="margin: 0; color: #0c4a6e; font-size: 14px;">
+                        <strong>注意:</strong> 这是邮件内容预览，实际发送需要配置真实的邮件服务。
+                    </p>
+                </div>
+            `, 'success');
+        });
+
+        // 发送邮件函数
+        async function sendEmail() {
+            const userId = document.getElementById('userId').value;
+            const testEmail = document.getElementById('testEmail').value;
+            const eventTitle = document.getElementById('eventTitle').value;
+            const approvalStatus = document.getElementById('approvalStatus').value;
+            const approvalNotes = document.getElementById('approvalNotes').value;
+
+            if (!testEmail || !eventTitle || !approvalStatus) {
+                showResult('❌ 请填写所有必填字段！', 'error');
+                return;
+            }
+
+            try {
+                // 模拟发送邮件
+                showResult('🔄 正在发送邮件...', 'success');
+                
+                // 模拟网络延迟
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                const isApproved = approvalStatus === 'approved';
+                const subject = isApproved 
+                    ? `🎉 活动报名已批准 - ${eventTitle}`
+                    : `❌ 活动报名未通过 - ${eventTitle}`;
+
+                showResult(`
+                    ✅ 邮件发送成功！<br>
+                    <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; background: #f9fafb; margin-top: 10px;">
+                        <p><strong>收件人:</strong> ${testEmail}</p>
+                        <p><strong>主题:</strong> ${subject}</p>
+                        <p><strong>状态:</strong> ${isApproved ? '已批准' : '已拒绝'}</p>
+                        <p><strong>备注:</strong> ${approvalNotes || '无'}</p>
+                        <p><strong>发送时间:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: #e0f2fe; border-radius: 6px; border-left: 4px solid #0284c7;">
+                        <p style="margin: 0; color: #0c4a6e; font-size: 14px;">
+                            <strong>注意:</strong> 这是模拟发送，实际项目中需要配置真实的邮件服务。
+                        </p>
+                    </div>
+                `, 'success');
+
+            } catch (error) {
+                showResult('❌ 发送失败！' + error.message, 'error');
+            }
+        }
+
+        function showResult(message, type) {
+            result.innerHTML = message;
+            result.className = 'result ' + type;
+            result.style.display = 'block';
+        }
+
+        // 页面加载时填充示例数据
+        window.addEventListener('load', () => {
+            console.log('📧 审批通知邮件预览页面已加载');
+        });
+    </script>
+</body>
+</html>

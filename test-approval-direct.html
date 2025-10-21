@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>审批通知直接测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    h1 {
+      color: #16a34a;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    button {
+      background: #16a34a;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #15803d;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .success {
+      background: #dcfce7;
+      border: 1px solid #16a34a;
+      color: #15803d;
+    }
+    .error {
+      background: #fef2f2;
+      border: 1px solid #ef4444;
+      color: #dc2626;
+    }
+    .test-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .test-btn {
+      background: #3b82f6;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+    .test-btn:hover {
+      background: #2563eb;
+    }
+    .switch {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📧 审批通知直接测试</h1>
+    <p style="text-align: center; color: #666; margin-bottom: 20px;">
+      测试 Supabase Edge Function 邮件发送（支持测试模式或正式模式）
+    </p>
+
+    <div class="switch">
+      <input type="checkbox" id="testMode" checked />
+      <label for="testMode">🧪 启用测试模式（使用 test-user-id，不发真实邮件）</label>
+    </div>
+
+    <div class="test-buttons">
+      <button class="test-btn" onclick="fillTestData('approved')">测试批准邮件</button>
+      <button class="test-btn" onclick="fillTestData('rejected')">测试拒绝邮件</button>
+      <button class="test-btn" onclick="clearForm()">清空表单</button>
+    </div>
+
+    <form id="notificationForm">
+      <div class="form-group">
+        <label for="userId">用户ID:</label>
+        <input type="text" id="userId" value="test-user-id" />
+        <small style="color:#666;">（正式模式时请输入 user_profiles 表中的真实 id）</small>
+      </div>
+
+      <div class="form-group">
+        <label for="testEmail">收件邮箱:</label>
+        <input type="email" id="testEmail" placeholder="输入目标邮箱地址" required />
+      </div>
+
+      <div class="form-group">
+        <label for="eventTitle">活动标题:</label>
+        <input type="text" id="eventTitle" placeholder="输入活动标题" required />
+      </div>
+
+      <div class="form-group">
+        <label for="approvalStatus">审批状态:</label>
+        <select id="approvalStatus" required>
+          <option value="">请选择审批状态</option>
+          <option value="approved">批准</option>
+          <option value="rejected">拒绝</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="approvalNotes">审批备注:</label>
+        <textarea id="approvalNotes" rows="3" placeholder="输入审批备注（可选）"></textarea>
+      </div>
+
+      <button type="button" onclick="sendDirectEmail()">🚀 发送请求</button>
+      <button type="button" onclick="previewEmail()">👁️ 邮件预览</button>
+    </form>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    const result = document.getElementById("result");
+
+    const SUPABASE_URL = "https://mypglmtsgfgojtnpmkbc.supabase.co";
+
+    // 🔹 填充测试数据
+    function fillTestData(status) {
+      document.getElementById("testEmail").value = "jing_curie@hotmail.com";
+      document.getElementById("eventTitle").value = "2025秋季高尔夫俱乐部锦标赛";
+      document.getElementById("approvalStatus").value = status;
+      document.getElementById("approvalNotes").value =
+        status === "approved"
+          ? "恭喜！您的报名已通过审核，请准时参加活动。"
+          : "很抱歉，本次活动报名未通过。";
+    }
+
+    // 🔹 清空表单
+    function clearForm() {
+      document.getElementById("notificationForm").reset();
+      document.getElementById("userId").value = "test-user-id";
+      result.style.display = "none";
+    }
+
+    // 🔹 发送请求
+    async function sendDirectEmail() {
+      const userId = document.getElementById("userId").value.trim();
+      const testEmail = document.getElementById("testEmail").value.trim();
+      const eventTitle = document.getElementById("eventTitle").value.trim();
+      const approvalStatus = document.getElementById("approvalStatus").value.trim();
+      const approvalNotes = document.getElementById("approvalNotes").value.trim();
+      const testMode = document.getElementById("testMode").checked;
+
+      if (!testEmail || !eventTitle || !approvalStatus) {
+        showResult("❌ 请填写所有必填字段！", "error");
+        return;
+      }
+
+      const payload = {
+        user_id: testMode ? "test-user-id" : userId,
+        event_title: eventTitle,
+        approval_status: approvalStatus,
+        approval_notes: approvalNotes,
+        test_email: testMode ? testEmail : null,
+      };
+
+      showResult("⏳ 正在调用 Edge Function...", "success");
+      console.log("📤 请求体:", payload);
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/send-approval-notification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const text = await res.text();
+        console.log("📥 响应状态:", res.status);
+        console.log("📥 响应内容:", text);
+
+        try {
+          const data = JSON.parse(text);
+          const msg = JSON.stringify(data, null, 2);
+          if (res.ok) {
+            showResult(`✅ 请求成功 (HTTP ${res.status})\n\n${msg}`, "success");
+          } else {
+            showResult(`❌ 请求失败 (HTTP ${res.status})\n\n${msg}`, "error");
+          }
+        } catch {
+          showResult(`⚠️ 响应非JSON格式:\n${text}`, "error");
+        }
+      } catch (err) {
+        showResult(`❌ 请求异常: ${err.message}`, "error");
+      }
+    }
+
+    // 🔹 邮件预览
+    function previewEmail() {
+      const testEmail = document.getElementById("testEmail").value.trim();
+      const eventTitle = document.getElementById("eventTitle").value.trim();
+      const approvalStatus = document.getElementById("approvalStatus").value.trim();
+      const approvalNotes = document.getElementById("approvalNotes").value.trim();
+
+      if (!testEmail || !eventTitle || !approvalStatus) {
+        showResult("❌ 请填写所有必填字段！", "error");
+        return;
+      }
+
+      const isApproved = approvalStatus === "approved";
+      const subject = isApproved
+        ? `🎉 活动报名已批准 - ${eventTitle}`
+        : `❌ 活动报名未通过 - ${eventTitle}`;
+      showResult(
+        `📧 邮件预览\n收件人: ${testEmail}\n主题: ${subject}\n备注: ${
+          approvalNotes || "无"
+        }`,
+        "success"
+      );
+    }
+
+    // 🔹 显示结果
+    function showResult(msg, type) {
+      result.textContent = msg;
+      result.className = "result " + type;
+      result.style.display = "block";
+      result.scrollTop = result.scrollHeight;
+    }
+  </script>
+</body>
+</html>

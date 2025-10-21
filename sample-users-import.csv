@@ -1,0 +1,4 @@
+email,password,full_name,real_name,phone,membership_type,role,handicap,clothing_size,vancouver_residence,domestic_residence,main_club_membership,industry,golf_preferences,golf_motto,other_interests
+user13@example.com,password123,张三,张三,13800138013,standard,member,18,L,温哥华,北京,温哥华高尔夫俱乐部,IT,喜欢挑战性球场,永不放弃,摄影
+user14@example.com,password123,李四,李四,13800138014,premium,member,12,M,温哥华,上海,温哥华高尔夫俱乐部,金融,喜欢风景优美的球场,享受高尔夫,旅游
+user15@example.com,password123,王五,王五,13800138015,vip,member,8,XL,温哥华,广州,温哥华高尔夫俱乐部,房地产,喜欢竞技性球场,追求完美,音乐
