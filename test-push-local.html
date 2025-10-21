@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推送通知本地测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .log-item {
+            margin-bottom: 5px;
+        }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-warning { color: #ffc107; }
+        .log-info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 推送通知本地测试</h1>
+            <p>测试浏览器推送通知功能（HTTP环境）</p>
+        </div>
+
+        <div class="status">
+            <h3>系统状态</h3>
+            <p><strong>浏览器支持：</strong><span id="support-status">检测中...</span></p>
+            <p><strong>通知权限：</strong><span id="permission-status">检测中...</span></p>
+            <p><strong>Service Worker：</strong><span id="sw-status">检测中...</span></p>
+            <p><strong>推送订阅：</strong><span id="subscription-status">检测中...</span></p>
+        </div>
+
+        <div id="mobile-notice" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+            <h4 style="color: #856404; margin-top: 0;">📱 移动设备提示</h4>
+            <p style="color: #856404; margin-bottom: 10px;">您的设备是移动设备，推送通知功能可能受限：</p>
+            <ul style="color: #856404; margin: 0; padding-left: 20px;">
+                <li>iOS Safari：推送通知支持有限</li>
+                <li>Android Chrome：支持完整推送功能</li>
+                <li>微信浏览器：不支持推送通知</li>
+            </ul>
+            <p style="color: #856404; margin-top: 10px; margin-bottom: 0;">
+                <strong>建议：使用邮件通知作为替代方案</strong>
+            </p>
+        </div>
+
+        <div style="text-align: center;">
+            <button id="request-permission" class="btn" disabled>请求权限</button>
+            <button id="subscribe" class="btn btn-success" disabled>订阅推送</button>
+            <button id="test-notification" class="btn btn-warning" disabled>测试通知</button>
+            <button id="unsubscribe" class="btn btn-danger" disabled>取消订阅</button>
+        </div>
+
+        <div class="log" id="log">
+            <div class="log-item log-info">[INFO] 推送通知测试页面已加载</div>
+        </div>
+    </div>
+
+    <script>
+        let subscription = null;
+        let registration = null;
+
+        // 日志函数
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+            logItem.textContent = `[${type.toUpperCase()}] ${message}`;
+            logElement.appendChild(logItem);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // 更新状态显示
+        function updateStatus() {
+            // 检查浏览器支持
+            const isSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+            const supportStatus = document.getElementById('support-status');
+            
+            // 检查是否为移动设备
+            const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+            
+            if (isSupported) {
+                if (isIOS && isSafari) {
+                    supportStatus.textContent = '⚠️ iOS Safari支持有限';
+                    supportStatus.style.color = '#ffc107';
+                } else if (isMobile) {
+                    supportStatus.textContent = '✅ 支持（移动端）';
+                    supportStatus.style.color = '#28a745';
+                } else {
+                    supportStatus.textContent = '✅ 支持';
+                    supportStatus.style.color = '#28a745';
+                }
+            } else {
+                supportStatus.textContent = '❌ 不支持';
+                supportStatus.style.color = '#dc3545';
+            }
+
+            // 检查通知权限
+            const permission = Notification.permission;
+            const permissionStatus = document.getElementById('permission-status');
+            if (permission === 'granted') {
+                permissionStatus.textContent = '✅ 已授权';
+                permissionStatus.style.color = '#28a745';
+            } else if (permission === 'denied') {
+                permissionStatus.textContent = '❌ 已拒绝';
+                permissionStatus.style.color = '#dc3545';
+            } else {
+                permissionStatus.textContent = '⚠️ 未设置';
+                permissionStatus.style.color = '#ffc107';
+            }
+
+            // 检查Service Worker
+            const swStatus = document.getElementById('sw-status');
+            if (registration) {
+                swStatus.textContent = '✅ 已注册';
+                swStatus.style.color = '#28a745';
+            } else {
+                swStatus.textContent = '⚠️ 未注册';
+                swStatus.style.color = '#ffc107';
+            }
+
+            // 检查推送订阅
+            const subscriptionStatus = document.getElementById('subscription-status');
+            if (subscription) {
+                subscriptionStatus.textContent = '✅ 已订阅';
+                subscriptionStatus.style.color = '#28a745';
+            } else {
+                subscriptionStatus.textContent = '⚠️ 未订阅';
+                subscriptionStatus.style.color = '#ffc107';
+            }
+
+            // 更新按钮状态
+            updateButtonStates();
+        }
+
+        // 更新按钮状态
+        function updateButtonStates() {
+            const requestBtn = document.getElementById('request-permission');
+            const subscribeBtn = document.getElementById('subscribe');
+            const testBtn = document.getElementById('test-notification');
+            const unsubscribeBtn = document.getElementById('unsubscribe');
+
+            const isSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+            const permission = Notification.permission;
+
+            requestBtn.disabled = !isSupported || permission !== 'default';
+            subscribeBtn.disabled = !isSupported || permission !== 'granted' || !!subscription;
+            testBtn.disabled = !isSupported || permission !== 'granted';
+            unsubscribeBtn.disabled = !subscription;
+        }
+
+        // 请求通知权限
+        async function requestPermission() {
+            try {
+                log('请求通知权限...', 'info');
+                const permission = await Notification.requestPermission();
+                log(`权限请求结果: ${permission}`, permission === 'granted' ? 'success' : 'warning');
+                updateStatus();
+            } catch (error) {
+                log(`权限请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 注册Service Worker
+        async function registerServiceWorker() {
+            try {
+                log('注册Service Worker...', 'info');
+                registration = await navigator.serviceWorker.register('/sw.js');
+                log('Service Worker注册成功', 'success');
+                updateStatus();
+            } catch (error) {
+                log(`Service Worker注册失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 订阅推送
+        async function subscribeToPush() {
+            try {
+                log('订阅推送通知...', 'info');
+                
+                if (!registration) {
+                    await registerServiceWorker();
+                }
+
+                // 注意：HTTP环境下推送订阅可能失败
+                log('⚠️ HTTP环境下推送订阅可能失败，需要HTTPS', 'warning');
+                
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: 'BEl62iUYgUivxIkv69yViEuiBIa40HI8F7j7kwAd-oUcKzgwXosRFgJWLrw-o06Mx1kE8m5Q2pz1jkej5HaZujc'
+                });
+
+                log('推送订阅成功', 'success');
+                log(`订阅ID: ${subscription.endpoint}`, 'info');
+                updateStatus();
+            } catch (error) {
+                log(`推送订阅失败: ${error.message}`, 'error');
+                log('💡 提示：推送通知需要HTTPS环境才能正常工作', 'warning');
+            }
+        }
+
+        // 取消订阅
+        async function unsubscribeFromPush() {
+            try {
+                log('取消推送订阅...', 'info');
+                await subscription.unsubscribe();
+                subscription = null;
+                log('推送订阅已取消', 'success');
+                updateStatus();
+            } catch (error) {
+                log(`取消订阅失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试通知
+        function testNotification() {
+            if (Notification.permission === 'granted') {
+                const notification = new Notification('测试通知', {
+                    body: '这是一条测试推送通知，点击查看详情',
+                    icon: '/icon-192x192.svg',
+                    badge: '/badge-72x72.svg',
+                    vibrate: [100, 50, 100],
+                    requireInteraction: true,
+                    actions: [
+                        { action: 'open', title: '查看详情' },
+                        { action: 'dismiss', title: '稍后提醒' }
+                    ],
+                    data: {
+                        url: '/',
+                        timestamp: Date.now()
+                    }
+                });
+
+                notification.onclick = function() {
+                    log('通知被点击', 'info');
+                    window.focus();
+                };
+
+                log('测试通知已发送', 'success');
+            } else {
+                log('通知权限未授权，无法发送测试通知', 'error');
+            }
+        }
+
+        // 初始化
+        function init() {
+            log('初始化推送通知测试...', 'info');
+            
+            // 立即更新状态
+            updateStatus();
+            
+            // 检查是否为移动设备并显示提示
+            const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                document.getElementById('mobile-notice').style.display = 'block';
+                log('检测到移动设备，推送通知功能可能受限', 'warning');
+            }
+
+            // 绑定事件
+            document.getElementById('request-permission').onclick = requestPermission;
+            document.getElementById('subscribe').onclick = subscribeToPush;
+            document.getElementById('test-notification').onclick = testNotification;
+            document.getElementById('unsubscribe').onclick = unsubscribeFromPush;
+
+            // 异步检查Service Worker
+            checkServiceWorker();
+
+            log('推送通知测试页面初始化完成', 'success');
+        }
+
+        // 检查Service Worker
+        async function checkServiceWorker() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    log('检查Service Worker...', 'info');
+                    registration = await navigator.serviceWorker.ready;
+                    log('Service Worker已就绪', 'success');
+                    
+                    if (registration.pushManager) {
+                        subscription = await registration.pushManager.getSubscription();
+                        if (subscription) {
+                            log('发现现有推送订阅', 'success');
+                        } else {
+                            log('未发现推送订阅', 'info');
+                        }
+                    } else {
+                        log('当前浏览器不支持推送管理', 'warning');
+                    }
+                } else {
+                    log('当前浏览器不支持Service Worker', 'warning');
+                }
+            } catch (error) {
+                log(`检查订阅失败: ${error.message}`, 'error');
+            }
+
+            // 更新状态
+            updateStatus();
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

@@ -19,12 +19,21 @@ export default function TinyMCEEditor({
   const editorId = useRef(propEditorId || `editor-${Math.random().toString(36).substr(2, 9)}`);
   const initialized = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [tinymceLoaded, setTinymceLoaded] = useState(false);
+  const [tinymceError, setTinymceError] = useState(false);
 
-  // 检测是否为移动设备
+  // 检测是否为移动设备和微信浏览器
   useEffect(() => {
     const checkMobile = () => {
       const isMobileDevice = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+      console.log('设备检测:', { isMobileDevice, isWeChat, userAgent: navigator.userAgent });
       setIsMobile(isMobileDevice);
+      
+      // 如果是微信浏览器，直接使用降级方案
+      if (isWeChat) {
+        setTinymceError(true);
+      }
     };
     
     checkMobile();
@@ -32,33 +41,21 @@ export default function TinyMCEEditor({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // 如果是移动设备，使用简单的textarea
-  if (isMobile) {
-    return (
-      <div className="w-full">
-        <textarea
-          value={content}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full p-3 border border-gray-300 rounded-lg resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          style={{ height: `${height}px` }}
-        />
-        <div className="text-xs text-gray-500 mt-2">
-          💡 移动设备上使用简化编辑器，如需富文本编辑请在电脑上操作
-        </div>
-      </div>
-    );
-  }
-
   useEffect(() => {
     if (initialized.current) return;
 
     const script = document.createElement('script');
     script.src = '/tinymce/tinymce.min.js';
     script.onload = () => {
+      console.log('TinyMCE脚本加载成功');
       if (window.tinymce) {
+        console.log('TinyMCE对象可用');
         // 检测是否为移动设备，使用不同的配置
         const isMobileDevice = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        console.log('设备检测:', { isMobileDevice, userAgent: navigator.userAgent, screenWidth: window.innerWidth });
+        
+        const mobileConfig = getMobileConfig();
+        console.log('移动端配置:', mobileConfig);
         
         window.tinymce.init({
           selector: `#${editorId.current}`,
@@ -78,7 +75,8 @@ export default function TinyMCEEditor({
             'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify',
             'bullist numlist outdent indent | removeformat | help | link image media table | emoticons charmap | code fullscreen preview | searchreplace | wordcount'
           ],
-          toolbar_mode: isMobileDevice ? 'wrap' : 'sliding',
+          toolbar_mode: isMobileDevice ? 'scrolling' : 'sliding',
+          ...mobileConfig,
           contextmenu: 'link image imagetools table spellchecker configurepermanentpen',
           menubar: 'file edit view insert format tools table help',
           menu: {
@@ -173,8 +171,9 @@ export default function TinyMCEEditor({
           },
           setup: (editor: any) => {
             editor.on('init', () => {
-              // console.log('TinyMCE 初始化，设置内容:', content);
-              // console.log('TinyMCE 初始化，内容长度:', content?.length);
+              console.log('TinyMCE 初始化成功');
+              console.log('TinyMCE 初始化，设置内容:', content);
+              console.log('TinyMCE 初始化，内容长度:', content?.length);
               
               // 强制设置 LTR 方向
               editor.getBody().style.direction = 'ltr';
@@ -182,16 +181,87 @@ export default function TinyMCEEditor({
               
               if (content) {
                 editor.setContent(content);
-                // console.log('初始化后编辑器内容:', editor.getContent());
+                console.log('初始化后编辑器内容:', editor.getContent());
               }
             });
             editor.on('change keyup', () => {
               onChange(editor.getContent());
             });
+            editor.on('error', (e: any) => {
+              console.error('TinyMCE 错误:', e);
+            });
+          },
+          init_instance_callback: (editor: any) => {
+            console.log('TinyMCE 实例初始化完成:', editor.id);
           }
         });
         initialized.current = true;
+        setTinymceLoaded(true);
       }
+    };
+    script.onerror = (error) => {
+      console.error('TinyMCE脚本加载失败:', error);
+      setTinymceError(true);
+      console.log('尝试使用CDN加载TinyMCE...');
+      
+      // 如果本地脚本失败，尝试使用CDN
+      const cdnScript = document.createElement('script');
+      cdnScript.src = 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js';
+      cdnScript.onload = () => {
+        console.log('TinyMCE CDN脚本加载成功');
+        if (window.tinymce) {
+          console.log('TinyMCE CDN对象可用');
+          // 重新初始化TinyMCE（复制初始化逻辑）
+          const isMobileDevice = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          const mobileConfig = getMobileConfig();
+          
+          window.tinymce.init({
+            selector: `#${editorId.current}`,
+            height: height,
+            plugins: isMobileDevice ? [
+              'lists', 'link', 'image', 'emoticons', 'wordcount'
+            ] : [
+              'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+              'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+              'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
+              'template', 'codesample', 'hr', 'pagebreak', 'nonbreaking', 'toc',
+              'imagetools', 'textpattern', 'noneditable', 'quickbars', 'accordion'
+            ],
+            toolbar: isMobileDevice ? [
+              'undo redo | bold italic underline | bullist numlist | link image | emoticons'
+            ] : [
+              'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify',
+              'bullist numlist outdent indent | removeformat | help | link image media table | emoticons charmap | code fullscreen preview | searchreplace | wordcount'
+            ],
+            toolbar_mode: isMobileDevice ? 'scrolling' : 'sliding',
+            ...mobileConfig,
+            placeholder: placeholder,
+            branding: false,
+            statusbar: true,
+            promotion: false,
+            license_key: 'gpl',
+            language: 'zh_CN',
+            setup: (editor: any) => {
+              editor.on('init', () => {
+                console.log('TinyMCE CDN 初始化成功');
+                if (content) {
+                  editor.setContent(content);
+                }
+              });
+              editor.on('change keyup', () => {
+                onChange(editor.getContent());
+              });
+            }
+          });
+          initialized.current = true;
+          setTinymceLoaded(true);
+        }
+      };
+      cdnScript.onerror = (cdnError) => {
+        console.error('TinyMCE CDN脚本也加载失败:', cdnError);
+        setTinymceError(true);
+      };
+      document.head.appendChild(cdnScript);
     };
     document.head.appendChild(script);
 
@@ -230,6 +300,67 @@ export default function TinyMCEEditor({
       }
     }
   }, [content]);
+
+  // 移动设备使用TinyMCE的移动端配置
+  const getMobileConfig = () => {
+    if (!isMobile) return {};
+    
+    return {
+      mobile: {
+        menubar: false,
+        toolbar_mode: 'scrolling',
+        toolbar_sticky: false,
+        table_grid: false,
+        resize: false,
+        object_resizing: false,
+        plugins: [
+          'lists', 'link', 'image', 'emoticons', 'wordcount'
+        ],
+        toolbar: [
+          'undo redo | bold italic underline | bullist numlist | link image | emoticons'
+        ]
+      }
+    };
+  };
+
+  // 移动端降级方案：增强的textarea
+  const renderMobileFallback = () => {
+    const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+    
+    return (
+      <div className="w-full">
+        <div className="mb-2 text-sm text-gray-600">
+          {isWeChat ? '💬 微信编辑器（简化版）' : '📱 移动端编辑器（简化版）'}
+        </div>
+        <textarea
+          value={content}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full p-3 border border-gray-300 rounded-lg resize-vertical focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          style={{ height: `${height}px`, fontSize: '16px' }}
+        />
+        <div className="mt-2 text-xs text-gray-500">
+          {isWeChat 
+            ? '💡 微信浏览器使用简化编辑器，支持基本文本输入。如需富文本编辑，请在Safari浏览器中打开。'
+            : '💡 移动端使用简化编辑器，支持基本文本输入。如需富文本编辑，请在电脑上操作。'
+          }
+        </div>
+        <div className="mt-2 text-xs text-blue-600">
+          💡 提示：可以使用HTML标签，如 &lt;b&gt;粗体&lt;/b&gt;、&lt;i&gt;斜体&lt;/i&gt;、&lt;br&gt;换行
+        </div>
+        {isWeChat && (
+          <div className="mt-2 text-xs text-green-600">
+            💡 建议：复制链接到Safari浏览器打开，获得更好的编辑体验
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 如果TinyMCE加载失败且是移动设备，使用降级方案
+  if (tinymceError && isMobile) {
+    return renderMobileFallback();
+  }
 
   return <textarea id={editorId.current} />;
 }

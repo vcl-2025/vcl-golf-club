@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推送通知基础测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 推送通知基础测试</h1>
+        
+        <div class="status">
+            <h3>系统状态</h3>
+            <p><strong>浏览器支持：</strong><span id="support-status">检测中...</span></p>
+            <p><strong>通知权限：</strong><span id="permission-status">检测中...</span></p>
+            <p><strong>设备类型：</strong><span id="device-type">检测中...</span></p>
+        </div>
+
+        <div style="text-align: center;">
+            <button id="request-permission" class="btn">请求权限</button>
+            <button id="test-notification" class="btn btn-warning">测试通知</button>
+        </div>
+
+        <div class="log" id="log">
+            <div>页面加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        console.log('脚本开始执行');
+        
+        // 日志函数
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const logItem = document.createElement('div');
+            logItem.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            logElement.appendChild(logItem);
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+
+        // 更新状态显示
+        function updateStatus() {
+            console.log('更新状态开始');
+            
+            // 检查浏览器支持
+            const isSupported = 'Notification' in window;
+            const supportStatus = document.getElementById('support-status');
+            if (isSupported) {
+                supportStatus.textContent = '✅ 支持';
+                supportStatus.style.color = '#28a745';
+            } else {
+                supportStatus.textContent = '❌ 不支持';
+                supportStatus.style.color = '#dc3545';
+            }
+            log('浏览器支持检查完成: ' + (isSupported ? '支持' : '不支持'));
+
+            // 检查通知权限
+            const permission = Notification.permission;
+            const permissionStatus = document.getElementById('permission-status');
+            if (permission === 'granted') {
+                permissionStatus.textContent = '✅ 已授权';
+                permissionStatus.style.color = '#28a745';
+            } else if (permission === 'denied') {
+                permissionStatus.textContent = '❌ 已拒绝';
+                permissionStatus.style.color = '#dc3545';
+            } else {
+                permissionStatus.textContent = '⚠️ 未设置';
+                permissionStatus.style.color = '#ffc107';
+            }
+            log('通知权限检查完成: ' + permission);
+
+            // 检查设备类型
+            const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+            const deviceType = document.getElementById('device-type');
+            
+            if (isIOS && isSafari) {
+                deviceType.textContent = '📱 iOS Safari（推送支持有限）';
+                deviceType.style.color = '#ffc107';
+            } else if (isMobile) {
+                deviceType.textContent = '📱 移动设备';
+                deviceType.style.color = '#28a745';
+            } else {
+                deviceType.textContent = '💻 桌面设备';
+                deviceType.style.color = '#17a2b8';
+            }
+            log('设备类型检查完成: ' + (isMobile ? '移动设备' : '桌面设备'));
+            
+            console.log('状态更新完成');
+        }
+
+        // 请求通知权限
+        async function requestPermission() {
+            try {
+                log('开始请求通知权限');
+                const permission = await Notification.requestPermission();
+                log('权限请求结果: ' + permission);
+                updateStatus();
+            } catch (error) {
+                log('权限请求失败: ' + error.message);
+            }
+        }
+
+        // 测试通知
+        function testNotification() {
+            if (Notification.permission === 'granted') {
+                log('发送测试通知');
+                const notification = new Notification('测试通知', {
+                    body: '这是一条测试推送通知',
+                    icon: '/icon-192x192.svg'
+                });
+
+                notification.onclick = function() {
+                    log('通知被点击');
+                    window.focus();
+                };
+
+                log('测试通知已发送');
+            } else {
+                log('通知权限未授权，无法发送测试通知');
+            }
+        }
+
+        // 初始化
+        function init() {
+            console.log('初始化开始');
+            log('开始初始化');
+            
+            // 立即更新状态
+            updateStatus();
+            
+            // 绑定事件
+            document.getElementById('request-permission').onclick = requestPermission;
+            document.getElementById('test-notification').onclick = testNotification;
+
+            log('初始化完成');
+            console.log('初始化完成');
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成');
+            init();
+        });
+
+        // 备用初始化
+        window.addEventListener('load', function() {
+            console.log('页面加载完成');
+            if (document.getElementById('support-status').textContent === '检测中...') {
+                log('备用初始化触发');
+                init();
+            }
+        });
+    </script>
+</body>
+</html>

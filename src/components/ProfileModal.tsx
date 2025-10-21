@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { X, User, Mail, Phone, Calendar, Edit2, Save, Upload, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import NotificationManager from './NotificationManager'
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -660,6 +661,13 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                     : 'bg-red-100 text-red-700 border border-red-200'
                 }`}>
                   {message}
+                </div>
+              )}
+
+              {/* 通知设置 */}
+              {!isEditing && (
+                <div className="mt-6">
+                  <NotificationManager userId={user.id} />
                 </div>
               )}
 
