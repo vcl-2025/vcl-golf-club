@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { 
   X, Calendar, MapPin, Users, Clock, DollarSign, 
-  FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye
+  FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye, Maximize2, Minimize2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventStats, EventRegistration } from '../types'
@@ -23,7 +23,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
   const [userRegistration, setUserRegistration] = useState<EventRegistration | null>(null)
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [isEditingArticle, setIsEditingArticle] = useState(false)
+  const [isFullscreenEditing, setIsFullscreenEditing] = useState(false)
   const [articleContent, setArticleContent] = useState(event.article_content || '')
   const [articleExcerpt, setArticleExcerpt] = useState(event.article_excerpt || '')
   const [savingArticle, setSavingArticle] = useState(false)
@@ -119,7 +119,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
       // 更新本地状态以实时反映更改
       setArticleContent(articleContent)
       setArticleExcerpt(articleExcerpt)
-      setIsEditingArticle(false)
+      setIsFullscreenEditing(false)
       
       // console.log('文章保存成功')
       showError('文章保存成功！')
@@ -164,7 +164,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
       setArticleExcerpt(articleExcerpt)
       setIsArticlePublished(true)
       setArticlePublishedAt(new Date().toISOString())
-      setIsEditingArticle(false)
+      setIsFullscreenEditing(false)
       
       // console.log('文章发布成功')
       showError('文章发布成功！')
@@ -390,70 +390,16 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
                       <FileText className="w-5 h-5 mr-2 text-golf-600" />
                       活动精彩回顾
                     </h3>
-                    {!isEditingArticle && (
-                      <button
-                        onClick={() => setIsEditingArticle(true)}
-                        className="flex items-center px-3 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
-                      >
-                        <Edit3 className="w-4 h-4 mr-2" />
-                        {event.article_content ? '编辑文章' : '写精彩回顾'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setIsFullscreenEditing(true)}
+                      className="flex items-center px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                    >
+                      <Maximize2 className="w-4 h-4 mr-2" />
+                      {event.article_content ? '编辑文章' : '写精彩回顾'}
+                    </button>
                   </div>
 
-                  {isEditingArticle ? (
-                    <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          文章摘要
-                        </label>
-                        <textarea
-                          value={articleExcerpt}
-                          onChange={(e) => setArticleExcerpt(e.target.value)}
-                          placeholder="请输入文章摘要，用于列表展示..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500"
-                          rows={3}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          文章内容
-                        </label>
-                        <TinyMCEEditor
-                          content={articleContent}
-                          onChange={setArticleContent}
-                          placeholder="请写下活动的精彩回顾..."
-                          editorId="event-article-editor"
-                          height={500}
-                        />
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <button
-                          onClick={handleSaveArticle}
-                          disabled={savingArticle}
-                          className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
-                        >
-                          <Save className="w-4 h-4 mr-2" />
-                          {savingArticle ? '保存中...' : '保存草稿'}
-                        </button>
-                        <button
-                          onClick={handlePublishArticle}
-                          disabled={savingArticle}
-                          className="flex items-center px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 disabled:opacity-50 transition-colors"
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          {savingArticle ? '发布中...' : '发布文章'}
-                        </button>
-                        <button
-                          onClick={() => setIsEditingArticle(false)}
-                          className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                        >
-                          取消
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-6">
+                  <div className="bg-gray-50 rounded-lg p-6">
                       {articleContent ? (
                         <div>
                           <TinyMCEViewer content={articleContent} />
@@ -472,7 +418,6 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
                         </div>
                       )}
                     </div>
-                  )}
                 </div>
               )}
             </div>
@@ -590,6 +535,97 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
             fetchEventData()
           }}
         />
+      )}
+
+      {/* 全屏编辑模态窗口 */}
+      {isFullscreenEditing && (
+        <div className="fixed inset-0 bg-white z-[80] flex flex-col">
+          {/* 全屏编辑器头部 */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center">
+              <button
+                onClick={() => setIsFullscreenEditing(false)}
+                className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                返回
+              </button>
+              <h2 className="text-xl font-semibold text-gray-900">
+                全屏编辑 - {event.title}
+              </h2>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setIsFullscreenEditing(false)}
+                className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                <Minimize2 className="w-4 h-4 mr-2" />
+                退出全屏
+              </button>
+            </div>
+          </div>
+
+          {/* 全屏编辑器内容 */}
+          <div className="flex-1 flex flex-col p-6">
+            {/* 文章摘要 */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                文章摘要
+              </label>
+              <textarea
+                value={articleExcerpt}
+                onChange={(e) => setArticleExcerpt(e.target.value)}
+                placeholder="请输入文章摘要，用于列表展示..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+              />
+            </div>
+
+            {/* 文章内容 */}
+            <div className="flex-1 flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                文章内容
+              </label>
+              <div className="flex-1">
+                <TinyMCEEditor
+                  content={articleContent}
+                  onChange={setArticleContent}
+                  placeholder="请写下活动的精彩回顾..."
+                  editorId="fullscreen-article-editor"
+                  height={window.innerHeight - 300}
+                />
+              </div>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleSaveArticle}
+                  disabled={savingArticle}
+                  className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {savingArticle ? '保存中...' : '保存草稿'}
+                </button>
+                <button
+                  onClick={handlePublishArticle}
+                  disabled={savingArticle}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  {savingArticle ? '发布中...' : '发布文章'}
+                </button>
+              </div>
+              <button
+                onClick={() => setIsFullscreenEditing(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
