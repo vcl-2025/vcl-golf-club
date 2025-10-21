@@ -36,11 +36,29 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
     fetchEventData()
   }, [event.id, user])
 
-  // 防止背景滚动
+  // 防止背景滚动 - 更强力的方案
   useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow
+    const originalPosition = window.getComputedStyle(document.body).position
+    
+    // 保存当前滚动位置
+    const scrollY = window.scrollY
+    
+    // 应用样式
     document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    
     return () => {
-      document.body.style.overflow = 'unset'
+      // 恢复样式
+      document.body.style.overflow = originalStyle
+      document.body.style.position = originalPosition
+      document.body.style.top = ''
+      document.body.style.width = ''
+      
+      // 恢复滚动位置
+      window.scrollTo(0, scrollY)
     }
   }, [])
 
@@ -308,7 +326,11 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
   const StatusIcon = status.icon
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-hidden">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-hidden"
+      onTouchMove={(e) => e.preventDefault()}
+      onWheel={(e) => e.preventDefault()}
+    >
       <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative mx-auto">
         {/* 头部 */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
