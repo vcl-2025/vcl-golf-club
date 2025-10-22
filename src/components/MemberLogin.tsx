@@ -8,7 +8,7 @@ interface MemberLoginProps {
 }
 
 export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -85,6 +85,15 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
     'https://images.pexels.com/photos/1325733/pexels-photo-1325733.jpeg?auto=compress&cs=tinysrgb&w=1920'  // 高尔夫球场日落
   ]
 
+  useEffect(() => {
+    // 检查URL参数，如果是密码重置，自动切换到重置模式
+    const urlParams = new URLSearchParams(window.location.search)
+    const type = urlParams.get('type')
+    if (type === 'recovery') {
+      setMode('reset')
+    }
+  }, [])
+
   const resetForm = () => {
     setEmail('')
     setPassword('')
@@ -107,6 +116,13 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         })
         if (error) throw error
         setMessage('重置邮件已发送，请检查您的邮箱。')
+      } else if (mode === 'reset') {
+        const { error } = await supabase.auth.updateUser({
+          password: password
+        })
+        if (error) throw error
+        setMessage('密码重置成功！请使用新密码登录。')
+        setMode('login')
       } else if (mode === 'register') {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -270,6 +286,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
     switch (mode) {
       case 'register': return '会员注册'
       case 'forgot': return '重置密码'
+      case 'reset': return '重置密码'
       default: return '会员登录'
     }
   }
@@ -278,6 +295,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
     switch (mode) {
       case 'register': return '加入绿茵高尔夫俱乐部'
       case 'forgot': return '输入您的邮箱地址，我们将发送重置链接'
+      case 'reset': return '请输入您的新密码'
       default: return '欢迎回到绿茵高尔夫俱乐部'
     }
   }
@@ -488,8 +506,8 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                   className="w-full bg-gradient-to-r from-golf-600 to-golf-700 hover:from-golf-700 hover:to-golf-800 text-white font-semibold py-2 sm:py-3 px-4 text-sm sm:text-base rounded-lg sm:rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   {loading ? 
-                    (mode === 'register' ? '注册中...' : mode === 'forgot' ? '发送中...' : '登录中...') : 
-                    (mode === 'register' ? '注册' : mode === 'forgot' ? '发送重置邮件' : '登录')
+                    (mode === 'register' ? '注册中...' : mode === 'forgot' ? '发送中...' : mode === 'reset' ? '重置中...' : '登录中...') : 
+                    (mode === 'register' ? '注册' : mode === 'forgot' ? '发送重置邮件' : mode === 'reset' ? '重置密码' : '登录')
                   }
                 </button>
               </form>
@@ -543,6 +561,10 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                     >
                       返回登录
                     </button>
+                  </p>
+                ) : mode === 'reset' ? (
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    密码重置成功！请使用新密码登录。
                   </p>
                 ) : (
                   <p className="text-xs sm:text-sm text-gray-600">

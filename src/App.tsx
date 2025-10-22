@@ -16,6 +16,16 @@ function App() {
     
     // 处理邮件验证回调
     const handleAuthCallback = async () => {
+      // 检查是否是密码重置
+      const urlParams = new URLSearchParams(window.location.search)
+      const type = urlParams.get('type')
+      if (type === 'recovery') {
+        // 密码重置，显示重置密码界面
+        console.log('Password recovery detected')
+        // 这里可以设置状态来显示重置密码界面
+        return
+      }
+      
       const hash = window.location.hash
       if (hash && hash.includes('access_token')) {
         try {

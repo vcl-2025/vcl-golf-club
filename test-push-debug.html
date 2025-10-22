@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>推送调试测试</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>推送通知调试测试</h1>
+    
+    <div class="section">
+        <h3>1. 检查浏览器支持</h3>
+        <div id="browser-support"></div>
+    </div>
+    
+    <div class="section">
+        <h3>2. 检查通知权限</h3>
+        <div id="permission-status"></div>
+        <button onclick="requestPermission()">请求通知权限</button>
+    </div>
+    
+    <div class="section">
+        <h3>3. 检查推送订阅</h3>
+        <div id="subscription-status"></div>
+        <button onclick="checkSubscription()">检查订阅</button>
+        <button onclick="subscribe()">订阅推送</button>
+        <button onclick="unsubscribe()">取消订阅</button>
+    </div>
+    
+    <div class="section">
+        <h3>4. 测试本地通知</h3>
+        <button onclick="testLocalNotification()">测试本地通知</button>
+    </div>
+    
+    <div class="section">
+        <h3>5. 测试服务器推送</h3>
+        <button onclick="testServerPush()">测试服务器推送</button>
+    </div>
+    
+    <div class="section">
+        <h3>6. 调试信息</h3>
+        <div id="debug-info"></div>
+    </div>
+
+    <script>
+        const VAPID_PUBLIC_KEY = 'BGJP6fFiXDvOVsT5WpD0T93uu7ZUi64OHFfY2kCgrt7ZV6JI2AW4zjXT26OMA4G76-3Px49wlEvk-gEvLFijVjY';
+        
+        // 检查浏览器支持
+        function checkBrowserSupport() {
+            const support = document.getElementById('browser-support');
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                support.innerHTML = '<span class="success">✅ 浏览器支持推送通知</span>';
+            } else {
+                support.innerHTML = '<span class="error">❌ 浏览器不支持推送通知</span>';
+            }
+        }
+        
+        // 检查通知权限
+        function checkPermission() {
+            const status = document.getElementById('permission-status');
+            if (Notification.permission === 'granted') {
+                status.innerHTML = '<span class="success">✅ 通知权限已授予</span>';
+            } else if (Notification.permission === 'denied') {
+                status.innerHTML = '<span class="error">❌ 通知权限被拒绝</span>';
+            } else {
+                status.innerHTML = '<span class="info">⚠️ 通知权限未设置</span>';
+            }
+        }
+        
+        // 请求通知权限
+        async function requestPermission() {
+            const permission = await Notification.requestPermission();
+            checkPermission();
+        }
+        
+        // 检查推送订阅
+        async function checkSubscription() {
+            const status = document.getElementById('subscription-status');
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.getSubscription();
+                
+                if (subscription) {
+                    status.innerHTML = `
+                        <span class="success">✅ 已订阅推送通知</span><br>
+                        <small>Endpoint: ${subscription.endpoint.substring(0, 50)}...</small><br>
+                        <small>Keys: ${JSON.stringify(subscription.getKey('p256dh'))}</small>
+                    `;
+                } else {
+                    status.innerHTML = '<span class="error">❌ 未订阅推送通知</span>';
+                }
+            } catch (error) {
+                status.innerHTML = `<span class="error">❌ 检查订阅失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 订阅推送
+        async function subscribe() {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+                
+                console.log('订阅成功:', subscription);
+                checkSubscription();
+            } catch (error) {
+                console.error('订阅失败:', error);
+                document.getElementById('subscription-status').innerHTML = 
+                    `<span class="error">❌ 订阅失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 取消订阅
+        async function unsubscribe() {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.getSubscription();
+                if (subscription) {
+                    await subscription.unsubscribe();
+                    console.log('取消订阅成功');
+                    checkSubscription();
+                }
+            } catch (error) {
+                console.error('取消订阅失败:', error);
+            }
+        }
+        
+        // 测试本地通知
+        function testLocalNotification() {
+            if (Notification.permission === 'granted') {
+                new Notification('测试通知', {
+                    body: '这是一条本地测试通知',
+                    icon: '/icon-192x192.png'
+                });
+            } else {
+                alert('请先授予通知权限');
+            }
+        }
+        
+        // 测试服务器推送
+        async function testServerPush() {
+            try {
+                const response = await fetch('https://mypglmtsgfgojtnpmkbc.supabase.co/functions/v1/send-push-notification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cGdsbXRzZ2Znb2p0bnBta2JjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNzE0NzQ4MCwiZXhwIjoyMDUyNzIzNDgwfQ.tVi2KR7Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q8Q'
+                    },
+                    body: JSON.stringify({
+                        user_id: 'fca1ef76-3752-46af-abe5-c649ca368726',
+                        title: '服务器推送测试',
+                        message: '这是一条来自服务器的推送通知',
+                        url: '/'
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('服务器推送结果:', result);
+                document.getElementById('debug-info').innerHTML = 
+                    `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+            } catch (error) {
+                console.error('服务器推送失败:', error);
+                document.getElementById('debug-info').innerHTML = 
+                    `<span class="error">❌ 服务器推送失败: ${error.message}</span>`;
+            }
+        }
+        
+        // Base64转Uint8Array
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/-/g, '+')
+                .replace(/_/g, '/');
+            
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+        
+        // 页面加载时检查
+        window.onload = function() {
+            checkBrowserSupport();
+            checkPermission();
+            checkSubscription();
+        };
+    </script>
+</body>
+</html>
