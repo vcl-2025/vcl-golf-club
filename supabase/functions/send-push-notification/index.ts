@@ -41,7 +41,7 @@ serve(async (req) => {
       )
     }
 
-    // 使用本地推送通知（通过Service Worker）
+    // 使用web-push库发送真正的推送通知
     const results = []
     for (const sub of subscriptions) {
       try {
@@ -52,15 +52,44 @@ serve(async (req) => {
           subscription: sub.subscription?.endpoint || 'no-endpoint'
         })
 
-        // 由于VAPID认证复杂，我们使用本地推送
-        // 实际通知将通过Service Worker的push事件处理
+        // 构建推送载荷
+        const payload = JSON.stringify({
+          title,
+          body: message,
+          icon: '/icon-192x192.svg',
+          badge: '/badge-72x72.svg',
+          vibrate: [100, 50, 100],
+          requireInteraction: true,
+          actions: [
+            { action: 'open', title: '查看详情' },
+            { action: 'dismiss', title: '稍后提醒' }
+          ],
+          data: {
+            url: url || '/',
+            timestamp: Date.now()
+          }
+        })
+
+        // 使用web-push发送推送通知
+        const webpush = await import('https://esm.sh/web-push@3.6.7')
+        
+        // 配置VAPID详情
+        webpush.setVapidDetails(
+          'mailto:your-email@example.com',
+          Deno.env.get('VAPID_PUBLIC_KEY') ?? '',
+          Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
+        )
+
+        // 发送推送通知
+        await webpush.sendNotification(sub.subscription, payload)
+        
         results.push({ 
           success: true, 
           subscription: sub.subscription?.endpoint || 'no-endpoint',
-          message: '推送通知已准备发送（本地模式）'
+          message: '推送通知发送成功'
         })
         
-        console.log('推送通知准备完成（本地模式）:', sub.subscription?.endpoint)
+        console.log('推送通知发送成功:', sub.subscription?.endpoint)
       } catch (error) {
         console.error('发送推送失败:', error)
         results.push({ success: false, error: error.message })

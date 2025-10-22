@@ -180,10 +180,46 @@ serve(async (req) => {
       throw new Error(`Resend API error: ${res.status} - ${data.message}`)
     }
 
+    // 发送推送通知（通过本地方式）
+    try {
+      console.log("📱 发送推送通知...")
+      
+      // 直接调用send-push-notification Edge Function
+      const pushResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-push-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+        },
+        body: JSON.stringify({
+          user_id: user_id,
+          title: `🏌️ 高尔夫俱乐部 - ${approval_status === 'approved' ? '报名批准' : '报名取消'}`,
+          message: approval_status === 'approved' 
+            ? `恭喜！您的活动"${event_title}"报名已批准，请及时完成支付。`
+            : `很抱歉，您的活动"${event_title}"报名已取消。${approval_notes || ''}`,
+          data: {
+            type: 'approval',
+            event_title: event_title,
+            approval_status: approval_status,
+            timestamp: Date.now()
+          },
+          url: '/'
+        })
+      })
+      
+      if (pushResponse.ok) {
+        console.log("✅ 推送通知发送成功")
+      } else {
+        console.log("⚠️ 推送通知发送失败，但邮件已发送")
+      }
+    } catch (pushError) {
+      console.log("⚠️ 推送通知发送失败，但邮件已发送:", pushError.message)
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: "审批通知邮件已发送",
+        message: "审批通知邮件和推送已发送",
         recipient: userData.email,
         resend_response: data,
       }),

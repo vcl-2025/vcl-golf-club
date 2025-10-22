@@ -106,7 +106,7 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
       }
       
       // 将VAPID公钥转换为Uint8Array
-      const vapidPublicKey = 'BD185vkWB_7UMBz0jv2HYU3KvTL2s8vkMEy7_7b6fyVT67Ob3JLP-x5CMl926DVN-NJs5y7EK7TSJfc0QMuSWVE';
+      const vapidPublicKey = 'BO-8Y3LBdK3K1iUiCETFeCk8tGd7HOw1-Qm_xK0cvbgQshzA5-qfi8K62TEFU1UgjHM7yOG3qfaaoTU57MKAkBw';
       const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
       
       const subscription = await registration.pushManager.subscribe({
