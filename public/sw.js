@@ -41,20 +41,20 @@ self.addEventListener('push', (event) => {
   let notificationData = {
     title: '高尔夫俱乐部',
     body: '您有新的活动通知',
-    icon: '/icon-192x192.png',
-    badge: '/badge-72x72.png',
+    icon: '/icon-192x192.svg',
+    badge: '/badge-72x72.svg',
     vibrate: [100, 50, 100],
     requireInteraction: true,
     actions: [
       {
         action: 'open',
         title: '查看详情',
-        icon: '/icon-192x192.png'
+        icon: '/icon-192x192.svg'
       },
       {
         action: 'dismiss',
         title: '稍后提醒',
-        icon: '/icon-192x192.png'
+        icon: '/icon-192x192.svg'
       }
     ],
     data: {
@@ -67,15 +67,76 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       const pushData = event.data.json();
+      console.log('Push data received:', pushData);
       notificationData = { ...notificationData, ...pushData };
     } catch (e) {
       console.error('Error parsing push data:', e);
     }
   }
 
+  console.log('Showing notification with data:', notificationData);
+  
   event.waitUntil(
     self.registration.showNotification(notificationData.title, notificationData)
+      .then(() => {
+        console.log('Notification shown successfully');
+      })
+      .catch((error) => {
+        console.error('Error showing notification:', error);
+      })
   );
+});
+
+// 主动触发推送通知（用于测试）
+self.addEventListener('message', (event) => {
+  console.log('Service Worker received message:', event.data);
+  console.log('Message type:', event.data?.type);
+  
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    console.log('处理SHOW_NOTIFICATION消息...');
+    const { title, body, icon, badge } = event.data;
+    
+    const notificationData = {
+      title: title || '高尔夫俱乐部',
+      body: body || '您有新的活动通知',
+      icon: icon || '/icon-192x192.svg',
+      badge: badge || '/badge-72x72.svg',
+      vibrate: [100, 50, 100],
+      requireInteraction: true,
+      actions: [
+        {
+          action: 'open',
+          title: '查看详情',
+          icon: '/icon-192x192.svg'
+        },
+        {
+          action: 'dismiss',
+          title: '稍后提醒',
+          icon: '/icon-192x192.svg'
+        }
+      ],
+      data: {
+        url: '/',
+        timestamp: Date.now()
+      }
+    };
+    
+    console.log('准备显示通知:', notificationData);
+    console.log('通知标题:', notificationData.title);
+    console.log('通知内容:', notificationData.body);
+    
+    self.registration.showNotification(notificationData.title, notificationData)
+      .then(() => {
+        console.log('✅ 通知显示成功！');
+      })
+      .catch((error) => {
+        console.error('❌ 通知显示失败:', error);
+        console.error('错误详情:', error.message);
+        console.error('错误堆栈:', error.stack);
+      });
+  } else {
+    console.log('未知消息类型:', event.data?.type);
+  }
 });
 
 // 处理通知点击

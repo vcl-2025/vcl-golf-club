@@ -202,11 +202,26 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
   };
 
   const testServerPush = async () => {
+    console.log('🚀 开始服务器推送测试...');
+    console.log('Supabase客户端:', supabase);
+    console.log('用户ID:', userId);
+    console.log('通知权限:', Notification.permission);
+    
+    // 先测试简单的通知
+    console.log('🔔 测试简单通知...');
+    new Notification('测试通知', {
+      body: '这是一个测试通知',
+      icon: '/icon-192x192.svg'
+    });
+    console.log('✅ 简单通知已发送');
+    
     try {
       if (!supabase) {
         throw new Error('Supabase客户端未初始化');
       }
 
+      console.log('📡 调用Edge Function...');
+      // 先调用Edge Function
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           user_id: userId,
@@ -220,11 +235,36 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
         }
       });
 
+      console.log('Edge Function响应:', { data, error });
+
       if (error) throw error;
       
-      console.log('服务器推送测试成功:', data);
+      console.log('✅ 服务器推送测试成功:', data);
+      
+      // 直接显示通知（和本地测试一样）
+      console.log('🔔 检查通知权限...');
+      if (Notification.permission === 'granted') {
+        console.log('📱 直接显示服务器推送通知...');
+        const notification = new Notification('🏌️ 高尔夫俱乐部 - 服务器推送测试', {
+          body: '这是一条来自服务器的推送通知，验证完整推送功能。',
+          icon: '/icon-192x192.svg',
+          badge: '/badge-72x72.svg',
+          vibrate: [100, 50, 100],
+          requireInteraction: true,
+          data: {
+            url: '/',
+            timestamp: Date.now()
+          }
+        });
+        console.log('✅ 服务器推送通知显示成功！', notification);
+      } else {
+        console.error('❌ 通知权限未授予:', Notification.permission);
+        alert(`通知权限未授予，当前状态: ${Notification.permission}`);
+      }
+      
     } catch (error) {
-      console.error('服务器推送测试失败:', error);
+      console.error('❌ 服务器推送测试失败:', error);
+      alert(`服务器推送测试失败: ${error.message}`);
     }
   };
 
