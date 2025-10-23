@@ -46,10 +46,10 @@ export function useAuth() {
           
           // 检查是否是密码重置登录
           if (event === 'SIGNED_IN' && session?.user) {
-            // 检查用户是否刚通过密码重置登录
-            const isPasswordRecovery = session.user.app_metadata?.provider === 'email' && 
-                                     session.user.aud === 'authenticated'
-            if (isPasswordRecovery) {
+            // 检查URL参数，只有通过重置链接登录才设置标记
+            const urlParams = new URLSearchParams(window.location.search)
+            const type = urlParams.get('type')
+            if (type === 'recovery') {
               console.log('Password recovery login detected')
               localStorage.setItem('forcePasswordChange', 'true')
             }

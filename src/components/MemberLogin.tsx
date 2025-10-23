@@ -112,7 +112,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
     try {
       if (mode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin
+          redirectTo: `${window.location.origin}/reset-password`
         })
         if (error) throw error
         setMessage('重置邮件已发送，请检查您的邮箱。')
@@ -121,11 +121,8 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
           password: password
         })
         if (error) throw error
-        setMessage('密码重置成功！正在登录...')
-        // 重置成功后自动登录
-        setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+        setMessage('密码重置成功！请使用新密码登录。')
+        setMode('login')
       } else if (mode === 'register') {
         const { data, error } = await supabase.auth.signUp({
           email,

@@ -1,11 +1,14 @@
 import React, { useState } from 'react'
 import { useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import MemberLogin from './components/MemberLogin'
 import Dashboard from './components/Dashboard'
+import ResetPassword from './pages/ResetPassword'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
 import { initMobileViewport } from './utils/viewport'
+import { initializeOneSignal } from './lib/onesignal'
 
 function App() {
   const { user, loading } = useAuth()
@@ -15,16 +18,18 @@ function App() {
     // 初始化移动端视口设置
     initMobileViewport()
     
+    // 初始化 OneSignal
+    initializeOneSignal()
+    
     // 处理邮件验证回调
     const handleAuthCallback = async () => {
       // 检查是否是密码重置
       const urlParams = new URLSearchParams(window.location.search)
       const type = urlParams.get('type')
       if (type === 'recovery') {
-        console.log('Password recovery detected - showing reset form')
-        setShowPasswordReset(true)
-        // 清理URL参数
-        window.history.replaceState({}, document.title, window.location.pathname)
+        console.log('Password recovery detected - redirecting to reset page')
+        // 重定向到重置页面
+        window.location.href = '/reset-password'
         return
       }
       
@@ -102,20 +107,21 @@ function App() {
     )
   }
 
-  // 如果没有用户，显示登录页面
-  if (!user) {
-    return (
-      <ModalProvider>
-        <MemberLogin onLoginSuccess={() => {}} />
-      </ModalProvider>
-    )
-  }
-
-  // 如果有用户，显示 Dashboard
   return (
-    <ModalProvider>
-      <Dashboard />
-    </ModalProvider>
+    <Router>
+      <ModalProvider>
+        <Routes>
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="*" element={
+            !user ? (
+              <MemberLogin onLoginSuccess={() => {}} />
+            ) : (
+              <Dashboard />
+            )
+          } />
+        </Routes>
+      </ModalProvider>
+    </Router>
   )
 }
 

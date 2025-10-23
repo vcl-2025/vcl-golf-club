@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@onesignal/node-onesignal": "^5.3.1-beta1",
     "@supabase/supabase-js": "^2.76.1",
     "@tinymce/tinymce-react": "^6.3.0",
     "@tiptap/extension-color": "^3.4.3",
@@ -36,6 +37,7 @@
     "lucide-react": "^0.543.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.4",
     "recharts": "^3.2.1",
     "tinymce": "^8.0.2",
     "vite": "^5.2.0"
