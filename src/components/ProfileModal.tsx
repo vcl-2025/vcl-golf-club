@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { X, User, Mail, Phone, Calendar, Edit2, Save, Upload, Camera } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import NotificationManager from './NotificationManager'
-import OneSignalManager from './OneSignalManager'
+// import OneSignalManager from './OneSignalManager'
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -666,12 +666,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
               )}
 
               {/* 通知设置 */}
-              {!isEditing && (
-                <div className="mt-6 space-y-4">
-                  <NotificationManager userId={user.id} />
-                  <OneSignalManager />
-                </div>
-              )}
+        {!isEditing && (
+          <div className="mt-6 space-y-4">
+            <NotificationManager userId={user.id} />
+            {/* <OneSignalManager /> */}
+          </div>
+        )}
 
               {/* 操作按钮 */}
               <div className="flex space-x-4 pt-4 border-t border-gray-200">
