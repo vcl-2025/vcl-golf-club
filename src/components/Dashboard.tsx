@@ -89,6 +89,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
+      // 检查是否需要强制修改密码
+      const forcePasswordChange = localStorage.getItem('forcePasswordChange')
+      if (forcePasswordChange === 'true') {
+        // 显示密码修改模态框
+        setProfileModalOpen(true)
+        // 清除标记
+        localStorage.removeItem('forcePasswordChange')
+      }
+      
       fetchUserProfile()
       fetchMemberCount()
       fetchDashboardData()

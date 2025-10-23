@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
 import MemberLogin from './components/MemberLogin'
@@ -9,6 +9,7 @@ import { initMobileViewport } from './utils/viewport'
 
 function App() {
   const { user, loading } = useAuth()
+  const [showPasswordReset, setShowPasswordReset] = useState(false)
 
   useEffect(() => {
     // 初始化移动端视口设置
@@ -20,9 +21,10 @@ function App() {
       const urlParams = new URLSearchParams(window.location.search)
       const type = urlParams.get('type')
       if (type === 'recovery') {
-        // 密码重置，显示重置密码界面
-        console.log('Password recovery detected')
-        // 这里可以设置状态来显示重置密码界面
+        console.log('Password recovery detected - showing reset form')
+        setShowPasswordReset(true)
+        // 清理URL参数
+        window.history.replaceState({}, document.title, window.location.pathname)
         return
       }
       
@@ -88,6 +90,15 @@ function App() {
           <p className="text-gray-600">加载中...</p>
         </div>
       </div>
+    )
+  }
+
+  // 如果显示密码重置，显示重置界面
+  if (showPasswordReset) {
+    return (
+      <ModalProvider>
+        <MemberLogin onLoginSuccess={() => {}} />
+      </ModalProvider>
     )
   }
 

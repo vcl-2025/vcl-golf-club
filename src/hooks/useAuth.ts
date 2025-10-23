@@ -43,6 +43,17 @@ export function useAuth() {
         if (mounted) {
           setUser(session?.user ?? null)
           setLoading(false)
+          
+          // 检查是否是密码重置登录
+          if (event === 'SIGNED_IN' && session?.user) {
+            // 检查用户是否刚通过密码重置登录
+            const isPasswordRecovery = session.user.app_metadata?.provider === 'email' && 
+                                     session.user.aud === 'authenticated'
+            if (isPasswordRecovery) {
+              console.log('Password recovery login detected')
+              localStorage.setItem('forcePasswordChange', 'true')
+            }
+          }
         }
       }
     )

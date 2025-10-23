@@ -121,8 +121,11 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
           password: password
         })
         if (error) throw error
-        setMessage('密码重置成功！请使用新密码登录。')
-        setMode('login')
+        setMessage('密码重置成功！正在登录...')
+        // 重置成功后自动登录
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
       } else if (mode === 'register') {
         const { data, error } = await supabase.auth.signUp({
           email,
