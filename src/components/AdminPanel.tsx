@@ -1241,6 +1241,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       {/* 会员管理 */}
       {currentView === 'members' && <MemberAdmin />}
 
+
       {/* 活动报名管理模态框 */}
       {selectedEventForRegistration && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">

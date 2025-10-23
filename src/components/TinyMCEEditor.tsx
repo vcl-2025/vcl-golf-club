@@ -44,7 +44,7 @@ export default function TinyMCEEditor({
     if (initialized.current) return;
 
     const script = document.createElement('script');
-    script.src = '/tinymce/tinymce.min.js';
+    script.src = 'https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js';
     script.onload = () => {
       console.log('TinyMCE脚本加载成功');
       if (window.tinymce) {
@@ -59,20 +59,22 @@ export default function TinyMCEEditor({
         window.tinymce.init({
           selector: `#${editorId.current}`,
           height: height,
+          theme: 'silver',
+          skin: 'oxide',
           plugins: isMobileDevice ? [
             'lists', 'link', 'image', 'emoticons', 'wordcount'
           ] : [
             'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
             'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
             'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
-            'codesample', 'hr', 'pagebreak', 'nonbreaking', 'toc',
+            'template', 'codesample', 'hr', 'pagebreak', 'nonbreaking', 'toc',
             'imagetools', 'textpattern', 'noneditable', 'quickbars', 'accordion'
           ],
           toolbar: isMobileDevice ? [
-            'undo redo | bold italic underline | bullist numlist | link image | emoticons'
+                'undo redo | bold italic underline | bullist numlist | link image | emoticons | template'
           ] : [
             'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify',
-            'bullist numlist outdent indent | removeformat | help | link image media table | emoticons charmap | code fullscreen preview | searchreplace | wordcount'
+                'bullist numlist outdent indent | removeformat | help | link image media table | emoticons charmap | code fullscreen preview | searchreplace | wordcount | template'
           ],
           toolbar_mode: isMobileDevice ? 'scrolling' : 'sliding',
           ...mobileConfig,
@@ -82,7 +84,7 @@ export default function TinyMCEEditor({
             file: { title: '文件', items: 'newdocument restoredraft | preview | export print | deleteallconversations' },
             edit: { title: '编辑', items: 'undo redo | cut copy paste pastetext | selectall | searchreplace' },
             view: { title: '视图', items: 'code | visualaid visualchars visualblocks | spellchecker | preview fullscreen | showcomments' },
-            insert: { title: '插入', items: 'image link media codesample inserttable | charmap emoticons hr | pagebreak nonbreaking anchor toc | insertdatetime' },
+            insert: { title: '插入', items: 'image link media template codesample inserttable | charmap emoticons hr | pagebreak nonbreaking anchor toc | insertdatetime' },
             format: { title: '格式', items: 'bold italic underline strikethrough superscript subscript codeformat | blocks fontfamily fontsize align lineheight | forecolor backcolor removeformat' },
             tools: { title: '工具', items: 'spellchecker spellcheckerlanguage | a11ycheck code wordcount' },
             table: { title: '表格', items: 'inserttable | cell row column | tableprops deletetable' },
@@ -92,7 +94,6 @@ export default function TinyMCEEditor({
           branding: false,
           statusbar: true,
           promotion: false,
-          license_key: 'gpl',
           content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; }',
           font_family_formats: '微软雅黑=Microsoft YaHei,Helvetica Neue,PingFang SC,sans-serif;苹果苹方=PingFang SC,Microsoft YaHei,sans-serif;宋体=simsun,serif;仿宋体=FangSong,serif;黑体=SimHei,sans-serif;Arial=arial,helvetica,sans-serif;Arial Black=arial black,avant garde;Times New Roman=times new roman,times;Courier New=courier new,courier;',
           fontsize_formats: '8px 10px 12px 14px 16px 18px 20px 24px 28px 32px 36px 48px 64px 72px 96px',
@@ -120,6 +121,28 @@ export default function TinyMCEEditor({
             {title: 'Striped', value: 'table table-striped'},
             {title: 'Bordered', value: 'table table-bordered'},
             {title: 'Hover', value: 'table table-hover'}
+          ],
+          templates: [
+            {
+              title: '豪华活动回顾模板',
+              description: '带样式的精美活动回顾模板',
+              url: '/templates/activity-review.html'
+            },
+            {
+              title: '专业比赛通知模板',
+              description: '带表格和样式的比赛通知模板',
+              url: '/templates/competition-notice.html'
+            },
+            {
+              title: '精美会员活动邀请模板',
+              description: '带卡片样式的活动邀请模板',
+              url: '/templates/member-activity.html'
+            },
+            {
+              title: '正式新闻公告模板',
+              description: '带官方样式的新闻公告模板',
+              url: '/templates/official-announcement.html'
+            }
           ],
           images_upload_handler: async (blobInfo: any, progress: any) => {
             try {
@@ -175,9 +198,9 @@ export default function TinyMCEEditor({
               console.error('TinyMCE 错误:', e);
             });
           },
-          init_instance_callback: (editor: any) => {
-            console.log('TinyMCE 实例初始化完成:', editor.id);
-          }
+              init_instance_callback: (editor: any) => {
+                console.log('TinyMCE 实例初始化完成:', editor.id);
+              }
         });
         initialized.current = true;
         setTinymceLoaded(true);
@@ -208,14 +231,14 @@ export default function TinyMCEEditor({
               'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
               'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
               'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
-              'codesample', 'hr', 'pagebreak', 'nonbreaking', 'toc',
+              'template', 'codesample', 'hr', 'pagebreak', 'nonbreaking', 'toc',
               'imagetools', 'textpattern', 'noneditable', 'quickbars', 'accordion'
             ],
             toolbar: isMobileDevice ? [
-              'undo redo | bold italic underline | bullist numlist | link image | emoticons'
+                'undo redo | bold italic underline | bullist numlist | link image | emoticons | template'
             ] : [
               'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify',
-              'bullist numlist outdent indent | removeformat | help | link image media table | emoticons charmap | code fullscreen preview | searchreplace | wordcount'
+                'bullist numlist outdent indent | removeformat | help | link image media table | emoticons charmap | code fullscreen preview | searchreplace | wordcount | template'
             ],
             toolbar_mode: isMobileDevice ? 'scrolling' : 'sliding',
             ...mobileConfig,
@@ -301,7 +324,7 @@ export default function TinyMCEEditor({
           'lists', 'link', 'image', 'emoticons', 'wordcount'
         ],
         toolbar: [
-          'undo redo | bold italic underline | bullist numlist | link image | emoticons'
+                'undo redo | bold italic underline | bullist numlist | link image | emoticons | template'
         ]
       }
     };
