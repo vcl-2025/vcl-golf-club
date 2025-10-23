@@ -5,24 +5,17 @@ import './index.css'
 import { injectSpeedInsights } from '@vercel/speed-insights';
 injectSpeedInsights();
 
-// 注册Service Worker
+// 注册Service Worker (PWA功能)
 if ('serviceWorker' in navigator) {
-  console.log('开始注册Service Worker...');
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('✅ Service Worker注册成功:', registration);
-        console.log('Service Worker作用域:', registration.scope);
-        console.log('Service Worker状态:', registration.active?.state);
+        console.log('✅ PWA Service Worker注册成功:', registration.scope);
       })
       .catch((error) => {
-        console.error('❌ Service Worker注册失败:', error);
-        console.error('错误详情:', error.message);
-        console.error('错误堆栈:', error.stack);
+        console.error('❌ PWA Service Worker注册失败:', error);
       });
   });
-} else {
-  console.log('❌ 浏览器不支持Service Worker');
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

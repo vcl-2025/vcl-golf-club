@@ -139,53 +139,17 @@ export default function Dashboard() {
     setLoading(true)
     try {
       // 获取即将举行的活动 - 显示2个
-      // 查询状态为 'upcoming' 的活动，或者查询未来日期的活动
-      // // console.log('查询即将举行的活动...')
+      // 只显示未开始的活动（当前时间 < 活动开始时间）
+      const now = new Date().toISOString()
       
-      const today = new Date().toISOString().split('T')[0]
-      
-      // 先尝试查询状态为 'upcoming' 的活动
-      let { data: events, error: eventsError } = await supabase
+      // 查询未开始的活动，排除已取消的活动
+      const { data: events, error: eventsError } = await supabase
         .from('events')
         .select('*')
-        .eq('status', 'upcoming')
+        .gt('start_time', now)
+        .neq('status', 'cancelled')
+        .order('start_time', { ascending: true })
         .limit(2)
-      
-      // // console.log('upcoming状态活动查询结果:', { events, eventsError })
-      
-      // 如果没有找到，尝试查询未来日期的活动
-      if (!events || events.length === 0) {
-        // // console.log('没有找到upcoming状态的活动，尝试查询未来日期的活动...')
-        // // console.log('今天日期:', today)
-        
-        const { data: futureEvents, error: futureError } = await supabase
-          .from('events')
-          .select('*')
-          .gte('start_time', today)
-          .limit(2)
-        
-        // // console.log('未来日期活动查询结果:', { futureEvents, futureError })
-        events = futureEvents
-        eventsError = futureError
-      }
-      
-      // 如果还是没有找到，尝试查询所有活动看看数据结构
-      if (!events || events.length === 0) {
-        // // console.log('没有找到未来日期的活动，查询所有活动看看数据结构...')
-        const { data: allEvents, error: allError } = await supabase
-          .from('events')
-          .select('*')
-          .limit(5)
-        
-        // // console.log('所有活动查询结果:', { allEvents, allError })
-        // // console.log('所有活动的状态和日期:', allEvents?.map(e => ({ 
-        //   id: e.id, 
-        //   title: e.title, 
-        //   status: e.status, 
-        //   start_time: e.start_time,
-        //   created_at: e.created_at 
-        // })))
-      }
       
       // 如果还是没有找到，就不显示任何活动
       if (!events || events.length === 0) {

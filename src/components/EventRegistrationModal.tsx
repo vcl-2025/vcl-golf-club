@@ -200,10 +200,10 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       }
 
       setMessage('报名申请已提交，等待管理员审核。审核通过后您将收到通知。')
-      setTimeout(() => {
-        onSuccess()
-        onClose()
-      }, 2000)
+      
+      // 立即关闭，不等待用户看完
+      onSuccess()
+      onClose()
     } catch (error: any) {
       setMessage(error.message || '报名失败，请重试')
     }
