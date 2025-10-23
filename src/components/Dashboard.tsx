@@ -841,8 +841,24 @@ export default function Dashboard() {
                   onClick={() => setCurrentView('scores')}
                   className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <Trophy className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4 shadow-lg">
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-10 lg:h-10 relative">
+                      {/* 高尔夫俱乐部 Logo */}
+                      <div className="w-full h-full bg-white rounded-full flex items-center justify-center relative overflow-hidden">
+                        {/* 天空背景 */}
+                        <div className="absolute top-0 left-0 right-0 h-1/2 bg-blue-100"></div>
+                        {/* 高尔夫球场 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-green-400 rounded-b-full"></div>
+                        {/* 树木 */}
+                        <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-green-600 rounded-full"></div>
+                        <div className="absolute top-1/4 right-1/4 w-1 h-1 bg-green-600 rounded-full"></div>
+                        {/* 高尔夫旗杆 */}
+                        <div className="absolute bottom-1/3 left-1/2 w-0.5 h-2 bg-green-700 transform -translate-x-1/2"></div>
+                        <div className="absolute bottom-1/3 left-1/2 w-1 h-0.5 bg-red-500 transform -translate-x-1/2"></div>
+                        {/* 球洞 */}
+                        <div className="absolute bottom-1/3 left-1/2 w-0.5 h-0.5 bg-black rounded-full transform -translate-x-1/2"></div>
+                      </div>
+                    </div>
                   </div>
                   <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                     成绩查询
@@ -964,7 +980,18 @@ export default function Dashboard() {
               <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
-                    <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 mr-2" />
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 mr-2 relative">
+                      {/* 高尔夫俱乐部 Logo 简化版 */}
+                      <div className="w-full h-full bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center relative overflow-hidden">
+                        {/* 天空背景 */}
+                        <div className="absolute top-0 left-0 right-0 h-1/2 bg-blue-100"></div>
+                        {/* 高尔夫球场 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-green-300 rounded-b-full"></div>
+                        {/* 高尔夫旗杆 */}
+                        <div className="absolute bottom-1/3 left-1/2 w-0.5 h-1.5 bg-green-700 transform -translate-x-1/2"></div>
+                        <div className="absolute bottom-1/3 left-1/2 w-0.5 h-0.5 bg-red-500 transform -translate-x-1/2"></div>
+                      </div>
+                    </div>
                     最新发布的成绩活动
                   </h3>
                   <button 
@@ -985,8 +1012,19 @@ export default function Dashboard() {
                     {recentScores.map((score) => (
                       <div key={score.id} className="flex items-center justify-between p-3 sm:p-4 bg-yellow-50 rounded-lg">
                         <div className="flex items-center">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-500 rounded-full flex items-center justify-center mr-2 sm:mr-3">
-                            <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mr-2 sm:mr-3 shadow-md">
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 relative">
+                              {/* 高尔夫俱乐部 Logo 迷你版 */}
+                              <div className="w-full h-full bg-white rounded-full flex items-center justify-center relative overflow-hidden">
+                                {/* 天空背景 */}
+                                <div className="absolute top-0 left-0 right-0 h-1/2 bg-blue-100"></div>
+                                {/* 高尔夫球场 */}
+                                <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-green-400 rounded-b-full"></div>
+                                {/* 高尔夫旗杆 */}
+                                <div className="absolute bottom-1/3 left-1/2 w-0.5 h-1 bg-green-700 transform -translate-x-1/2"></div>
+                                <div className="absolute bottom-1/3 left-1/2 w-0.5 h-0.5 bg-red-500 transform -translate-x-1/2"></div>
+                              </div>
+                            </div>
                           </div>
                           <div>
                             <div className="font-semibold text-gray-900 text-sm sm:text-base">
