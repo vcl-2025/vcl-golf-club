@@ -10,6 +10,12 @@ export const initializeOneSignal = () => {
   console.log('OneSignal 配置:', ONESIGNAL_CONFIG)
   
   if (typeof window !== 'undefined' && window.OneSignal) {
+    // 检查是否已经初始化
+    if (window.OneSignal.isInitialized && window.OneSignal.isInitialized()) {
+      console.log('OneSignal 已经初始化，跳过重复初始化')
+      return
+    }
+    
     console.log('开始初始化 OneSignal SDK...')
     window.OneSignal.init({
       appId: ONESIGNAL_CONFIG.appId,

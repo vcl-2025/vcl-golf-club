@@ -8,7 +8,6 @@ import ResetPassword from './pages/ResetPassword'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
 import { initMobileViewport } from './utils/viewport'
-import { initializeOneSignal } from './lib/onesignal'
 
 function App() {
   const { user, loading } = useAuth()
@@ -17,9 +16,6 @@ function App() {
   useEffect(() => {
     // 初始化移动端视口设置
     initMobileViewport()
-    
-    // 初始化 OneSignal
-    initializeOneSignal()
     
     // 处理邮件验证回调
     const handleAuthCallback = async () => {

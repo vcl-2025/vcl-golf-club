@@ -19,6 +19,13 @@ export default function OneSignalManager() {
           return
         }
         
+        // 检查是否已经初始化
+        if (window.OneSignal && window.OneSignal.isInitialized && window.OneSignal.isInitialized()) {
+          console.log('OneSignal 已经初始化，直接设置状态')
+          setIsInitialized(true)
+          return
+        }
+        
         initializeOneSignal()
         setIsInitialized(true)
         console.log('OneSignal 初始化成功')
@@ -28,7 +35,12 @@ export default function OneSignalManager() {
       }
     }
 
-    initOneSignal()
+    // 延迟初始化，确保 OneSignal SDK 完全加载
+    const timer = setTimeout(() => {
+      initOneSignal()
+    }, 1000)
+
+    return () => clearTimeout(timer)
   }, [])
 
   const handleSubscribe = async () => {
