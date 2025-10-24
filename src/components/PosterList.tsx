@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Image as ImageIcon, Filter, ChevronDown, ChevronUp } from 'lucide-react'
+import { Calendar, Image as ImageIcon, Filter, ChevronDown, ChevronUp, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 interface Poster {
@@ -21,6 +21,7 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
   const [posters, setPosters] = useState<Poster[]>([])
   const [filteredPosters, setFilteredPosters] = useState<Poster[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [monthFilter, setMonthFilter] = useState<string>('all')
   const [availableYears, setAvailableYears] = useState<string[]>([])
@@ -32,7 +33,7 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
 
   useEffect(() => {
     applyFilters()
-  }, [posters, yearFilter, monthFilter])
+  }, [posters, searchTerm, yearFilter, monthFilter])
 
   const fetchPosters = async () => {
     try {
@@ -61,6 +62,14 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
 
   const applyFilters = () => {
     let filtered = [...posters]
+
+    // 标题搜索
+    if (searchTerm) {
+      filtered = filtered.filter(p =>
+        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
 
     // 年份筛选
     if (yearFilter !== 'all') {
@@ -104,7 +113,7 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
           <div className="flex items-center">
             <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2" />
             <h3 className="text-base sm:text-lg font-semibold text-gray-900">筛选条件</h3>
-            {(yearFilter !== 'all' || monthFilter !== 'all') && (
+            {(searchTerm || yearFilter !== 'all' || monthFilter !== 'all') && (
               <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 已筛选
               </span>
@@ -132,6 +141,23 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
         
         {/* 桌面端始终显示，移动端根据状态显示 */}
         <div className={`flex flex-col lg:flex-row gap-3 sm:gap-4 ${isExpanded ? 'block' : 'hidden md:flex'}`}>
+          {/* 标题搜索 */}
+          <div className="flex-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+              标题搜索
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="按标题搜索..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 text-sm"
+              />
+            </div>
+          </div>
+
           {/* 年份筛选 */}
           <div className="w-32">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
@@ -183,10 +209,11 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
         </div>
 
         {/* 清除过滤器按钮 */}
-        {(yearFilter !== 'all' || monthFilter !== 'all') && (
+        {(searchTerm || yearFilter !== 'all' || monthFilter !== 'all') && (
           <div className="mt-2 sm:mt-4 flex justify-end">
             <button
               onClick={() => {
+                setSearchTerm('')
                 setYearFilter('all')
                 setMonthFilter('all')
               }}
