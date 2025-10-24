@@ -1,9 +1,8 @@
 // 简单的 Service Worker，用于 PWA 功能
-const CACHE_NAME = 'golf-club-v1'
+const CACHE_NAME = 'golf-club-v2'
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
+  '/index.html',
   '/manifest.json'
 ]
 
@@ -37,7 +36,12 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // 返回缓存或网络请求
+        // 如果是 HTML 请求，总是从网络获取
+        if (event.request.headers.get('accept').includes('text/html')) {
+          return fetch(event.request)
+            .catch(() => caches.match('/index.html'))
+        }
+        // 其他资源返回缓存或网络请求
         return response || fetch(event.request)
       })
   )
