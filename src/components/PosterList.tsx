@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Image as ImageIcon, Filter } from 'lucide-react'
+import { Calendar, Image as ImageIcon, Filter, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 interface Poster {
@@ -21,9 +21,10 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
   const [posters, setPosters] = useState<Poster[]>([])
   const [filteredPosters, setFilteredPosters] = useState<Poster[]>([])
   const [loading, setLoading] = useState(true)
-  const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('all')
   const [yearFilter, setYearFilter] = useState<string>('all')
+  const [monthFilter, setMonthFilter] = useState<string>('all')
   const [availableYears, setAvailableYears] = useState<string[]>([])
+  const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
     fetchPosters()
@@ -31,7 +32,7 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
 
   useEffect(() => {
     applyFilters()
-  }, [posters, timeFilter, yearFilter])
+  }, [posters, yearFilter, monthFilter])
 
   const fetchPosters = async () => {
     try {
@@ -60,17 +61,18 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
 
   const applyFilters = () => {
     let filtered = [...posters]
-    const now = new Date()
 
-    if (timeFilter === 'upcoming') {
-      filtered = filtered.filter(p => new Date(p.event_date) >= now)
-    } else if (timeFilter === 'past') {
-      filtered = filtered.filter(p => new Date(p.event_date) < now)
-    }
-
+    // 年份筛选
     if (yearFilter !== 'all') {
       filtered = filtered.filter(p =>
         new Date(p.event_date).getFullYear().toString() === yearFilter
+      )
+    }
+
+    // 月份筛选
+    if (monthFilter !== 'all') {
+      filtered = filtered.filter(p =>
+        (new Date(p.event_date).getMonth() + 1).toString() === monthFilter
       )
     }
 
@@ -97,46 +99,103 @@ export default function PosterList({ onPosterSelect }: PosterListProps) {
   return (
     <div className="space-y-6">
       {/* 筛选器 */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-center mb-4">
-          <Filter className="w-5 h-5 text-golf-600 mr-2" />
-          <h3 className="text-lg font-semibold text-gray-900">筛选条件</h3>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* 时间筛选 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              时间范围
-            </label>
-            <select
-              value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value as any)}
-              className="input-field"
-            >
-              <option value="all">全部</option>
-              <option value="upcoming">即将到来</option>
-              <option value="past">已过期</option>
-            </select>
+      <div className="bg-white rounded-2xl shadow-sm p-3 sm:p-6 mb-4 sm:mb-6">
+        <div className="flex items-center justify-between mb-2 sm:mb-4">
+          <div className="flex items-center">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2" />
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">筛选条件</h3>
+            {(yearFilter !== 'all' || monthFilter !== 'all') && (
+              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                已筛选
+              </span>
+            )}
           </div>
-
+          
+          {/* 移动端折叠按钮 */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="md:hidden flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            {isExpanded ? (
+              <>
+                <span className="text-xs mr-1">收起</span>
+                <ChevronUp className="w-3 h-3" />
+              </>
+            ) : (
+              <>
+                <span className="text-xs mr-1">展开</span>
+                <ChevronDown className="w-3 h-3" />
+              </>
+            )}
+          </button>
+        </div>
+        
+        {/* 桌面端始终显示，移动端根据状态显示 */}
+        <div className={`flex flex-col lg:flex-row gap-3 sm:gap-4 ${isExpanded ? 'block' : 'hidden md:flex'}`}>
           {/* 年份筛选 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="w-32">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
               年份
             </label>
-            <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">全部年份</option>
-              {availableYears.map(year => (
-                <option key={year} value={year}>{year}年</option>
-              ))}
-            </select>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+              >
+                <option value="all">全部年份</option>
+                {availableYears.map(year => (
+                  <option key={year} value={year}>{year}年</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* 月份筛选 */}
+          <div className="w-32">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+              月份
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+              >
+                <option value="all">全部月份</option>
+                <option value="1">1月</option>
+                <option value="2">2月</option>
+                <option value="3">3月</option>
+                <option value="4">4月</option>
+                <option value="5">5月</option>
+                <option value="6">6月</option>
+                <option value="7">7月</option>
+                <option value="8">8月</option>
+                <option value="9">9月</option>
+                <option value="10">10月</option>
+                <option value="11">11月</option>
+                <option value="12">12月</option>
+              </select>
+            </div>
           </div>
         </div>
+
+        {/* 清除过滤器按钮 */}
+        {(yearFilter !== 'all' || monthFilter !== 'all') && (
+          <div className="mt-2 sm:mt-4 flex justify-end">
+            <button
+              onClick={() => {
+                setYearFilter('all')
+                setMonthFilter('all')
+              }}
+              className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              清除所有筛选
+            </button>
+          </div>
+        )}
 
         <div className="mt-4 text-sm text-gray-600">
           共找到 {filteredPosters.length} 张海报

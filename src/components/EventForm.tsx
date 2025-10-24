@@ -101,7 +101,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         fee: 0,
         max_participants: 50,
         registration_deadline: '',
-        rules: '',
+        rules: '', 
         image_url: '',
         payment_qr_code: '',
         payment_emt_email: '',

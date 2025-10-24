@@ -207,8 +207,7 @@ export default function UserScoreQuery() {
   })
 
   const filteredGroups = Object.values(groupedScores).filter(group => {
-    const matchesSearch = group.event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         group.event.location.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = group.event.title.toLowerCase().includes(searchTerm.toLowerCase())
     
     const eventDate = new Date(group.event.start_time)
     const matchesYear = !selectedYear || eventDate.getFullYear().toString() === selectedYear
@@ -322,10 +321,8 @@ export default function UserScoreQuery() {
           selectedMonth={selectedMonth}
           onMonthChange={setSelectedMonth}
           availableYears={availableYears}
-          placeholder="按活动名称或地点搜索..."
-          showLocationFilter={true}
-          locationTerm={searchTerm}
-          onLocationChange={setSearchTerm}
+          placeholder="按活动名称搜索..."
+          showLocationFilter={false}
           onClearFilters={() => {
             setSearchTerm('')
             setSelectedYear('')

@@ -30,3 +30,4 @@ GRANT EXECUTE ON FUNCTION get_user_active_sessions() TO authenticated;
 
 
 
+

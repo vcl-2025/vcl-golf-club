@@ -92,3 +92,4 @@ SELECT 'investment_projects', COUNT(*) FROM investment_projects WHERE qrcode_url
 
 
 
+

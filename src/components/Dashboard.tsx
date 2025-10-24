@@ -192,7 +192,7 @@ export default function Dashboard() {
       // 如果还是没有找到，就不显示任何活动
       if (!events || events.length === 0) {
         // console.log('没有找到即将举行的活动')
-        events = []
+        // events 已经是常量，不需要重新赋值
       }
       
       // console.log('活动查询结果:', { events, eventsError })
