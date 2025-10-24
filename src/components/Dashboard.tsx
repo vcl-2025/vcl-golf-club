@@ -291,8 +291,12 @@ export default function Dashboard() {
               className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => setCurrentView('dashboard')}
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-golf-600 rounded-full flex items-center justify-center">
-                <span className="text-sm sm:text-lg lg:text-xl font-bold text-white">B</span>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-2 border-golf-600 rounded-full flex items-center justify-center">
+                <img 
+                  src="/golf-club-logo.png" 
+                  alt="绿茵高尔夫俱乐部" 
+                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 object-contain"
+                />
               </div>
               <div className="ml-2 sm:ml-3">
                 <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-gray-900">绿茵高尔夫俱乐部</h1>

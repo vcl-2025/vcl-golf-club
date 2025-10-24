@@ -342,8 +342,12 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         <div className="flex-1 flex items-end justify-center px-4 py-4 sm:py-6 lg:items-center lg:py-12 lg:px-12">
           <div className="max-w-lg text-center lg:text-left w-full">
             {/* Logo */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto lg:mx-0 mb-3 sm:mb-4 lg:mb-8 border border-white/20">
-              <Trophy className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-white rounded-full flex items-center justify-center mx-auto lg:mx-0 mb-3 sm:mb-4 lg:mb-8 border border-white shadow-lg">
+              <img 
+                src="/golf-club-logo.png" 
+                alt="绿茵高尔夫俱乐部" 
+                className="w-19 h-19 sm:w-21 sm:h-21 lg:w-23 lg:h-23 object-contain"
+              />
             </div>
             
             {/* Brand Name */}
@@ -382,8 +386,12 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
           <div className="w-full max-w-sm sm:max-w-md">
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-white/20">
               <div className="text-center mb-6 sm:mb-8">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-golf-600 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                  <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg">
+                  <img 
+                    src="/golf-club-logo.png" 
+                    alt="绿茵高尔夫俱乐部" 
+                    className="w-15 h-15 sm:w-17 sm:h-17 object-contain"
+                  />
                 </div>
                 <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-2">{getTitle()}</h2>
                 <p className="text-xs sm:text-sm lg:text-base text-gray-600">{getSubtitle()}</p>
