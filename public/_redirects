@@ -1,1 +1,5 @@
+# SPA 路由重定向
 /*    /index.html   200
+
+# 静态资源缓存
+/assets/*   /assets/:splat   200
