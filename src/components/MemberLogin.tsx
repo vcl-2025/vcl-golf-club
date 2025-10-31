@@ -128,7 +128,11 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}`
+            emailRedirectTo: `${window.location.origin}`,
+            data: {
+              full_name: fullName,
+              phone: phone
+            }
           }
         })
         if (error) throw error

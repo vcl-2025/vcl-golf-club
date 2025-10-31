@@ -356,30 +356,24 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
         console.error('获取成绩数据失败:', scoresError)
         setScores([])
       } else {
-        
-        if (scoresData && scoresData.length > 0) {
-          // 获取用户信息
-          const userIds = [...new Set(scoresData.map(s => s.user_id))]
-          
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('user_profiles')
-            .select('id, full_name')
-            .in('id', userIds)
-
-
-          // 合并数据
-          const scoresWithProfiles = scoresData.map(score => {
-            const userProfile = profilesData?.find(p => p.id === score.user_id)
-            return {
+        // 直接使用 JOIN 查询的结果，user_profiles 已经在 scoresData 中了
+        // 如果某些记录缺少 user_profiles，使用默认值
+        const scoresWithProfiles = (scoresData || []).map(score => {
+          // 确保 user_profiles 对象存在，如果不存在或缺少字段，使用默认值
+          const userProfile = score.user_profiles || {}
+          return {
             ...score,
-              user_profiles: userProfile || { full_name: '未知' }
+            user_profiles: {
+              id: userProfile.id || score.user_id,
+              full_name: userProfile.full_name || '未知',
+              avatar_url: userProfile.avatar_url || null,
+              avatar_position_x: userProfile.avatar_position_x || 50,
+              avatar_position_y: userProfile.avatar_position_y || 50
             }
-          })
+          }
+        })
 
-          setScores(scoresWithProfiles)
-        } else {
-          setScores([])
-        }
+        setScores(scoresWithProfiles)
       }
     } catch (error) {
       console.error('获取管理数据失败:', error)
@@ -1238,19 +1232,36 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                             if (Array.isArray(holeScores) && holeScores.length > 0 && typeof holeScores[0] === 'string') {
                               holeScores = holeScores.map(s => parseInt(String(s), 10) || 0)
                             }
+                            
+                            // 处理头像URL：确保是完整URL，空字符串转为null
+                            let avatarUrl = score.user_profiles?.avatar_url || null
+                            if (avatarUrl && typeof avatarUrl === 'string') {
+                              // 移除首尾空格
+                              avatarUrl = avatarUrl.trim()
+                              // 如果为空字符串，转为null
+                              if (avatarUrl === '') {
+                                avatarUrl = null
+                              } else if (!avatarUrl.startsWith('http://') && !avatarUrl.startsWith('https://') && !avatarUrl.startsWith('data:')) {
+                                // 如果是相对路径，可能需要从 Supabase Storage 获取完整 URL
+                                // 但这里先保留原值，因为 Supabase Storage 的 URL 可能已经是完整路径
+                                console.log(`[头像] ${score.user_profiles?.full_name || '未知'} 的头像URL格式:`, avatarUrl)
+                              }
+                            }
+                            
                             return {
                               name: score.user_profiles?.full_name || '未知',
-                              avatarUrl: score.user_profiles?.avatar_url || null,
+                              avatarUrl: avatarUrl,
                               avatarPositionX: score.user_profiles?.avatar_position_x || 50,
                               avatarPositionY: score.user_profiles?.avatar_position_y || 50,
                               holeScores: holeScores,
+                              totalStrokes: score.total_strokes || 0,
                               groupNumber: score.group_number,
                               teamName: score.team_name
                             }
                           })
                           
                           // 按分组和团队组织数据
-                          const groups = new Map<number, Map<string, Array<{ name: string; avatarUrl: string | null; avatarPositionX: number; avatarPositionY: number; holeScores: number[] }>>>()
+                          const groups = new Map<number, Map<string, Array<{ name: string; avatarUrl: string | null; avatarPositionX: number; avatarPositionY: number; holeScores: number[]; totalStrokes: number }>>>()
                           players.forEach(player => {
                             if (!player.groupNumber || !player.teamName) return
                             const group = player.groupNumber
@@ -1267,14 +1278,15 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                               avatarUrl: player.avatarUrl,
                               avatarPositionX: player.avatarPositionX,
                               avatarPositionY: player.avatarPositionY,
-                              holeScores: player.holeScores
+                              holeScores: player.holeScores,
+                              totalStrokes: player.totalStrokes
                             })
                           })
                           
                           // 计算每组胜负和总比分
                           const groupDetails: Array<{
                             group: number
-                            teams: Array<{ teamName: string; wins: number; playerCount: number; players: Array<{ name: string; avatarUrl: string | null; avatarPositionX: number; avatarPositionY: number; holeScores: number[] }> }>
+                            teams: Array<{ teamName: string; wins: number; playerCount: number; players: Array<{ name: string; avatarUrl: string | null; avatarPositionX: number; avatarPositionY: number; holeScores: number[]; totalStrokes: number }> }>
                             winner: string | 'tie'
                           }> = []
                           const totalScores = new Map<string, number>()
@@ -1354,6 +1366,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                             }
                           })
                           
+                          // 按组号排序，确保显示顺序为1、2、3、4...
+                          groupDetails.sort((a, b) => a.group - b.group)
+                          
                           // 找到红队和蓝队名称（处理带*的名称）
                           const allTeamNames = Array.from(totalScores.keys())
                           
@@ -1392,23 +1407,23 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                               {/* 总比分 */}
                               <div className="flex flex-col sm:flex-row gap-6 mb-8 justify-center items-center">
                                 {redTeamName && (
-                                  <div className="flex items-center justify-between bg-white rounded-xl p-5 border border-gray-200 min-w-[200px]">
+                                  <div className="flex items-center justify-between bg-white rounded-xl p-5 border border-gray-200 min-w-[200px] gap-4">
                                     <div className="flex items-center space-x-3">
                                       <div className="w-3 h-3 rounded bg-red-500"></div>
                                       <span className="font-medium text-gray-900">{redTeamName}</span>
                                     </div>
-                                    <div className="bg-red-500 text-white rounded-lg px-6 py-2 font-bold text-xl">
+                                    <div className="bg-red-500 text-white rounded-lg px-6 py-2 font-bold text-xl flex-shrink-0">
                                       {(totalScores.get(redTeamName) ?? 0).toFixed(1)}
                                     </div>
                                   </div>
                                 )}
                                 {finalBlueTeamName && (
-                                  <div className="flex items-center justify-between bg-white rounded-xl p-5 border border-gray-200 min-w-[200px]">
+                                  <div className="flex items-center justify-between bg-white rounded-xl p-5 border border-gray-200 min-w-[200px] gap-4">
                                     <div className="flex items-center space-x-3">
                                       <div className="w-3 h-3 rounded bg-blue-500"></div>
                                       <span className="font-medium text-gray-900">{finalBlueTeamName}</span>
                                     </div>
-                                    <div className="bg-blue-500 text-white rounded-lg px-6 py-2 font-bold text-xl">
+                                    <div className="bg-blue-500 text-white rounded-lg px-6 py-2 font-bold text-xl flex-shrink-0">
                                       {(totalScores.get(finalBlueTeamName) ?? 0).toFixed(1)}
                                     </div>
                                   </div>
@@ -1537,117 +1552,185 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                                   const summaryText = `红赢${redScore}洞，蓝赢${blueScore}洞，平${ties}洞`
                                   
                                   return (
-                                    <div key={group.group} className="bg-white rounded-xl p-6 border-2 border-gray-200 shadow-sm">
-                                      <div className="flex items-center gap-3 mb-5">
-                                        <span className="text-sm font-medium text-gray-700">第{group.group}组</span>
-                                        <span className="text-gray-400">·</span>
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-2xl font-bold text-red-600">
-                                            {groupScoreText.split(' - ')[0]}
-                                          </span>
-                                          <span className="text-xl text-gray-400">-</span>
-                                          <span className="text-2xl font-bold text-blue-600">
-                                            {groupScoreText.split(' - ')[1]}
-                                          </span>
+                                    <div key={group.group} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+                                      {/* 头部区域：组号和比分 */}
+                                      <div className="mb-6 pb-4 border-b border-gray-100">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <span className="px-3 py-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg text-sm font-semibold text-gray-700 border border-gray-200">
+                                              第{group.group}组
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2 bg-gradient-to-r from-red-50 via-white to-blue-50 rounded-lg px-4 py-2 border border-gray-100">
+                                            <div className="flex items-center gap-2">
+                                              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                              <span className="text-2xl font-bold text-red-600 tracking-tight">
+                                                {groupScoreText.split(' - ')[0]}
+                                              </span>
+                                            </div>
+                                            <span className="text-gray-300 text-lg font-light">-</span>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-2xl font-bold text-blue-600 tracking-tight">
+                                                {groupScoreText.split(' - ')[1]}
+                                              </span>
+                                              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
                                       
-                                      {/* 第一行：球员信息（左右两队，带头像） */}
-                                      <div className="flex items-center gap-6 mb-5">
+                                      {/* 球员信息区域 */}
+                                      <div className="flex items-start gap-4 mb-6">
                                         {/* 红队球员列（左侧） */}
-                                        <div className="flex-1">
-                                          <div className="space-y-3">
+                                        <div className="flex-1 relative">
+                                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-red-400 to-red-600 rounded-full"></div>
+                                          <div className="pl-4 space-y-3">
                                             {redPlayers.map((player, idx) => (
-                                              <div key={idx} className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                  {player.avatarUrl ? (
-                                                    <img 
-                                                      src={player.avatarUrl} 
-                                                      alt={player.name}
-                                                      className="w-full h-full object-cover"
-                                                      style={{
-                                                        objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                      }}
-                                                    />
-                                                  ) : (
-                                                    <User className="w-6 h-6 text-red-500" />
-                                                  )}
+                                              <div key={idx} className="flex items-center gap-3 group">
+                                                <div className="relative">
+                                                  <div className="absolute inset-0 bg-red-500 rounded-full opacity-20 blur-sm group-hover:opacity-30 transition-opacity"></div>
+                                                  <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-300 shadow-sm flex items-center justify-center overflow-hidden">
+                                                    {player.avatarUrl ? (
+                                                      <img 
+                                                        src={player.avatarUrl} 
+                                                        alt={player.name}
+                                                        className="w-full h-full object-cover"
+                                                        style={{
+                                                          objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
+                                                        }}
+                                                        onError={(e) => {
+                                                          // 图片加载失败时，替换为默认图标
+                                                          const parent = e.currentTarget.parentElement
+                                                          if (parent) {
+                                                            e.currentTarget.remove()
+                                                            const fallback = document.createElement('div')
+                                                            fallback.className = 'w-full h-full flex items-center justify-center'
+                                                            fallback.innerHTML = '<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>'
+                                                            parent.appendChild(fallback)
+                                                          }
+                                                          console.log(`[头像加载失败] ${player.name}:`, player.avatarUrl)
+                                                        }}
+                                                      />
+                                                    ) : (
+                                                      <User className="w-6 h-6 text-red-500" />
+                                                    )}
+                                                  </div>
                                                 </div>
-                                                <span className="text-base text-gray-800 font-medium">{player.name}</span>
+                                                <div className="flex flex-col">
+                                                  <span className="text-base text-gray-800 font-semibold group-hover:text-red-600 transition-colors">{player.name}</span>
+                                                  <span className="text-sm text-gray-500 font-medium">{player.totalStrokes || 0}杆</span>
+                                                </div>
                                               </div>
                                             ))}
                                           </div>
                                         </div>
                                         
+                                        {/* 分隔线 */}
+                                        <div className="w-px h-full bg-gradient-to-b from-transparent via-gray-200 to-transparent self-stretch"></div>
+                                        
                                         {/* 蓝队球员列（右侧） */}
-                                        <div className="flex-1">
-                                          <div className="space-y-3">
+                                        <div className="flex-1 relative">
+                                          <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
+                                          <div className="pr-4 space-y-3">
                                             {bluePlayers.map((player, idx) => (
-                                              <div key={idx} className="flex items-center gap-3">
-                                                <div className="w-12 h-12 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                  {player.avatarUrl ? (
-                                                    <img 
-                                                      src={player.avatarUrl} 
-                                                      alt={player.name}
-                                                      className="w-full h-full object-cover"
-                                                      style={{
-                                                        objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                      }}
-                                                    />
-                                                  ) : (
-                                                    <User className="w-6 h-6 text-blue-500" />
-                                                  )}
+                                              <div key={idx} className="flex items-center gap-3 group justify-end">
+                                                <div className="flex flex-col items-end">
+                                                  <span className="text-base text-gray-800 font-semibold group-hover:text-blue-600 transition-colors">{player.name}</span>
+                                                  <span className="text-sm text-gray-500 font-medium">{player.totalStrokes || 0}杆</span>
                                                 </div>
-                                                <span className="text-base text-gray-800 font-medium">{player.name}</span>
+                                                <div className="relative">
+                                                  <div className="absolute inset-0 bg-blue-500 rounded-full opacity-20 blur-sm group-hover:opacity-30 transition-opacity"></div>
+                                                  <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 shadow-sm flex items-center justify-center overflow-hidden">
+                                                    {player.avatarUrl ? (
+                                                      <img 
+                                                        src={player.avatarUrl} 
+                                                        alt={player.name}
+                                                        className="w-full h-full object-cover"
+                                                        style={{
+                                                          objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
+                                                        }}
+                                                        onError={(e) => {
+                                                          // 图片加载失败时，替换为默认图标
+                                                          const parent = e.currentTarget.parentElement
+                                                          if (parent) {
+                                                            e.currentTarget.remove()
+                                                            const fallback = document.createElement('div')
+                                                            fallback.className = 'w-full h-full flex items-center justify-center'
+                                                            fallback.innerHTML = '<svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>'
+                                                            parent.appendChild(fallback)
+                                                          }
+                                                          console.log(`[头像加载失败] ${player.name}:`, player.avatarUrl)
+                                                        }}
+                                                      />
+                                                    ) : (
+                                                      <User className="w-6 h-6 text-blue-500" />
+                                                    )}
+                                                  </div>
+                                                </div>
                                               </div>
                                             ))}
                                           </div>
                                         </div>
                                       </div>
                                       
-                                      {/* 第二行：进度圆圈（每洞胜负） */}
-                                      <div className="space-y-2">
+                                      {/* 进度圆圈区域 */}
+                                      <div className="bg-gradient-to-b from-gray-50 to-white rounded-xl p-4 border border-gray-100">
                                         {/* 红队进度行 */}
-                                        <div className="flex justify-center gap-0.5 flex-wrap">
+                                        <div className="flex justify-center items-center gap-1 mb-2">
                                           {redBlueResults.map((result, idx) => (
                                             <div
                                               key={idx}
-                                              className={`w-2.5 h-2.5 rounded-full transition-colors flex items-center justify-center flex-shrink-0 ${
-                                                result === 'red' ? 'bg-red-500' : 
-                                                result === 'blue' ? 'bg-white border border-gray-300' :
-                                                'bg-white border border-gray-300'
-                                              }`}
+                                              className="relative group"
                                               title={`洞${idx + 1}: ${result === 'red' ? '红队获胜' : result === 'blue' ? '蓝队获胜' : '平局'}`}
                                             >
-                                              {result === 'tie' && (
-                                                <div className="w-0.5 h-0.5 rounded-full bg-gray-400"></div>
+                                              <div
+                                                className={`w-3 h-3 rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 group-hover:scale-125 ${
+                                                  result === 'red' ? 'bg-red-500 shadow-md shadow-red-200' : 
+                                                  result === 'blue' ? 'bg-white border-2 border-gray-200 shadow-sm' :
+                                                  'bg-white border-2 border-gray-300 shadow-sm'
+                                                }`}
+                                              >
+                                                {result === 'tie' && (
+                                                  <div className="w-1 h-1 rounded-full bg-gray-500"></div>
+                                                )}
+                                              </div>
+                                              {(idx + 1) % 3 === 0 && idx < 17 && (
+                                                <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[8px] text-gray-400 font-medium">
+                                                  {idx + 1}
+                                                </div>
                                               )}
                                             </div>
                                           ))}
                                         </div>
                                         
                                         {/* 蓝队进度行 */}
-                                        <div className="flex justify-center gap-0.5 flex-wrap">
+                                        <div className="flex justify-center items-center gap-1 mb-3">
                                           {redBlueResults.map((result, idx) => (
                                             <div
                                               key={idx}
-                                              className={`w-2.5 h-2.5 rounded-full transition-colors flex items-center justify-center flex-shrink-0 ${
-                                                result === 'blue' ? 'bg-blue-500' : 
-                                                result === 'red' ? 'bg-white border border-gray-300' :
-                                                'bg-white border border-gray-300'
-                                              }`}
+                                              className="relative group"
                                               title={`洞${idx + 1}: ${result === 'blue' ? '蓝队获胜' : result === 'red' ? '红队获胜' : '平局'}`}
                                             >
-                                              {result === 'tie' && (
-                                                <div className="w-0.5 h-0.5 rounded-full bg-gray-400"></div>
-                                              )}
+                                              <div
+                                                className={`w-3 h-3 rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 group-hover:scale-125 ${
+                                                  result === 'blue' ? 'bg-blue-500 shadow-md shadow-blue-200' : 
+                                                  result === 'red' ? 'bg-white border-2 border-gray-200 shadow-sm' :
+                                                  'bg-white border-2 border-gray-300 shadow-sm'
+                                                }`}
+                                              >
+                                                {result === 'tie' && (
+                                                  <div className="w-1 h-1 rounded-full bg-gray-500"></div>
+                                                )}
+                                              </div>
                                             </div>
                                           ))}
                                         </div>
                                         
                                         {/* 总结文字 */}
-                                        <div className="text-sm font-medium text-red-600 text-center mt-4">
-                                          {summaryText}
+                                        <div className="text-center pt-2 border-t border-gray-200">
+                                          <span className="inline-block px-4 py-1.5 bg-gradient-to-r from-red-50 to-blue-50 rounded-full text-sm font-semibold text-gray-700 border border-gray-200">
+                                            {summaryText}
+                                          </span>
                                         </div>
                                       </div>
                                     </div>
