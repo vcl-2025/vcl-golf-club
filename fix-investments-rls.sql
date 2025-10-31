@@ -73,3 +73,5 @@ ALTER TABLE investment_projects ENABLE ROW LEVEL SECURITY;
 
 
 
+
+

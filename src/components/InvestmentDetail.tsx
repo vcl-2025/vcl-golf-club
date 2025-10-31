@@ -118,7 +118,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70]">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex items-center justify-between z-10">
-          <h2 className="text-2xl font-bold text-gray-900">投资支持</h2>
+          <h2 className="text-2xl font-bold text-gray-900">捐赠与赞助</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

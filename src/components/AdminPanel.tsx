@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Plus, Edit, Trash2, Users, DollarSign, Calendar, MapPin, ChevronDown, ChevronRight,
-  BarChart3, Settings, Eye, Download, Image as ImageIcon, Trophy, Receipt, Clock, Search, Filter, X
+  BarChart3, Settings, Eye, Download, Image as ImageIcon, Trophy, Receipt, Clock, Search, Filter, X, Pin
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
@@ -13,8 +13,11 @@ import InvestmentAdmin from './InvestmentAdmin'
 import ExpenseAdmin from './ExpenseAdmin'
 import MemberAdmin from './MemberAdmin'
 import AdminAnalytics from './AdminAnalytics'
+import InformationCenterForm from './InformationCenterForm'
 import { useModal } from './ModalProvider'
 import { getEventStatus, getEventStatusText, getEventStatusStyles } from '../utils/eventStatus'
+import { InformationItem } from '../types'
+import { FileText as FileTextIcon } from 'lucide-react'
 
 interface AdminStats {
   // 活动统计
@@ -72,7 +75,7 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps) {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members'>('dashboard')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information'>('dashboard')
   const [selectedEventForRegistration, setSelectedEventForRegistration] = useState<Event | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [posters, setPosters] = useState<Poster[]>([])
@@ -82,9 +85,12 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedPoster, setSelectedPoster] = useState<Poster | null>(null)
   const [selectedScore, setSelectedScore] = useState<any>(null)
+  const [informationItems, setInformationItems] = useState<InformationItem[]>([])
+  const [selectedInformationItem, setSelectedInformationItem] = useState<InformationItem | null>(null)
   const [showEventForm, setShowEventForm] = useState(false)
   const [showPosterForm, setShowPosterForm] = useState(false)
   const [showScoreForm, setShowScoreForm] = useState(false)
+  const [showInformationForm, setShowInformationForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'upcoming' | 'active' | 'cancelled' | 'completed'>('all')
@@ -92,6 +98,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   const [scoreSearchTerm, setScoreSearchTerm] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
+  const [informationSearchTerm, setInformationSearchTerm] = useState('')
+  const [informationStatusFilter, setInformationStatusFilter] = useState<string>('all')
+  const [informationCategoryFilter, setInformationCategoryFilter] = useState<string>('all')
   
   // 排序状态
   const [sortField, setSortField] = useState<string>('')
@@ -137,6 +146,46 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       setSortField(field)
       setSortDirection('asc')
     }
+  }
+
+  // 获取排序后的信息中心列表
+  const getSortedInformationItems = () => {
+    let sorted = [...informationItems]
+    
+    if (sortField && sortField.startsWith('information_')) {
+      const field = sortField.replace('information_', '')
+      sorted.sort((a, b) => {
+        let aValue: any
+        let bValue: any
+        
+        switch (field) {
+          case 'title':
+            aValue = a.title
+            bValue = b.title
+            break
+          case 'published_at':
+            aValue = a.published_at ? new Date(a.published_at).getTime() : 0
+            bValue = b.published_at ? new Date(b.published_at).getTime() : 0
+            break
+          case 'view_count':
+            aValue = a.view_count || 0
+            bValue = b.view_count || 0
+            break
+          case 'display_order':
+            aValue = a.display_order || 0
+            bValue = b.display_order || 0
+            break
+          default:
+            return 0
+        }
+        
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+    
+    return sorted
   }
 
   // 获取排序后的活动列表
@@ -266,6 +315,17 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
       if (postersError) throw postersError
       setPosters(postersData || [])
+
+      // 获取信息中心数据
+      const { data: informationData, error: informationError } = await supabase
+        .from('information_items')
+        .select('*')
+        .order('is_pinned', { ascending: false })
+        .order('display_order', { ascending: true })
+        .order('published_at', { ascending: false })
+
+      if (informationError) throw informationError
+      setInformationItems(informationData || [])
 
       // 获取所有报名记录
       const { data: registrationsData, error: registrationsError } = await supabase
@@ -461,7 +521,8 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
               <Calendar className="w-4 h-4 mr-2" />
               活动管理
             </button>
-            <button
+            {/* 海报管理 - 已隐藏 */}
+            {/* <button
               onClick={() => setCurrentView('posters')}
               className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'posters'
@@ -471,7 +532,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             >
               <ImageIcon className="w-4 h-4 mr-2" />
               海报管理
-            </button>
+            </button> */}
             <button
               onClick={() => setCurrentView('scores')}
               className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
@@ -515,6 +576,17 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             >
               <Users className="w-4 h-4 mr-2" />
               会员管理
+            </button>
+            <button
+              onClick={() => setCurrentView('information')}
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                currentView === 'information'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+              }`}
+            >
+              <FileTextIcon className="w-4 h-4 mr-2" />
+              信息中心管理
             </button>
           </div>
         </div>
@@ -618,11 +690,11 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
           {/* 活动列表 */}
           <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-200">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead className="bg-gray-50">
                 <tr>
                   <th 
-                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-48"
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-56"
                     onClick={() => handleSort('title')}
                   >
                     <div className="flex items-center space-x-1">
@@ -635,11 +707,11 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-32"
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-44"
                     onClick={() => handleSort('start_time')}
                   >
                     <div className="flex items-center space-x-1">
-                      <span>时间</span>
+                      <span>活动信息</span>
                       {sortField === 'start_time' && (
                         <span className="text-gray-400">
                           {sortDirection === 'asc' ? '↑' : '↓'}
@@ -648,12 +720,13 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-64"
-                    onClick={() => handleSort('location')}
+                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-28"
+                    onClick={() => handleSort('event_type')}
+                    style={{ writingMode: 'horizontal-tb', textOrientation: 'mixed' }}
                   >
-                    <div className="flex items-center space-x-1">
-                      <span>地点</span>
-                      {sortField === 'location' && (
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>活动详情</span>
+                      {sortField === 'event_type' && (
                         <span className="text-gray-400">
                           {sortDirection === 'asc' ? '↑' : '↓'}
                         </span>
@@ -661,23 +734,10 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
-                    onClick={() => handleSort('fee')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>费用</span>
-                      {sortField === 'fee' && (
-                        <span className="text-gray-400">
-                          {sortDirection === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
+                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-20"
                     onClick={() => handleSort('registrations')}
                   >
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center justify-center space-x-1">
                       <span>报名情况</span>
                       {sortField === 'registrations' && (
                         <span className="text-gray-400">
@@ -687,10 +747,10 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
+                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-12"
                     onClick={() => handleSort('status')}
                   >
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center justify-center space-x-1">
                       <span>状态</span>
                       {sortField === 'status' && (
                         <span className="text-gray-400">
@@ -699,7 +759,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">操作</th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-24">操作</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -712,51 +772,72 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                   return matchesSearch && matchesStatus
                 }).map((event) => (
                   <tr key={event.id} className="hover:bg-green-50">
-                    <td className="px-6 py-4 w-48">
+                    <td className="px-6 py-4 w-56">
                       <div className="font-medium text-gray-900 truncate" title={event.title}>{event.title}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 w-32">
-                      <div className="text-center">
-                        <div className="text-xs font-medium">{new Date(event.start_time).toLocaleDateString('zh-CN')}</div>
-                        <div className="text-xs text-gray-500">{new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+                    <td className="px-6 py-4 text-sm text-gray-600 w-44">
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-medium">{new Date(event.start_time).toLocaleDateString('zh-CN')}</span>
+                          <span className="text-sm text-gray-500">{new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div className="flex items-start space-x-2">
+                          <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
+                          <span className="text-sm text-gray-600 break-words">{event.location}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 w-64">
-                      <div className="break-words">{event.location}</div>
+                    <td className="px-6 py-4 text-sm text-gray-600 w-28" style={{ writingMode: 'horizontal-tb', textOrientation: 'mixed' }}>
+                      <div className="space-y-2">
+                        <div className="text-center">
+                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                            event.event_type === '个人赛' ? 'bg-blue-100 text-blue-800' :
+                            event.event_type === '团体赛' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {event.event_type}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-sm font-bold text-red-600">{formatCurrency(event.fee)}</span>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600">
-                      {formatCurrency(event.fee)}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 w-20">
+                      <div className="text-center">
+                        {(() => {
+                          const allRegistrations = eventRegistrations.filter(reg => reg.event_id === event.id)
+                          const approvedRegistrations = allRegistrations.filter(reg => reg.approval_status === 'approved')
+                          const pendingRegistrations = allRegistrations.filter(reg => reg.approval_status === 'pending')
+                          
+                          return (
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">{approvedRegistrations.length}/{event.max_participants}</div>
+                              {pendingRegistrations.length > 0 && (
+                                <div className="text-xs text-yellow-600 font-medium animate-pulse">
+                                  {pendingRegistrations.length} 待审批
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {(() => {
-                        const allRegistrations = eventRegistrations.filter(reg => reg.event_id === event.id)
-                        const approvedRegistrations = allRegistrations.filter(reg => reg.approval_status === 'approved')
-                        const pendingRegistrations = allRegistrations.filter(reg => reg.approval_status === 'pending')
-                        
-                        return (
-                          <div className="flex items-center space-x-2">
-                            <span>{approvedRegistrations.length}/{event.max_participants}</span>
-                            {pendingRegistrations.length > 0 && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 animate-pulse">
-                                {pendingRegistrations.length} 待审批
-                              </span>
-                            )}
-                          </div>
-                        )
-                      })()}
+                    <td className="px-6 py-4 whitespace-nowrap w-12">
+                      <div className="text-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEventStatusStyles(getEventStatus(event))}`}>
+                          {getEventStatusText(getEventStatus(event))}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEventStatusStyles(getEventStatus(event))}`}>
-                        {getEventStatusText(getEventStatus(event))}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium w-24">
+                      <div className="flex items-center justify-center space-x-2">
                         <button
                           onClick={() => {
                             setSelectedEventForRegistration(event)
                           }}
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
+                          className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
                           title="报名管理"
                         >
                           <Users className="w-4 h-4" />
@@ -766,14 +847,14 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                             setSelectedEvent(event)
                             setShowEventForm(true)
                           }}
-                          className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
+                          className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
                           title="编辑"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteEvent(event.id)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
+                          className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
                           title="删除"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1238,9 +1319,281 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       {/* 费用管理 */}
       {currentView === 'expenses' && <ExpenseAdmin />}
 
+      {/* 信息中心管理 */}
+      {currentView === 'information' && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">信息中心管理</h2>
+            <button
+              onClick={() => {
+                setSelectedInformationItem(null)
+                setShowInformationForm(true)
+              }}
+              className="btn-primary flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              创建信息
+            </button>
+          </div>
+
+          {/* 搜索和筛选 */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="搜索标题或内容..."
+                value={informationSearchTerm}
+                onChange={(e) => setInformationSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <select
+                value={informationStatusFilter}
+                onChange={(e) => setInformationStatusFilter(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="all">所有状态</option>
+                <option value="draft">草稿</option>
+                <option value="published">已发布</option>
+                <option value="archived">已归档</option>
+              </select>
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <select
+                value={informationCategoryFilter}
+                onChange={(e) => setInformationCategoryFilter(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="all">全部分类</option>
+                <option value="公告">公告</option>
+                <option value="通知">通知</option>
+                <option value="重要资料">重要资料</option>
+                <option value="规则章程">规则章程</option>
+              </select>
+            </div>
+            {(informationSearchTerm || informationStatusFilter !== 'all' || informationCategoryFilter !== 'all') && (
+              <button
+                onClick={() => {
+                  setInformationSearchTerm('')
+                  setInformationStatusFilter('all')
+                  setInformationCategoryFilter('all')
+                }}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                清除筛选
+              </button>
+            )}
+          </div>
+
+          {/* 信息列表表格 */}
+          <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-200">
+            <table className="w-full table-fixed">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th 
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-48"
+                    onClick={() => {
+                      setSortField('information_title')
+                      setSortDirection(sortField === 'information_title' && sortDirection === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>标题</span>
+                      {sortField === 'information_title' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-24">分类</th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-24">状态</th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-28">优先级</th>
+                  <th 
+                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-32"
+                    onClick={() => {
+                      setSortField('information_published_at')
+                      setSortDirection(sortField === 'information_published_at' && sortDirection === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>发布时间</span>
+                      {sortField === 'information_published_at' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-20"
+                    onClick={() => {
+                      setSortField('information_view_count')
+                      setSortDirection(sortField === 'information_view_count' && sortDirection === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>阅读数</span>
+                      {sortField === 'information_view_count' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-28">操作</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {getSortedInformationItems().filter(item => {
+                  const matchesSearch = !informationSearchTerm || 
+                    item.title.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
+                    item.excerpt?.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
+                    item.content?.toLowerCase().includes(informationSearchTerm.toLowerCase())
+                  const matchesStatus = informationStatusFilter === 'all' || item.status === informationStatusFilter
+                  const matchesCategory = informationCategoryFilter === 'all' || item.category === informationCategoryFilter
+                  return matchesSearch && matchesStatus && matchesCategory
+                }).map((item) => (
+                  <tr key={item.id} className="hover:bg-green-50">
+                    <td className="px-6 py-4 w-48">
+                      <div className="flex items-center space-x-2">
+                        {item.is_pinned && (
+                          <Pin className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                        )}
+                        <div className="font-medium text-gray-900 truncate" title={item.title}>
+                          {item.title}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center w-24">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.category === '公告' ? 'bg-blue-100 text-blue-800' :
+                        item.category === '通知' ? 'bg-yellow-100 text-yellow-800' :
+                        item.category === '重要资料' ? 'bg-green-100 text-green-800' :
+                        'bg-purple-100 text-purple-800'
+                      }`}>
+                        {item.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center w-24">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.status === 'published' ? 'bg-green-100 text-green-800' :
+                        item.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {item.status === 'published' ? '已发布' : item.status === 'draft' ? '草稿' : '已归档'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center w-28">
+                      <div className="space-y-1">
+                        {item.priority > 0 && (
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            item.priority === 1 ? 'bg-orange-100 text-orange-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {item.priority === 1 ? '重要' : '紧急'}
+                          </span>
+                        )}
+                        {item.is_pinned && (
+                          <div className="text-xs text-yellow-600">置顶</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600 w-32">
+                      {item.published_at ? (
+                        <div>
+                          <div>{new Date(item.published_at).toLocaleDateString('zh-CN')}</div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(item.published_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600 w-20">
+                      {item.view_count || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium w-28">
+                      <div className="flex items-center justify-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedInformationItem(item)
+                            setShowInformationForm(true)
+                          }}
+                          className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
+                          title="编辑"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            confirmDelete(`确定要删除"${item.title}"吗？`, async () => {
+                              if (!supabase) return
+                              const { error } = await supabase
+                                .from('information_items')
+                                .delete()
+                                .eq('id', item.id)
+                              
+                              if (error) {
+                                showError('删除失败: ' + error.message)
+                              } else {
+                                showSuccess('删除成功')
+                                fetchAdminData()
+                              }
+                            })
+                          }}
+                          className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
+                          title="删除"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {getSortedInformationItems().filter(item => {
+            const matchesSearch = !informationSearchTerm || 
+              item.title.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
+              item.excerpt?.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
+              item.content?.toLowerCase().includes(informationSearchTerm.toLowerCase())
+            const matchesStatus = informationStatusFilter === 'all' || item.status === informationStatusFilter
+            const matchesCategory = informationCategoryFilter === 'all' || item.category === informationCategoryFilter
+            return matchesSearch && matchesStatus && matchesCategory
+          }).length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              {informationSearchTerm || informationStatusFilter !== 'all' || informationCategoryFilter !== 'all' 
+                ? '没有找到匹配的信息' 
+                : '暂无信息，点击"创建信息"开始创建'}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 会员管理 */}
       {currentView === 'members' && <MemberAdmin />}
 
+      {/* 信息中心表单 */}
+      {showInformationForm && (
+        <InformationCenterForm
+          item={selectedInformationItem}
+          onClose={() => {
+            setShowInformationForm(false)
+            setSelectedInformationItem(null)
+          }}
+          onSuccess={() => {
+            fetchAdminData()
+          }}
+        />
+      )}
 
       {/* 活动报名管理模态框 */}
       {selectedEventForRegistration && (

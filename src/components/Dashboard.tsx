@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -16,7 +16,9 @@ import InvestmentList from './InvestmentList'
 import InvestmentDetail from './InvestmentDetail'
 import ExpenseList from './ExpenseList'
 import EventReviews from './EventReviews'
-import { Event } from '../types'
+import InformationCenterList from './InformationCenterList'
+import InformationCenterDetail from './InformationCenterDetail'
+import { Event, InformationItem } from '../types'
 
 interface Poster {
   id: string
@@ -68,7 +70,7 @@ export default function Dashboard() {
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [adminMenuVisible, setAdminMenuVisible] = useState(true)
-  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'admin'>('dashboard')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'admin'>('dashboard')
 
   // 监听用户菜单状态变化
   useEffect(() => {
@@ -80,6 +82,7 @@ export default function Dashboard() {
   const [selectedPoster, setSelectedPoster] = useState<Poster | null>(null)
   const [selectedScore, setSelectedScore] = useState<Score | null>(null)
   const [selectedInvestment, setSelectedInvestment] = useState<InvestmentProject | null>(null)
+  const [selectedInformationItem, setSelectedInformationItem] = useState<InformationItem | null>(null)
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([])
   const [recentScores, setRecentScores] = useState<Score[]>([])
   const [recentInvestments, setRecentInvestments] = useState<InvestmentProject[]>([])
@@ -240,13 +243,14 @@ export default function Dashboard() {
       // console.log('费用公示查询结果:', { expenses, expensesError })
       setRecentExpenses(expenses || [])
 
-      // 获取最近的海报 - 显示2个
-      const { data: posters, error: postersError } = await supabase
-        .from('posters')
-        .select('*')
-        .limit(2)
-      // console.log('海报查询结果:', { posters, postersError })
-      setRecentPosters(posters || [])
+      // 获取最近的海报 - 显示2个（暂时隐藏）
+      // const { data: posters, error: postersError } = await supabase
+      //   .from('posters')
+      //   .select('*')
+      //   .limit(2)
+      // // console.log('海报查询结果:', { posters, postersError })
+      // setRecentPosters(posters || [])
+      setRecentPosters([])
 
     } catch (error) {
       console.error('获取Dashboard数据失败:', error)
@@ -316,6 +320,16 @@ export default function Dashboard() {
               >
                 首页
               </button>
+              <button
+                onClick={() => setCurrentView('information')}
+                className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  currentView === 'information'
+                    ? 'bg-golf-600 text-white'
+                    : 'text-gray-700 hover:text-golf-600'
+                }`}
+              >
+                信息中心
+              </button>
               <button 
                 onClick={() => setCurrentView('events')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
@@ -347,16 +361,6 @@ export default function Dashboard() {
                 成绩查询
               </button>
               <button
-                onClick={() => setCurrentView('posters')}
-                className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
-                  currentView === 'posters'
-                    ? 'bg-golf-600 text-white'
-                    : 'text-gray-700 hover:text-golf-600'
-                }`}
-              >
-                海报展示
-              </button>
-              <button
                 onClick={() => setCurrentView('investments')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'investments'
@@ -364,7 +368,7 @@ export default function Dashboard() {
                     : 'text-gray-700 hover:text-golf-600'
                 }`}
               >
-                投资支持
+                捐赠与赞助
               </button>
               <button
                 onClick={() => setCurrentView('expenses')}
@@ -560,6 +564,19 @@ export default function Dashboard() {
                 >
                   首页
                 </button>
+                <button
+                  onClick={() => {
+                    setCurrentView('information')
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                    currentView === 'information'
+                      ? 'bg-golf-600 text-white'
+                      : 'text-gray-700 hover:text-golf-600'
+                  }`}
+                >
+                  信息中心
+                </button>
                 <button 
                   onClick={() => {
                     setCurrentView('events')
@@ -601,19 +618,6 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => {
-                    setCurrentView('posters')
-                    setMobileMenuOpen(false)
-                  }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
-                    currentView === 'posters'
-                      ? 'bg-golf-600 text-white'
-                      : 'text-gray-700 hover:text-golf-600'
-                  }`}
-                >
-                  海报展示
-                </button>
-                <button
-                  onClick={() => {
                     setCurrentView('investments')
                     setMobileMenuOpen(false)
                   }}
@@ -623,7 +627,7 @@ export default function Dashboard() {
                       : 'text-gray-700 hover:text-golf-600'
                   }`}
                 >
-                  投资支持
+                  捐赠与赞助
                 </button>
                 <button
                   onClick={() => {
@@ -637,6 +641,19 @@ export default function Dashboard() {
                   }`}
                 >
                   费用公示
+                </button>
+                <button
+                  onClick={() => {
+                    setCurrentView('information')
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                    currentView === 'information'
+                      ? 'bg-golf-600 text-white'
+                      : 'text-gray-700 hover:text-golf-600'
+                  }`}
+                >
+                  信息中心
                 </button>
                 {isAdmin && (
                   <button 
@@ -814,6 +831,20 @@ export default function Dashboard() {
               <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6">快捷操作</h3>
               <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
                 <div 
+                  onClick={() => setCurrentView('information')}
+                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                >
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-purple-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
+                    <Bell className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  </div>
+                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                    信息中心
+                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </h4>
+                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看公告通知和重要信息</p>
+                </div>
+
+                <div 
                   onClick={() => setCurrentView('events')}
                   className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
@@ -856,20 +887,6 @@ export default function Dashboard() {
                 </div>
 
                 <div
-                  onClick={() => setCurrentView('posters')}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-                >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-purple-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <Image className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
-                  </div>
-                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    海报展示
-                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">浏览俱乐部活动海报</p>
-                </div>
-
-                <div
                   onClick={() => setCurrentView('investments')}
                   className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                 >
@@ -877,10 +894,10 @@ export default function Dashboard() {
                     <Heart className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
                   </div>
                   <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    投资支持
+                    捐赠与赞助
                     <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">支持俱乐部建设发展</p>
+                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">捐赠与赞助俱乐部建设发展</p>
                 </div>
 
                 <div
@@ -933,6 +950,9 @@ export default function Dashboard() {
                             <div className="font-semibold text-gray-900 text-sm">{event.title}</div>
                             <div className="text-xs text-gray-600">
                               {new Date(event.start_time).toLocaleDateString('zh-CN')}
+                            </div>
+                            <div className="text-xs text-golf-600 font-medium mt-1">
+                              {event.event_type}
                             </div>
                           </div>
                         </div>
@@ -1029,12 +1049,12 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* 最新投资支持 */}
+              {/* 最新捐赠与赞助 */}
               <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
                     <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 mr-2" />
-                    最新投资支持
+                    最新捐赠与赞助
                   </h3>
                   <button 
                     onClick={() => setCurrentView('investments')}
@@ -1160,71 +1180,6 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-
-              {/* 最新海报 */}
-              <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
-                    <Image className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 mr-2" />
-                    最新海报
-                  </h3>
-                  <button 
-                    onClick={() => setCurrentView('posters')}
-                    className="text-purple-600 hover:text-purple-700 font-medium text-sm sm:text-base flex items-center"
-                  >
-                    查看全部
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </button>
-                </div>
-                {loading ? (
-                  <div className="text-center py-6 sm:py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
-                    <p className="text-gray-500 mt-2 text-sm">加载中...</p>
-                  </div>
-                ) : recentPosters.length > 0 ? (
-                  <div className="space-y-3">
-                    {recentPosters.map((poster) => (
-                      <div key={poster.id} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center mr-3">
-                            <Image className="w-4 h-4 text-white" />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-900 text-sm">{poster.title}</div>
-                            <div className="text-xs text-gray-600">
-                              {new Date(poster.created_at).toLocaleDateString('zh-CN')}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-bold text-purple-600">
-                            {poster.status === 'active' ? '已发布' : '草稿'}
-                          </div>
-                          <div className="text-xs text-gray-600">海报</div>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="text-center pt-2">
-                      <button 
-                        onClick={() => setCurrentView('posters')}
-                        className="text-purple-600 hover:text-purple-700 font-medium text-sm"
-                      >
-                        查看海报展示
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6 sm:py-8">
-                    <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无海报</p>
-                    <button 
-                      onClick={() => setCurrentView('posters')}
-                      className="text-purple-600 hover:text-purple-700 font-medium text-sm sm:text-base"
-                    >
-                      查看海报展示
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </>
         ) : currentView === 'events' ? (
@@ -1235,20 +1190,12 @@ export default function Dashboard() {
             </div>
             <EventList onEventSelect={setSelectedEvent} user={user} />
           </div>
-        ) : currentView === 'posters' ? (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">海报展示</h2>
-              <p className="text-gray-600">浏览俱乐部精彩活动海报和宣传资料</p>
-            </div>
-            <PosterList onPosterSelect={setSelectedPoster} />
-          </div>
         ) : currentView === 'scores' ? (
           <UserScoreQuery />
         ) : currentView === 'investments' ? (
           <div className="space-y-6">
             <div className="text-center">
-              <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">投资支持</h2>
+              <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">捐赠与赞助</h2>
               <p className="text-gray-600">支持俱乐部建设和发展，共创美好未来</p>
             </div>
             <InvestmentList onProjectSelect={setSelectedInvestment} userId={user?.id} />
@@ -1264,6 +1211,14 @@ export default function Dashboard() {
         ) : currentView === 'reviews' ? (
           <div className="space-y-6">
             <EventReviews />
+          </div>
+        ) : currentView === 'information' ? (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">信息中心</h2>
+              <p className="text-gray-600">查看俱乐部公告、通知、重要资料和规则章程</p>
+            </div>
+            <InformationCenterList onItemSelect={setSelectedInformationItem} />
           </div>
         ) : currentView === 'admin' && isAdmin ? (
           <AdminPanel adminMenuVisible={adminMenuVisible} />
@@ -1287,13 +1242,13 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Poster Detail Modal */}
-      {selectedPoster && (
+      {/* Poster Detail Modal - 暂时隐藏 */}
+      {/* {selectedPoster && (
         <PosterDetail
           poster={selectedPoster}
           onClose={() => setSelectedPoster(null)}
         />
-      )}
+      )} */}
 
       {selectedScore && (
         <ScoreDetail
@@ -1307,6 +1262,14 @@ export default function Dashboard() {
           project={selectedInvestment}
           onClose={() => setSelectedInvestment(null)}
           user={user}
+        />
+      )}
+
+      {/* Information Center Detail Modal */}
+      {selectedInformationItem && (
+        <InformationCenterDetail
+          item={selectedInformationItem}
+          onClose={() => setSelectedInformationItem(null)}
         />
       )}
     </div>

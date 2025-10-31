@@ -135,12 +135,12 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
       <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
         <div className="flex items-center mb-6">
           <Heart className="w-8 h-8 text-red-500 mr-3" />
-          <h2 className="text-2xl font-bold text-gray-900">我的投资支持</h2>
+          <h2 className="text-2xl font-bold text-gray-900">我的捐赠与赞助</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">累计投资</div>
+            <div className="text-sm text-gray-600 mb-1">累计捐赠</div>
             <div className="text-2xl font-bold text-green-600">{formatAmount(getTotalInvested())}</div>
           </div>
           <div className="bg-white rounded-xl p-4 border border-gray-200">
@@ -184,7 +184,7 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                       )}
                     </div>
                     <div className="text-right ml-4">
-                      <div className="text-sm text-gray-500 mb-1">我的投资</div>
+                      <div className="text-sm text-gray-500 mb-1">我的捐赠</div>
                       <div className="text-2xl font-bold text-green-600">
                         {formatAmount(investment.amount)}
                       </div>
@@ -222,7 +222,7 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <div className="flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
-                        投资时间：{formatDateTime(investment.created_at)}
+                        捐赠时间：{formatDateTime(investment.created_at)}
                       </div>
                       {investment.notes && (
                         <div className="text-gray-600">
@@ -250,7 +250,7 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
       ) : (
         <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
           <Heart className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">还没有投资记录</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">还没有捐赠记录</h3>
           <p className="text-gray-600 mb-6">开始支持您喜欢的项目，为俱乐部的发展贡献力量</p>
         </div>
       )}

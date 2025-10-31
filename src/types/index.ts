@@ -48,6 +48,7 @@ export interface Event {
   payment_qr_code?: string
   payment_emt_email?: string
   payment_instructions?: string
+  event_type: '普通活动' | '个人赛' | '团体赛'
   status: 'active' | 'cancelled' | 'completed'
   created_at: string
   // 文章相关字段
@@ -83,4 +84,38 @@ export interface EventStats {
   total_registrations: number
   paid_registrations: number
   available_spots: number
+}
+
+export interface InformationItemAttachment {
+  name: string
+  url: string
+  size?: number
+  type?: string
+}
+
+export interface InformationItem {
+  id: string
+  category: '公告' | '通知' | '重要资料' | '规则章程'
+  title: string
+  content?: string
+  excerpt?: string
+  featured_image_url?: string
+  attachments?: InformationItemAttachment[]
+  status: 'draft' | 'published' | 'archived'
+  priority: number // 0普通, 1重要, 2紧急
+  is_pinned: boolean
+  display_order: number
+  published_at?: string
+  expires_at?: string
+  author_id?: string
+  view_count: number
+  like_count: number
+  created_at: string
+  updated_at: string
+  // 关联查询字段
+  author?: {
+    full_name?: string
+    email?: string
+  }
+  is_read?: boolean // 当前用户是否已读
 }

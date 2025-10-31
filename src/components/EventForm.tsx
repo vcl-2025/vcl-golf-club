@@ -33,6 +33,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
     payment_qr_code: '',
     payment_emt_email: '',
     payment_instructions: '',
+    event_type: '普通活动' as '普通活动' | '个人赛' | '团体赛',
     status: 'upcoming'
   })
 
@@ -71,6 +72,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_qr_code: event.payment_qr_code || '',
         payment_emt_email: event.payment_emt_email || '',
         payment_instructions: event.payment_instructions || '',
+        event_type: event.event_type || '普通活动',
         status: event.status || 'active'
       })
       
@@ -213,6 +215,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_qr_code: qrCodeUrl,
         payment_emt_email: formData.payment_emt_email,
         payment_instructions: formData.payment_instructions,
+        event_type: formData.event_type,
         status: formData.status === 'cancelled' ? 'cancelled' : 'active'
       }
 
@@ -370,6 +373,24 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                   placeholder="请输入活动地点"
                   required
                 />
+              </div>
+
+              {/* 活动类型 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Users className="w-4 h-4 inline mr-2" />
+                  活动类型 *
+                </label>
+                <select
+                  value={formData.event_type}
+                  onChange={(e) => setFormData({ ...formData, event_type: e.target.value as '普通活动' | '个人赛' | '团体赛' })}
+                  className="input-field"
+                  required
+                >
+                  <option value="普通活动">普通活动</option>
+                  <option value="个人赛">个人赛</option>
+                  <option value="团体赛">团体赛</option>
+                </select>
               </div>
             </div>
 

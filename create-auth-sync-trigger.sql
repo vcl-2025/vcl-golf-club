@@ -31,3 +31,5 @@ COMMENT ON FUNCTION public.sync_auth_to_profile() IS '当用户登录时自动�
 
 
 
+
+

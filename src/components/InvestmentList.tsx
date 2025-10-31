@@ -177,7 +177,7 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            我的投资
+            我的捐赠
           </button>
         </div>
         
