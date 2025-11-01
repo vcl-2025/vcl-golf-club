@@ -149,10 +149,13 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-delay-2">
                 <button
-                  onClick={() => navigate('/login')}
+                  onClick={() => {
+                    const element = document.getElementById('about')
+                    element?.scrollIntoView({ behavior: 'smooth' })
+                  }}
                   className="inline-flex items-center justify-center px-8 py-4 bg-golf-600 text-white rounded-xl hover:bg-golf-700 transition-all transform hover:scale-105 font-semibold text-lg shadow-2xl backdrop-blur-sm"
                 >
-                  立即登录
+                  关于我们
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </button>
                 <button
@@ -176,7 +179,7 @@ export default function HomePage() {
       </section>
 
       {/* 关于我们 - 参考 Northview 设计：文字在上方，背景图片在下方 */}
-      <section className="relative min-h-[900px] sm:min-h-[1000px] overflow-hidden">
+      <section id="about" className="relative min-h-[900px] sm:min-h-[1000px] overflow-hidden">
         {/* 背景图片 - 全景风景（山川湖泊） */}
         <div 
           className="absolute inset-0 w-full h-full bg-cover"

@@ -533,6 +533,17 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
               数据统计
             </button>
             <button
+              onClick={() => setCurrentView('information')}
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                currentView === 'information'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+              }`}
+            >
+              <FileTextIcon className="w-4 h-4 mr-2" />
+              信息中心管理
+            </button>
+            <button
               onClick={() => setCurrentView('events')}
               className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'events'
@@ -598,17 +609,6 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             >
               <Users className="w-4 h-4 mr-2" />
               会员管理
-            </button>
-            <button
-              onClick={() => setCurrentView('information')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'information'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <FileTextIcon className="w-4 h-4 mr-2" />
-              信息中心管理
             </button>
           </div>
         </div>

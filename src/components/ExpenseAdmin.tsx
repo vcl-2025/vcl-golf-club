@@ -6,6 +6,7 @@ import { useModal } from './ModalProvider'
 interface Expense {
   id: string
   expense_type: string
+  transaction_type: string
   title: string
   amount: number
   expense_date: string
@@ -18,6 +19,7 @@ interface Expense {
 
 interface ExpenseFormData {
   expense_type: string
+  transaction_type: string
   title: string
   amount: string
   expense_date: string
@@ -45,8 +47,8 @@ export default function ExpenseAdmin() {
   
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState('all') // 交易类型筛选：all/income/expense
+  const [typeFilter, setTypeFilter] = useState('all') // 费用类型筛选
   const [yearFilter, setYearFilter] = useState('all')
   const [monthFilter, setMonthFilter] = useState('all')
   const [availableYears, setAvailableYears] = useState<number[]>([])
@@ -56,7 +58,8 @@ export default function ExpenseAdmin() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   const [formData, setFormData] = useState<ExpenseFormData>({
-    expense_type: 'equipment',
+    expense_type: '',
+    transaction_type: '',
     title: '',
     amount: '',
     expense_date: new Date().toISOString().split('T')[0],
@@ -69,6 +72,30 @@ export default function ExpenseAdmin() {
   useEffect(() => {
     fetchExpenses()
   }, [])
+
+  // 当交易类型改变时，清空费用类型
+  useEffect(() => {
+    if (showForm && formData.transaction_type) {
+      setFormData(prev => ({ ...prev, expense_type: '' }))
+    }
+  }, [formData.transaction_type, showForm])
+
+  // 当交易类型筛选改变时，如果费用类型不匹配，则重置费用类型筛选
+  useEffect(() => {
+    if (transactionTypeFilter === 'income' && typeFilter !== 'all') {
+      // 检查当前选择的费用类型是否是收入类型
+      const incomeTypes = ['membership_fee', 'sponsorship_fee', 'collected_competition_ball_fee', 'collected_handicap_fee', 'interest_income', 'collected_meal_fee', 'gic_redemption', 'other_income']
+      if (!incomeTypes.includes(typeFilter)) {
+        setTypeFilter('all')
+      }
+    } else if (transactionTypeFilter === 'expense' && typeFilter !== 'all') {
+      // 检查当前选择的费用类型是否是支出类型
+      const expenseTypes = ['competition_prizes_misc', 'event_meal_beverage', 'photographer_fee', 'paid_handicap_fee', 'gic_deposit', 'bank_fee', 'paid_competition_fee', 'refund']
+      if (!expenseTypes.includes(typeFilter)) {
+        setTypeFilter('all')
+      }
+    }
+  }, [transactionTypeFilter, typeFilter])
 
   // 获取可用年份
   useEffect(() => {
@@ -102,6 +129,7 @@ export default function ExpenseAdmin() {
     try {
       const expenseData = {
         expense_type: formData.expense_type,
+        transaction_type: formData.transaction_type,
         title: formData.title,
         amount: parseFloat(formData.amount),
         expense_date: formData.expense_date,
@@ -132,16 +160,23 @@ export default function ExpenseAdmin() {
       setEditingExpense(null)
       resetForm()
       fetchExpenses()
-    } catch (error) {
+    } catch (error: any) {
       console.error('保存费用记录失败:', error)
-      showError('保存失败，请重试')
+      const errorMessage = error?.message || error?.error?.message || '保存失败，请重试'
+      showError(`保存失败: ${errorMessage}`)
     }
   }
 
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense)
+    
+    // 检查是否是旧分类值，如果是则需要用户重新选择
+    const oldTypes = ['equipment', 'maintenance', 'activity', 'salary', 'other']
+    const isOldType = oldTypes.includes(expense.expense_type)
+    
     setFormData({
-      expense_type: expense.expense_type,
+      expense_type: isOldType ? '' : expense.expense_type, // 旧分类清空，让用户重新选择
+      transaction_type: expense.transaction_type || 'expense',
       title: expense.title,
       amount: expense.amount.toString(),
       expense_date: expense.expense_date,
@@ -150,6 +185,11 @@ export default function ExpenseAdmin() {
       notes: expense.notes || '',
       status: expense.status
     })
+    
+    // 如果是旧分类，提示用户需要更新
+    if (isOldType) {
+      showWarning('此记录使用了旧的分类，请重新选择费用类型')
+    }
 
     if (expense.receipt_url) {
       const urls = expense.receipt_url.split(',')
@@ -276,7 +316,8 @@ export default function ExpenseAdmin() {
 
   const resetForm = () => {
     setFormData({
-      expense_type: 'equipment',
+      expense_type: '',
+      transaction_type: '',
       title: '',
       amount: '',
       expense_date: new Date().toISOString().split('T')[0],
@@ -289,25 +330,68 @@ export default function ExpenseAdmin() {
   }
 
   const getExpenseTypeText = (type: string) => {
-    switch (type) {
-      case 'equipment': return '设备采购'
-      case 'maintenance': return '场地维护'
-      case 'activity': return '活动支出'
-      case 'salary': return '人员工资'
-      case 'other': return '其他费用'
-      default: return type
+    // 收入分类
+    const incomeTypes: { [key: string]: string } = {
+      'membership_fee': '会费',
+      'sponsorship_fee': '赞助费',
+      'collected_competition_ball_fee': '代收比赛球费',
+      'collected_handicap_fee': '代收差点费',
+      'interest_income': '利息收入',
+      'collected_meal_fee': '代收餐费',
+      'gic_redemption': 'GIC 赎回',
+      'other_income': '其他'
     }
+    
+    // 支出分类
+    const expenseTypes: { [key: string]: string } = {
+      'competition_prizes_misc': '比赛奖品及杂费',
+      'event_meal_beverage': '活动餐费及酒水',
+      'photographer_fee': '摄影师费用',
+      'paid_handicap_fee': '代付差点费',
+      'gic_deposit': '存GIC',
+      'bank_fee': '银行费',
+      'paid_competition_fee': '代付比赛费用 (含联赛及Zone4 费用)',
+      'refund': '退费'
+    }
+    
+    // 旧分类映射（用于兼容旧数据）
+    const oldTypes: { [key: string]: string } = {
+      'equipment': '设备采购（旧分类）',
+      'maintenance': '场地维护（旧分类）',
+      'activity': '活动支出（旧分类）',
+      'salary': '人员工资（旧分类）',
+      'other': '其他费用（旧分类）'
+    }
+    
+    return incomeTypes[type] || expenseTypes[type] || oldTypes[type] || type
   }
 
   const getExpenseTypeColor = (type: string) => {
-    switch (type) {
-      case 'equipment': return 'bg-blue-100 text-blue-800'
-      case 'maintenance': return 'bg-green-100 text-green-800'
-      case 'activity': return 'bg-purple-100 text-purple-800'
-      case 'salary': return 'bg-orange-100 text-orange-800'
-      case 'other': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+    // 收入分类颜色
+    const incomeColors: { [key: string]: string } = {
+      'membership_fee': 'bg-green-100 text-green-800',
+      'sponsorship_fee': 'bg-blue-100 text-blue-800',
+      'collected_competition_ball_fee': 'bg-purple-100 text-purple-800',
+      'collected_handicap_fee': 'bg-yellow-100 text-yellow-800',
+      'interest_income': 'bg-indigo-100 text-indigo-800',
+      'collected_meal_fee': 'bg-pink-100 text-pink-800',
+      'gic_redemption': 'bg-teal-100 text-teal-800',
+      'other_income': 'bg-gray-100 text-gray-800'
     }
+    
+    // 支出分类颜色
+    const expenseColors: { [key: string]: string } = {
+      'competition_prizes_misc': 'bg-red-100 text-red-800',
+      'event_meal_beverage': 'bg-orange-100 text-orange-800',
+      'photographer_fee': 'bg-purple-100 text-purple-800',
+      'paid_handicap_fee': 'bg-yellow-100 text-yellow-800',
+      'gic_deposit': 'bg-blue-100 text-blue-800',
+      'bank_fee': 'bg-gray-100 text-gray-800',
+      'paid_competition_fee': 'bg-indigo-100 text-indigo-800',
+      'refund': 'bg-pink-100 text-pink-800'
+    }
+    
+    return incomeColors[type] || expenseColors[type] || 'bg-gray-100 text-gray-800'
   }
 
   const getPaymentMethodText = (method: string) => {
@@ -341,8 +425,13 @@ export default function ExpenseAdmin() {
     const matchesSearch = !searchTerm || 
       expense.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       expense.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // 交易类型筛选（收入/支出）
+    const expenseTransactionType = expense.transaction_type || 'expense'
+    const matchesTransactionType = transactionTypeFilter === 'all' || expenseTransactionType === transactionTypeFilter
+    
+    // 费用类型筛选
     const matchesType = typeFilter === 'all' || expense.expense_type === typeFilter
-    const matchesStatus = statusFilter === 'all' || expense.status === statusFilter
     
     // 年份筛选
     const expenseYear = new Date(expense.expense_date).getFullYear()
@@ -352,8 +441,19 @@ export default function ExpenseAdmin() {
     const expenseMonth = new Date(expense.expense_date).getMonth() + 1
     const matchesMonth = monthFilter === 'all' || expenseMonth.toString() === monthFilter
     
-    return matchesSearch && matchesType && matchesStatus && matchesYear && matchesMonth
+    return matchesSearch && matchesTransactionType && matchesType && matchesYear && matchesMonth
   })
+  
+  // 计算统计数据（基于筛选后的数据）
+  const totalIncome = filteredExpenses
+    .filter(exp => (exp.transaction_type || 'expense') === 'income')
+    .reduce((sum, exp) => sum + parseFloat(exp.amount.toString()), 0)
+  
+  const totalExpense = filteredExpenses
+    .filter(exp => (exp.transaction_type || 'expense') === 'expense')
+    .reduce((sum, exp) => sum + parseFloat(exp.amount.toString()), 0)
+  
+  const netAmount = totalIncome - totalExpense
 
   // 排序费用
   const getSortedExpenses = () => {
@@ -364,6 +464,10 @@ export default function ExpenseAdmin() {
       let bValue: any
 
       switch (sortField) {
+        case 'transaction_type':
+          aValue = a.transaction_type || 'expense'
+          bValue = b.transaction_type || 'expense'
+          break
         case 'title':
           aValue = a.title
           bValue = b.title
@@ -398,8 +502,6 @@ export default function ExpenseAdmin() {
     return new Date(dateString).toLocaleDateString('zh-CN')
   }
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount.toString()), 0)
-
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -432,30 +534,31 @@ export default function ExpenseAdmin() {
 
         {/* 统计卡片 */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-6 text-white mb-6">
-          <div className="flex items-center justify-between">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <div className="text-sm text-green-100 mb-1">
-                总支出金额
-                {(searchTerm || typeFilter !== 'all' || statusFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
-                  <span className="text-green-200 ml-2">
-                    (已过滤，共 {formatAmount(totalExpenses)})
-                  </span>
-                )}
-              </div>
-              <div className="text-3xl font-bold">
-                {formatAmount(filteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount.toString()), 0))}
+              <div className="text-sm text-green-100 mb-1">总收入</div>
+              <div className="text-2xl md:text-3xl font-bold">{formatAmount(totalIncome)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-green-100 mb-1">总支出</div>
+              <div className="text-2xl md:text-3xl font-bold">{formatAmount(totalExpense)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-green-100 mb-1">净额</div>
+              <div className={`text-2xl md:text-3xl font-bold ${netAmount >= 0 ? 'text-white' : 'text-red-200'}`}>
+                {formatAmount(netAmount)}
               </div>
             </div>
-            <div className="text-right">
+            <div>
               <div className="text-sm text-green-100 mb-1">
                 总记录数
-                {(searchTerm || typeFilter !== 'all' || statusFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
-                  <span className="text-green-200 ml-2">
-                    (已过滤，共 {expenses.length} 条)
+                {(searchTerm || transactionTypeFilter !== 'all' || typeFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
+                  <span className="text-green-200 ml-1">
+                    (已筛选)
                   </span>
                 )}
               </div>
-              <div className="text-3xl font-bold">{filteredExpenses.length}</div>
+              <div className="text-2xl md:text-3xl font-bold">{filteredExpenses.length}</div>
             </div>
           </div>
         </div>
@@ -473,7 +576,19 @@ export default function ExpenseAdmin() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap">
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <select
+                value={transactionTypeFilter}
+                onChange={(e) => setTransactionTypeFilter(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
+              >
+                <option value="all">所有交易类型</option>
+                <option value="income">收入</option>
+                <option value="expense">支出</option>
+              </select>
+            </div>
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <select
@@ -481,24 +596,31 @@ export default function ExpenseAdmin() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
               >
-                <option value="all">所有类型</option>
-                <option value="equipment">设备费用</option>
-                <option value="maintenance">维护费用</option>
-                <option value="salary">薪资费用</option>
-                <option value="activity">活动费用</option>
-                <option value="other">其他费用</option>
-              </select>
-            </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
-              >
-                <option value="all">所有状态</option>
-                <option value="paid">已支付</option>
-                <option value="pending">待支付</option>
+                <option value="all">所有费用类型</option>
+                {transactionTypeFilter === 'income' || transactionTypeFilter === 'all' ? (
+                  <>
+                    <option value="membership_fee">会费</option>
+                    <option value="sponsorship_fee">赞助费</option>
+                    <option value="collected_competition_ball_fee">代收比赛球费</option>
+                    <option value="collected_handicap_fee">代收差点费</option>
+                    <option value="interest_income">利息收入</option>
+                    <option value="collected_meal_fee">代收餐费</option>
+                    <option value="gic_redemption">GIC 赎回</option>
+                    <option value="other_income">其他收入</option>
+                  </>
+                ) : null}
+                {transactionTypeFilter === 'expense' || transactionTypeFilter === 'all' ? (
+                  <>
+                    <option value="competition_prizes_misc">比赛奖品及杂费</option>
+                    <option value="event_meal_beverage">活动餐费及酒水</option>
+                    <option value="photographer_fee">摄影师费用</option>
+                    <option value="paid_handicap_fee">代付差点费</option>
+                    <option value="gic_deposit">存GIC</option>
+                    <option value="bank_fee">银行费</option>
+                    <option value="paid_competition_fee">代付比赛费用</option>
+                    <option value="refund">退费</option>
+                  </>
+                ) : null}
               </select>
             </div>
             <div className="relative">
@@ -539,12 +661,12 @@ export default function ExpenseAdmin() {
           </div>
           
           {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
-          {(searchTerm || typeFilter !== 'all' || statusFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
+          {(searchTerm || transactionTypeFilter !== 'all' || typeFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
             <button
               onClick={() => {
                 setSearchTerm('')
+                setTransactionTypeFilter('all')
                 setTypeFilter('all')
-                setStatusFilter('all')
                 setYearFilter('all')
                 setMonthFilter('all')
               }}
@@ -562,10 +684,23 @@ export default function ExpenseAdmin() {
               <tr>
                 <th 
                   className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
+                  onClick={() => handleSort('transaction_type')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>交易类型</span>
+                    {sortField === 'transaction_type' && (
+                      <span className="text-gray-400">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                   onClick={() => handleSort('expense_type')}
                 >
                   <div className="flex items-center space-x-1">
-                    <span>类型</span>
+                    <span>费用类型</span>
                     {sortField === 'expense_type' && (
                       <span className="text-gray-400">
                         {sortDirection === 'asc' ? '↑' : '↓'}
@@ -633,6 +768,15 @@ export default function ExpenseAdmin() {
               {getSortedExpenses().map((expense) => (
                 <tr key={expense.id} className="hover:bg-green-50">
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                      (expense.transaction_type || 'expense') === 'income'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {(expense.transaction_type || 'expense') === 'income' ? '收入' : '支出'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getExpenseTypeColor(expense.expense_type)}`}>
                       {getExpenseTypeText(expense.expense_type)}
                     </span>
@@ -643,7 +787,11 @@ export default function ExpenseAdmin() {
                       <div className="text-base text-gray-500 truncate max-w-xs">{expense.notes}</div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base font-bold text-red-600">
+                  <td className={`px-6 py-4 whitespace-nowrap text-base font-bold ${
+                    (expense.transaction_type || 'expense') === 'income'
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}>
                     {formatAmount(parseFloat(expense.amount.toString()))}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-base text-gray-600">
@@ -720,27 +868,67 @@ export default function ExpenseAdmin() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    费用类型 *
-                  </label>
-                  <select
-                    value={formData.expense_type}
-                    onChange={(e) => setFormData({ ...formData, expense_type: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="equipment">设备采购</option>
-                    <option value="maintenance">场地维护</option>
-                    <option value="activity">活动支出</option>
-                    <option value="salary">人员工资</option>
-                    <option value="other">其他费用</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      交易类型 *
+                    </label>
+                    <select
+                      value={formData.transaction_type}
+                      onChange={(e) => setFormData({ ...formData, transaction_type: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">请选择</option>
+                      <option value="expense">支出</option>
+                      <option value="income">收入</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {formData.transaction_type === 'income' ? '收入类型' : '费用类型'} *
+                    </label>
+                    <select
+                      value={formData.expense_type}
+                      onChange={(e) => setFormData({ ...formData, expense_type: e.target.value })}
+                      disabled={!formData.transaction_type}
+                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                        !formData.transaction_type ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                      }`}
+                      required
+                    >
+                      <option value="">请选择</option>
+                      {formData.transaction_type === 'income' ? (
+                        <>
+                          <option value="membership_fee">会费</option>
+                          <option value="sponsorship_fee">赞助费</option>
+                          <option value="collected_competition_ball_fee">代收比赛球费</option>
+                          <option value="collected_handicap_fee">代收差点费</option>
+                          <option value="interest_income">利息收入</option>
+                          <option value="collected_meal_fee">代收餐费</option>
+                          <option value="gic_redemption">GIC 赎回</option>
+                          <option value="other_income">其他</option>
+                        </>
+                      ) : formData.transaction_type === 'expense' ? (
+                        <>
+                          <option value="competition_prizes_misc">比赛奖品及杂费</option>
+                          <option value="event_meal_beverage">活动餐费及酒水</option>
+                          <option value="photographer_fee">摄影师费用</option>
+                          <option value="paid_handicap_fee">代付差点费</option>
+                          <option value="gic_deposit">存GIC</option>
+                          <option value="bank_fee">银行费</option>
+                          <option value="paid_competition_fee">代付比赛费用 (含联赛及Zone4 费用)</option>
+                          <option value="refund">退费</option>
+                        </>
+                      ) : null}
+                    </select>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    费用标题 *
+                    {formData.transaction_type === 'income' ? '收入标题' : '费用标题'} *
                   </label>
                   <input
                     type="text"
@@ -775,7 +963,7 @@ export default function ExpenseAdmin() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      支出日期 *
+                      {formData.transaction_type === 'income' ? '收入日期' : '支出日期'} *
                     </label>
                     <input
                       type="date"
@@ -790,7 +978,7 @@ export default function ExpenseAdmin() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      支付方式 *
+                      {formData.transaction_type === 'income' ? '收款方式' : '支付方式'} *
                     </label>
                     <select
                       value={formData.payment_method}
@@ -814,15 +1002,24 @@ export default function ExpenseAdmin() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       required
                     >
-                      <option value="paid">已支付</option>
-                      <option value="pending">待支付</option>
+                      {formData.transaction_type === 'income' ? (
+                        <>
+                          <option value="paid">已收款</option>
+                          <option value="pending">待收款</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="paid">已支付</option>
+                          <option value="pending">待支付</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    支付凭证（支持多个文件）
+                    {formData.transaction_type === 'income' ? '收款凭证' : '支付凭证'}（支持多个文件）
                   </label>
                   <div
                     className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
