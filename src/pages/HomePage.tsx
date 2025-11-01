@@ -91,8 +91,8 @@ export default function HomePage() {
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-golf-600 to-golf-700 rounded-xl flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-white" />
+              <div className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 bg-white p-1">
+                <img src="/icon-96x96.png" alt="绿茵高尔夫俱乐部" className="w-full h-full object-cover" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">绿茵高尔夫俱乐部</h1>
@@ -191,7 +191,7 @@ export default function HomePage() {
           {/* 渐变过渡层 - 从米白色渐变到透明，与图片自然融合 */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#f7f6f3] via-[#f7f6f3] to-transparent pointer-events-none"></div>
           
-          <div className="relative z-10 max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12">
+          <div className="relative z-10 max-w-[1280px] mx-auto px-6 sm:px-8 lg:px-12">
             {/* 文字内容 - 简洁专业的两列布局 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16 items-start mb-20 sm:mb-24">
               {/* 左列 */}
@@ -224,7 +224,7 @@ export default function HomePage() {
             </div>
 
             {/* 核心优势 - 专业简洁的三列布局 */}
-            <div className="max-w-[1440px] mx-auto mt-24 sm:mt-32">
+            <div className="max-w-[1280px] mx-auto mt-24 sm:mt-32">
               <h3 className="text-2xl sm:text-3xl font-bold text-[#1e40af] mb-12 sm:mb-16 text-left">核心优势</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
                 {/* 专业赛事体系 */}
@@ -273,7 +273,7 @@ export default function HomePage() {
 
       {/* 活动回顾 */}
       <section id="reviews" className="py-16 bg-gradient-to-br from-gray-50 to-white">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-gray-900 mb-4">活动精彩回顾</h3>
             <p className="text-gray-600 max-w-2xl mx-auto">
@@ -368,9 +368,8 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* 左侧：Logo */}
               <div className="flex items-start">
-                <div className="bg-white rounded-lg p-3 mr-4">
-                  <div className="text-golf-700 font-bold text-lg">GGC</div>
-                  <div className="text-golf-600 text-xs">Est. 2015</div>
+                <div className="w-16 h-16 rounded-full mr-4 overflow-hidden flex-shrink-0 bg-white p-1">
+                  <img src="/icon-96x96.png" alt="绿茵高尔夫俱乐部" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <h5 className="text-lg font-semibold mb-2">绿茵高尔夫俱乐部</h5>
@@ -442,7 +441,7 @@ export default function HomePage() {
           onClick={() => setSelectedEvent(null)}
         >
           <div 
-            className="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative mx-auto"
+            className="bg-white rounded-2xl w-full max-w-[1080px] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative mx-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 头部 */}

@@ -145,7 +145,7 @@ export default function EventReviews() {
           onTouchMove={(e) => e.preventDefault()}
           onWheel={(e) => e.preventDefault()}
         >
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative mx-auto">
+          <div className="bg-white rounded-2xl w-full max-w-[1080px] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative mx-auto">
             {/* 头部 */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">{selectedEvent.title}</h2>
