@@ -29,6 +29,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
   const [savingArticle, setSavingArticle] = useState(false)
   const [isArticlePublished, setIsArticlePublished] = useState(event.article_published || false)
   const [articlePublishedAt, setArticlePublishedAt] = useState(event.article_published_at || '')
+  const [isPublic, setIsPublic] = useState(event.is_public || false)
   const { confirmAction, showError } = useModal()
 
 
@@ -72,6 +73,23 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
         setStats(statsResponse.data)
       }
 
+      // 获取最新的活动数据（包括 is_public）
+      if (supabase) {
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('is_public, article_published, article_published_at')
+          .eq('id', event.id)
+          .single()
+
+        if (eventData) {
+          setIsPublic(eventData.is_public || false)
+          setIsArticlePublished(eventData.article_published || false)
+          if (eventData.article_published_at) {
+            setArticlePublishedAt(eventData.article_published_at)
+          }
+        }
+      }
+
       // 获取用户报名记录
       if (user) {
         const registrationResponse = await supabase
@@ -101,6 +119,10 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
       //   userId: user?.id
       // })
       
+      if (!supabase) {
+        throw new Error('Supabase 未初始化')
+      }
+
       const { error } = await supabase
         .from('events')
         .update({
@@ -123,9 +145,9 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
       
       // console.log('文章保存成功')
       showError('文章保存成功！')
-    } catch (error) {
+    } catch (error: any) {
       console.error('保存文章失败:', error)
-      showError(`保存文章失败: ${error.message || '请重试'}`)
+      showError(`保存文章失败: ${error?.message || '请重试'}`)
     } finally {
       setSavingArticle(false)
     }
@@ -134,6 +156,10 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
   const handlePublishArticle = async () => {
     try {
       setSavingArticle(true)
+      
+      if (!supabase) {
+        throw new Error('Supabase 未初始化')
+      }
       
       // console.log('开始发布文章...', {
       //   eventId: event.id,
@@ -150,6 +176,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
           article_published: true,
           article_published_at: new Date().toISOString(),
           article_author_id: user?.id,
+          is_public: isPublic,
           updated_at: new Date().toISOString()
         })
         .eq('id', event.id)
@@ -168,9 +195,9 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
       
       // console.log('文章发布成功')
       showError('文章发布成功！')
-    } catch (error) {
+    } catch (error: any) {
       console.error('发布文章失败:', error)
-      showError(`发布文章失败: ${error.message || '请重试'}`)
+      showError(`发布文章失败: ${error?.message || '请重试'}`)
     } finally {
       setSavingArticle(false)
     }
@@ -583,6 +610,24 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
 
           {/* 全屏编辑器内容 */}
           <div className="flex-1 flex flex-col p-6">
+            {/* 发布设置 */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="w-4 h-4 text-golf-600 border-gray-300 rounded focus:ring-golf-500"
+                />
+                <span className="ml-3 text-sm font-medium text-gray-700">
+                  公开可见（所有人可查看，不仅仅是会员）
+                </span>
+              </label>
+              <p className="ml-7 mt-1 text-xs text-gray-500">
+                勾选后，此活动回顾将在网站首页公开显示；不勾选则仅会员可见
+              </p>
+            </div>
+
             {/* 文章摘要 */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">

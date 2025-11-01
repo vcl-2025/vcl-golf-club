@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, Trophy } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { logUserLogin } from '../utils/loginLogger'
@@ -8,6 +9,7 @@ interface MemberLoginProps {
 }
 
 export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
+  const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -174,7 +176,10 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
             }
             
             // 有session的情况下自动登录
-            setTimeout(() => onLoginSuccess(), 1500)
+            setTimeout(() => {
+              onLoginSuccess()
+              navigate('/dashboard')
+            }, 1500)
           }
         }
       } else {
@@ -241,6 +246,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         // console.log('=====================================')
         
         onLoginSuccess()
+        navigate('/dashboard')
       }
     } catch (error: any) {
       if (error.message === '您的账户已被禁用，请联系管理员') {

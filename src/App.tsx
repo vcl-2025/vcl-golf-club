@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import MemberLogin from './components/MemberLogin'
 import Dashboard from './components/Dashboard'
+import HomePage from './pages/HomePage'
 import ResetPassword from './pages/ResetPassword'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
@@ -33,6 +34,7 @@ function App() {
       if (hash && hash.includes('access_token')) {
         try {
           // 处理认证回调
+          if (!supabase) return
           const { data, error } = await supabase.auth.getUser()
           if (error) {
             console.error('Auth callback error:', error)
@@ -107,13 +109,39 @@ function App() {
     <Router>
       <ModalProvider>
         <Routes>
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="*" element={
+          {/* 公开首页 */}
+          <Route path="/" element={
+            !user ? (
+              <HomePage />
+            ) : (
+              <Navigate to="/dashboard" replace />
+            )
+          } />
+          
+          {/* 登录页面 */}
+          <Route path="/login" element={
             !user ? (
               <MemberLogin onLoginSuccess={() => {}} />
             ) : (
-              <Dashboard />
+              <Navigate to="/dashboard" replace />
             )
+          } />
+          
+          {/* 重置密码 */}
+          <Route path="/reset-password" element={<ResetPassword />} />
+          
+          {/* 会员面板（需要登录） */}
+          <Route path="/dashboard" element={
+            user ? (
+              <Dashboard />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } />
+          
+          {/* 其他路由重定向到首页 */}
+          <Route path="*" element={
+            <Navigate to={user ? "/dashboard" : "/"} replace />
           } />
         </Routes>
       </ModalProvider>

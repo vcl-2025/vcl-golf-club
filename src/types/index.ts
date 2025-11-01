@@ -58,6 +58,7 @@ export interface Event {
   article_author_id?: string
   article_excerpt?: string
   article_featured_image_url?: string
+  is_public?: boolean // 是否对所有人公开（true=所有人可见，false=仅会员可见）
 }
 
 export interface EventRegistration {
