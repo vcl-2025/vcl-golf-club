@@ -458,6 +458,25 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     })
   }
 
+  const handleDeleteInformation = async (itemId: string) => {
+    confirmDelete('确定要删除这条信息吗？', async () => {
+      try {
+        const { error } = await supabase
+          .from('information_items')
+          .delete()
+          .eq('id', itemId)
+
+        if (error) throw error
+
+        setInformationItems(informationItems.filter(item => item.id !== itemId))
+        showSuccess('信息删除成功')
+      } catch (error) {
+        console.error('删除信息失败:', error)
+        showError('删除失败，请重试')
+      }
+    })
+  }
+
 
   const formatCurrency = (amount: number | undefined | null) => {
     if (amount === undefined || amount === null || isNaN(amount)) {
@@ -1306,10 +1325,178 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
         />
       )}
 
+      {/* 投资管理 */}
+      {currentView === 'investments' && (
+        <div className="space-y-6">
+          <InvestmentAdmin />
+        </div>
+      )}
+
+      {/* 费用管理 */}
+      {currentView === 'expenses' && (
+        <div className="space-y-6">
+          <ExpenseAdmin />
+        </div>
+      )}
+
+      {/* 会员管理 */}
+      {currentView === 'members' && (
+        <div className="space-y-6">
+          <MemberAdmin />
+        </div>
+      )}
+
+      {/* 信息中心管理 */}
+      {currentView === 'information' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">信息中心管理</h2>
+              <button
+                onClick={() => {
+                  setSelectedInformationItem(null)
+                  setShowInformationForm(true)
+                }}
+                className="btn-primary flex items-center"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                添加信息
+              </button>
+            </div>
+
+            {/* 搜索和筛选 */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="搜索标题或内容..."
+                  value={informationSearchTerm}
+                  onChange={(e) => setInformationSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <select
+                  value={informationStatusFilter}
+                  onChange={(e) => setInformationStatusFilter(e.target.value)}
+                  className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
+                >
+                  <option value="all">全部状态</option>
+                  <option value="published">已发布</option>
+                  <option value="draft">草稿</option>
+                </select>
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <select
+                  value={informationCategoryFilter || 'all'}
+                  onChange={(e) => setInformationCategoryFilter(e.target.value)}
+                  className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
+                >
+                  <option value="all">全部分类</option>
+                  <option value="announcement">公告</option>
+                  <option value="notice">通知</option>
+                  <option value="rule">规则</option>
+                  <option value="resource">资料</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 信息列表 */}
+            <div className="space-y-4">
+              {informationItems
+                .filter(item => {
+                  const matchesSearch = !informationSearchTerm || 
+                    item.title.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
+                    item.content?.toLowerCase().includes(informationSearchTerm.toLowerCase())
+                  const matchesStatus = informationStatusFilter === 'all' || 
+                    (informationStatusFilter === 'published' && item.status === 'published') ||
+                    (informationStatusFilter === 'draft' && item.status === 'draft')
+                  const matchesCategory = !informationCategoryFilter || informationCategoryFilter === 'all' ||
+                    (informationCategoryFilter === 'announcement' && item.category === '公告') ||
+                    (informationCategoryFilter === 'notice' && item.category === '通知') ||
+                    (informationCategoryFilter === 'rule' && item.category === '规则章程') ||
+                    (informationCategoryFilter === 'resource' && item.category === '重要资料')
+                  return matchesSearch && matchesStatus && matchesCategory
+                })
+                .map((item) => (
+                  <div key={item.id} className="bg-gray-50 rounded-xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            item.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.status === 'published' ? '已发布' : item.status === 'draft' ? '草稿' : '已归档'}
+                          </span>
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {item.category}
+                          </span>
+                        </div>
+                        {item.excerpt && (
+                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.excerpt}</p>
+                        )}
+                        <div className="flex items-center text-xs text-gray-500 space-x-4">
+                          {item.published_at && (
+                            <span>发布时间: {new Date(item.published_at).toLocaleDateString('zh-CN')}</span>
+                          )}
+                          <span>创建时间: {new Date(item.created_at).toLocaleDateString('zh-CN')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 ml-4">
+                        <button
+                          onClick={() => {
+                            setSelectedInformationItem(item)
+                            setShowInformationForm(true)
+                          }}
+                          className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          编辑
+                        </button>
+                        <button
+                          onClick={() => handleDeleteInformation(item.id)}
+                          className="px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          删除
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              
+              {informationItems.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  暂无信息，点击"添加信息"开始创建
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 信息中心表单弹窗 */}
+      {showInformationForm && (
+        <InformationCenterForm
+          item={selectedInformationItem}
+          onClose={() => {
+            setShowInformationForm(false)
+            setSelectedInformationItem(null)
+          }}
+          onSuccess={() => {
+            setShowInformationForm(false)
+            setSelectedInformationItem(null)
+            fetchAdminData()
+          }}
+        />
+      )}
+
       {/* 活动报名管理模态框 */}
       {selectedEventForRegistration && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-[1600px] max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-end mb-6">
                 <button
