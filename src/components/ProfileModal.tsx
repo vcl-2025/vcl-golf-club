@@ -22,6 +22,8 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingMemberPhoto, setUploadingMemberPhoto] = useState(false)
+  const memberPhotoInputRef = useRef<HTMLInputElement>(null)
 
   
   // 编辑表单状态
@@ -31,6 +33,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
     phone: '',
     email: '',
     avatar_url: '',
+    member_photo_url: '',
     handicap: '',
     bc_handicap: '',
     clothing_size: '',
@@ -68,6 +71,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           avatar_scale,
           handicap,
           bc_handicap,
+          member_photo_url,
           clothing_size,
           vancouver_residence,
           domestic_residence,
@@ -92,6 +96,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           avatar_url: data.avatar_url || '',
           handicap: data.handicap || '',
           bc_handicap: data.bc_handicap || '',
+          member_photo_url: data.member_photo_url || '',
           clothing_size: data.clothing_size || '',
           vancouver_residence: data.vancouver_residence || '',
           domestic_residence: data.domestic_residence || '',
@@ -150,6 +155,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           avatar_url: editForm.avatar_url,
           handicap: editForm.handicap ? parseFloat(editForm.handicap) : null,
           bc_handicap: editForm.bc_handicap ? parseFloat(editForm.bc_handicap) : null,
+          member_photo_url: editForm.member_photo_url,
           clothing_size: editForm.clothing_size,
           vancouver_residence: editForm.vancouver_residence,
           domestic_residence: editForm.domestic_residence,
@@ -261,6 +267,64 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
     }
   }
 
+  const handleMemberPhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !user) return
+
+    // 检查文件类型
+    if (!file.type.startsWith('image/')) {
+      setMessage('请选择图片文件')
+      return
+    }
+
+    // 检查文件大小 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage('图片大小不能超过5MB')
+      return
+    }
+
+    setUploadingMemberPhoto(true)
+    try {
+      // 上传到 Supabase Storage
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-member-photo-${Date.now()}.${fileExt}`
+      const filePath = `member-photos/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('golf-club-images')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      // 获取公开URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('golf-club-images')
+        .getPublicUrl(filePath)
+
+      // 更新用户资料
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({ member_photo_url: publicUrl })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      // 更新本地状态
+      setUserProfile({ 
+        ...userProfile, 
+        member_photo_url: publicUrl
+      })
+      setEditForm({ ...editForm, member_photo_url: publicUrl })
+      setMessage('会员正式照片上传成功！')
+      setTimeout(() => setMessage(''), 3000)
+    } catch (error: any) {
+      console.error('会员正式照片上传失败:', error)
+      setMessage('照片上传失败: ' + error.message)
+    } finally {
+      setUploadingMemberPhoto(false)
+    }
+  }
+
   const handleCancel = () => {
     if (userProfile) {
       setEditForm({
@@ -271,6 +335,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
         avatar_url: userProfile.avatar_url || '',
         handicap: userProfile.handicap || '',
         bc_handicap: userProfile.bc_handicap || '',
+        member_photo_url: userProfile.member_photo_url || '',
         clothing_size: userProfile.clothing_size || '',
         vancouver_residence: userProfile.vancouver_residence || '',
         domestic_residence: userProfile.domestic_residence || '',
@@ -476,8 +541,114 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                           </div>
                         )}
                       </div>
+
+                      {/* 会员正式照片 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <Camera className="w-4 h-4 inline mr-2" />
+                          会员正式照片
+                        </label>
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            {editForm.member_photo_url ? (
+                              <div className="relative">
+                                <img
+                                  src={editForm.member_photo_url}
+                                  alt="会员正式照片"
+                                  className="w-full max-w-md h-48 object-contain border border-gray-300 rounded-lg bg-gray-50"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => memberPhotoInputRef.current?.click()}
+                                  disabled={uploadingMemberPhoto}
+                                  className="mt-2 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                >
+                                  {uploadingMemberPhoto ? (
+                                    <>
+                                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                      上传中...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Upload className="w-4 h-4 mr-2" />
+                                      更换照片
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      const { error } = await supabase
+                                        .from('user_profiles')
+                                        .update({ member_photo_url: null })
+                                        .eq('id', user.id)
+                                      
+                                      if (error) throw error
+                                      
+                                      setEditForm({ ...editForm, member_photo_url: '' })
+                                      setUserProfile({ ...userProfile, member_photo_url: '' })
+                                      setMessage('照片已删除')
+                                      setTimeout(() => setMessage(''), 3000)
+                                    } catch (error: any) {
+                                      console.error('删除照片失败:', error)
+                                      setMessage('删除失败: ' + error.message)
+                                    }
+                                  }}
+                                  className="mt-2 w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                                >
+                                  删除照片
+                                </button>
+                              </div>
+                            ) : (
+                              <div
+                                onClick={() => memberPhotoInputRef.current?.click()}
+                                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors cursor-pointer h-48 flex items-center justify-center"
+                              >
+                                {uploadingMemberPhoto ? (
+                                  <div className="flex flex-col items-center">
+                                    <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin mb-2" />
+                                    <p className="text-gray-600">上传中...</p>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-gray-600 mb-1">点击上传会员正式照片</p>
+                                    <p className="text-sm text-gray-500">支持 JPG、PNG 格式，最大 5MB</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <input
+                              ref={memberPhotoInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleMemberPhotoUpload}
+                              className="hidden"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            {userProfile.member_photo_url ? (
+                              <img
+                                src={userProfile.member_photo_url}
+                                alt="会员正式照片"
+                                className="w-full max-w-md h-48 object-contain border border-gray-300 rounded-lg bg-gray-50"
+                              />
+                            ) : (
+                              <div className="p-3 bg-gray-50 rounded-lg text-gray-500 border">
+                                未上传
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                {/* 右侧：会员信息和其他信息 */}
+                <div className="space-y-6">
 
                   {/* 高尔夫信息 */}
                   <div className="bg-white p-4 rounded-lg border border-gray-200">
@@ -532,15 +703,18 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* 右侧：会员信息和其他信息 */}
-                <div className="space-y-6">
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      衣服尺码
-                    </label>
+                  {/* 其它信息 */}
+                  <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <User className="w-5 h-5 mr-2 text-golf-600" />
+                      其它信息
+                    </h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          衣服尺码
+                        </label>
                     {isEditing ? (
                       <select
                         value={editForm.clothing_size}
@@ -561,12 +735,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                         {userProfile.clothing_size || '未设置'}
                       </div>
                     )}
-                  </div>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      行业
-                    </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          行业
+                        </label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -580,12 +754,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                         {userProfile.industry || '未设置'}
                       </div>
                     )}
-                  </div>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      温哥华常驻地
-                    </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          温哥华常驻地
+                        </label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -599,12 +773,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                         {userProfile.vancouver_residence || '未设置'}
                       </div>
                     )}
-                  </div>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      国内常驻地
-                    </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          国内常驻地
+                        </label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -618,12 +792,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                         {userProfile.domestic_residence || '未设置'}
                       </div>
                     )}
-                  </div>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      主球会会籍
-                    </label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          主球会会籍
+                        </label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -637,8 +811,9 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                         {userProfile.main_club_membership || '未设置'}
                       </div>
                     )}
+                      </div>
+                    </div>
                   </div>
-
                 </div>
               </div>
 
