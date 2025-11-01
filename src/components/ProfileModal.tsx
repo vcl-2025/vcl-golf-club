@@ -27,10 +27,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
   // 编辑表单状态
   const [editForm, setEditForm] = useState({
     full_name: '',
+    real_name: '',
     phone: '',
     email: '',
     avatar_url: '',
     handicap: '',
+    bc_handicap: '',
     clothing_size: '',
     vancouver_residence: '',
     domestic_residence: '',
@@ -57,6 +59,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
         .select(`
           id,
           full_name,
+          real_name,
           phone,
           email,
           avatar_url,
@@ -64,6 +67,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           avatar_position_y,
           avatar_scale,
           handicap,
+          bc_handicap,
           clothing_size,
           vancouver_residence,
           domestic_residence,
@@ -82,10 +86,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
         setUserProfile(data)
         setEditForm({
           full_name: data.full_name || '',
+          real_name: data.real_name || '',
           phone: data.phone || '',
           email: data.email || '',
           avatar_url: data.avatar_url || '',
           handicap: data.handicap || '',
+          bc_handicap: data.bc_handicap || '',
           clothing_size: data.clothing_size || '',
           vancouver_residence: data.vancouver_residence || '',
           domestic_residence: data.domestic_residence || '',
@@ -138,10 +144,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
         .from('user_profiles')
         .update({
           full_name: editForm.full_name,
+          real_name: editForm.real_name,
           phone: editForm.phone,
           email: editForm.email,
           avatar_url: editForm.avatar_url,
           handicap: editForm.handicap ? parseFloat(editForm.handicap) : null,
+          bc_handicap: editForm.bc_handicap ? parseFloat(editForm.bc_handicap) : null,
           clothing_size: editForm.clothing_size,
           vancouver_residence: editForm.vancouver_residence,
           domestic_residence: editForm.domestic_residence,
@@ -257,10 +265,12 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
     if (userProfile) {
       setEditForm({
         full_name: userProfile.full_name || '',
+        real_name: userProfile.real_name || '',
         phone: userProfile.phone || '',
         email: userProfile.email || '',
         avatar_url: userProfile.avatar_url || '',
         handicap: userProfile.handicap || '',
+        bc_handicap: userProfile.bc_handicap || '',
         clothing_size: userProfile.clothing_size || '',
         vancouver_residence: userProfile.vancouver_residence || '',
         domestic_residence: userProfile.domestic_residence || '',
@@ -301,7 +311,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-[1280px] max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">个人资料</h2>
@@ -323,7 +333,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           {!loading && userProfile && (
             <div className="space-y-6">
               {/* 头像和基本信息 */}
-              <div className="flex items-center space-x-6 p-6 bg-gradient-to-r from-golf-50 to-blue-50 rounded-xl border border-golf-100">
+              <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-6 p-6 bg-gradient-to-r from-golf-50 to-blue-50 rounded-xl border border-golf-100">
                 <div className="flex flex-col items-center">
                   <div className="w-20 h-20 bg-golf-600 rounded-full flex items-center justify-center overflow-hidden shadow-lg">
                     {userProfile.avatar_url ? (
@@ -363,26 +373,21 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                     className="hidden"
                   />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 w-full md:w-auto">
                   <h3 className="text-2xl font-bold text-gray-900 mb-1">
                     {userProfile.full_name || '未设置姓名'}
                   </h3>
                   <p className="text-gray-600 mb-3">{user.email}</p>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getMembershipTypeColor(userProfile.membership_type)}`}>
                       {getMembershipTypeText(userProfile.membership_type)}
                     </span>
-                    {userProfile.handicap && (
-                      <span className="inline-block px-3 py-1 bg-golf-100 text-golf-700 rounded-full text-sm font-medium">
-                        🏌️ 差点: {userProfile.handicap}
-                      </span>
-                    )}
                   </div>
                 </div>
                 {!isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                    className="w-full md:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                     <span>编辑资料</span>
@@ -434,6 +439,26 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <User className="w-4 h-4 inline mr-2" />
+                          真实姓名
+                        </label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.real_name}
+                            onChange={(e) => setEditForm({ ...editForm, real_name: e.target.value })}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+                            placeholder="请输入您的真实姓名"
+                          />
+                        ) : (
+                          <div className="p-3 bg-gray-50 rounded-lg text-gray-700 border">
+                            {userProfile.real_name || '未设置'}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           <Phone className="w-4 h-4 inline mr-2" />
                           手机号码
                         </label>
@@ -460,7 +485,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                       <span className="text-2xl mr-2">🏌️</span>
                       高尔夫信息
                     </h4>
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           差点
@@ -480,6 +505,28 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                         ) : (
                           <div className="p-3 bg-gray-50 rounded-lg text-gray-700 border">
                             {userProfile.handicap || '未设置'}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          BC差点
+                        </label>
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="54"
+                            value={editForm.bc_handicap}
+                            onChange={(e) => setEditForm({ ...editForm, bc_handicap: e.target.value })}
+                            onWheel={(e) => e.currentTarget.blur()}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+                            placeholder="18.5"
+                          />
+                        ) : (
+                          <div className="p-3 bg-gray-50 rounded-lg text-gray-700 border">
+                            {userProfile.bc_handicap || '未设置'}
                           </div>
                         )}
                       </div>
@@ -666,7 +713,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
               )}
 
               {/* 通知设置 */}
-        {!isEditing && (
+        {false && !isEditing && (
           <div className="mt-6 space-y-4">
             <NotificationManager userId={user.id} />
             {/* <OneSignalManager /> */}

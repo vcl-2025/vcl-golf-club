@@ -416,6 +416,15 @@ export default function UserScoreQuery() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
+                      {group.event.event_type && (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          group.event.event_type === '团体赛' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
+                        </span>
+                      )}
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {group.scores.length}人参赛
                       </span>
@@ -819,19 +828,13 @@ export default function UserScoreQuery() {
                                     {/* 比分显示在中间 - 小尺寸 */}
                                     <div className="flex flex-col items-center justify-center px-1 sm:px-3 flex-shrink-0">
                                       <div className="flex items-center gap-1 sm:gap-1.5 bg-gradient-to-r from-red-50 via-white to-blue-50 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-200">
-                                        <div className="flex items-center gap-1">
-                                          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500"></div>
-                                          <span className="text-base sm:text-xl font-bold text-red-600 tracking-tight">
-                                            {groupScoreText.split(' - ')[0]}
-                                          </span>
-                                        </div>
-                                        <span className="text-gray-400 text-sm sm:text-base font-light">-</span>
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-base sm:text-xl font-bold text-blue-600 tracking-tight">
-                                            {groupScoreText.split(' - ')[1]}
-                                          </span>
-                                          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500"></div>
-                                        </div>
+                                        <span className="text-2xl sm:text-3xl font-bold text-red-600 tracking-tight">
+                                          {groupScoreText.split(' - ')[0]}
+                                        </span>
+                                        <span className="text-gray-400 text-base sm:text-lg font-light">-</span>
+                                        <span className="text-2xl sm:text-3xl font-bold text-blue-600 tracking-tight">
+                                          {groupScoreText.split(' - ')[1]}
+                                        </span>
                                       </div>
                                     </div>
                                     

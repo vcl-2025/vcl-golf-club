@@ -1348,132 +1348,245 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
       {/* 信息中心管理 */}
       {currentView === 'information' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">信息中心管理</h2>
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">信息中心管理</h2>
+            <button
+              onClick={() => {
+                setSelectedInformationItem(null)
+                setShowInformationForm(true)
+              }}
+              className="btn-primary flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              创建信息
+            </button>
+          </div>
+
+          {/* 搜索和筛选 */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="搜索标题或内容..."
+                value={informationSearchTerm}
+                onChange={(e) => setInformationSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <select
+                value={informationStatusFilter}
+                onChange={(e) => setInformationStatusFilter(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="all">所有状态</option>
+                <option value="draft">草稿</option>
+                <option value="published">已发布</option>
+                <option value="archived">已归档</option>
+              </select>
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <select
+                value={informationCategoryFilter}
+                onChange={(e) => setInformationCategoryFilter(e.target.value)}
+                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="all">全部分类</option>
+                <option value="公告">公告</option>
+                <option value="通知">通知</option>
+                <option value="重要资料">重要资料</option>
+                <option value="规则章程">规则章程</option>
+              </select>
+            </div>
+            {(informationSearchTerm || informationStatusFilter !== 'all' || informationCategoryFilter !== 'all') && (
               <button
                 onClick={() => {
-                  setSelectedInformationItem(null)
-                  setShowInformationForm(true)
+                  setInformationSearchTerm('')
+                  setInformationStatusFilter('all')
+                  setInformationCategoryFilter('all')
                 }}
-                className="btn-primary flex items-center"
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                添加信息
+                清除筛选
               </button>
-            </div>
+            )}
+          </div>
 
-            {/* 搜索和筛选 */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="搜索标题或内容..."
-                  value={informationSearchTerm}
-                  onChange={(e) => setInformationSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
-                />
-              </div>
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <select
-                  value={informationStatusFilter}
-                  onChange={(e) => setInformationStatusFilter(e.target.value)}
-                  className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
-                >
-                  <option value="all">全部状态</option>
-                  <option value="published">已发布</option>
-                  <option value="draft">草稿</option>
-                </select>
-              </div>
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <select
-                  value={informationCategoryFilter || 'all'}
-                  onChange={(e) => setInformationCategoryFilter(e.target.value)}
-                  className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
-                >
-                  <option value="all">全部分类</option>
-                  <option value="announcement">公告</option>
-                  <option value="notice">通知</option>
-                  <option value="rule">规则</option>
-                  <option value="resource">资料</option>
-                </select>
-              </div>
-            </div>
-
-            {/* 信息列表 */}
-            <div className="space-y-4">
-              {informationItems
-                .filter(item => {
+          {/* 信息列表表格 */}
+          <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-200">
+            <table className="w-full table-fixed">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th 
+                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-48"
+                    onClick={() => {
+                      setSortField('information_title')
+                      setSortDirection(sortField === 'information_title' && sortDirection === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>标题</span>
+                      {sortField === 'information_title' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-24">分类</th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-24">状态</th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-28">优先级</th>
+                  <th 
+                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-32"
+                    onClick={() => {
+                      setSortField('information_published_at')
+                      setSortDirection(sortField === 'information_published_at' && sortDirection === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>发布时间</span>
+                      {sortField === 'information_published_at' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-20"
+                    onClick={() => {
+                      setSortField('information_view_count')
+                      setSortDirection(sortField === 'information_view_count' && sortDirection === 'asc' ? 'desc' : 'asc')
+                    }}
+                  >
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>阅读数</span>
+                      {sortField === 'information_view_count' && (
+                        <span className="text-gray-400">
+                          {sortDirection === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-28">操作</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {getSortedInformationItems().filter(item => {
                   const matchesSearch = !informationSearchTerm || 
                     item.title.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
+                    item.excerpt?.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
                     item.content?.toLowerCase().includes(informationSearchTerm.toLowerCase())
-                  const matchesStatus = informationStatusFilter === 'all' || 
-                    (informationStatusFilter === 'published' && item.status === 'published') ||
-                    (informationStatusFilter === 'draft' && item.status === 'draft')
-                  const matchesCategory = !informationCategoryFilter || informationCategoryFilter === 'all' ||
-                    (informationCategoryFilter === 'announcement' && item.category === '公告') ||
-                    (informationCategoryFilter === 'notice' && item.category === '通知') ||
-                    (informationCategoryFilter === 'rule' && item.category === '规则章程') ||
-                    (informationCategoryFilter === 'resource' && item.category === '重要资料')
+                  const matchesStatus = informationStatusFilter === 'all' || item.status === informationStatusFilter
+                  const matchesCategory = informationCategoryFilter === 'all' || item.category === informationCategoryFilter
                   return matchesSearch && matchesStatus && matchesCategory
-                })
-                .map((item) => (
-                  <div key={item.id} className="bg-gray-50 rounded-xl p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            item.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {item.status === 'published' ? '已发布' : item.status === 'draft' ? '草稿' : '已归档'}
-                          </span>
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {item.category}
-                          </span>
-                        </div>
-                        {item.excerpt && (
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.excerpt}</p>
+                }).map((item) => (
+                  <tr key={item.id} className="hover:bg-green-50">
+                    <td className="px-6 py-4 w-48">
+                      <div className="flex items-center space-x-2">
+                        {item.is_pinned && (
+                          <Pin className="w-4 h-4 text-yellow-600 flex-shrink-0" />
                         )}
-                        <div className="flex items-center text-xs text-gray-500 space-x-4">
-                          {item.published_at && (
-                            <span>发布时间: {new Date(item.published_at).toLocaleDateString('zh-CN')}</span>
-                          )}
-                          <span>创建时间: {new Date(item.created_at).toLocaleDateString('zh-CN')}</span>
+                        <div className="font-medium text-gray-900 truncate" title={item.title}>
+                          {item.title}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 ml-4">
+                    </td>
+                    <td className="px-6 py-4 text-center w-24">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.category === '公告' ? 'bg-blue-100 text-blue-800' :
+                        item.category === '通知' ? 'bg-yellow-100 text-yellow-800' :
+                        item.category === '重要资料' ? 'bg-green-100 text-green-800' :
+                        'bg-purple-100 text-purple-800'
+                      }`}>
+                        {item.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center w-24">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        item.status === 'published' ? 'bg-green-100 text-green-800' :
+                        item.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {item.status === 'published' ? '已发布' : item.status === 'draft' ? '草稿' : '已归档'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center w-28">
+                      <div className="space-y-1">
+                        {item.priority > 0 && (
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            item.priority === 1 ? 'bg-orange-100 text-orange-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {item.priority === 1 ? '重要' : '紧急'}
+                          </span>
+                        )}
+                        {item.is_pinned && (
+                          <div className="text-xs text-yellow-600">置顶</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600 w-32">
+                      {item.published_at ? (
+                        <div>
+                          <div>{new Date(item.published_at).toLocaleDateString('zh-CN')}</div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(item.published_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center text-sm text-gray-600 w-20">
+                      {item.view_count || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium w-28">
+                      <div className="flex items-center justify-center space-x-2">
                         <button
                           onClick={() => {
                             setSelectedInformationItem(item)
                             setShowInformationForm(true)
                           }}
-                          className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                          className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
+                          title="编辑"
                         >
-                          编辑
+                          <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteInformation(item.id)}
-                          className="px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                          className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
+                          title="删除"
                         >
-                          删除
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    </div>
-                  </div>
+                    </td>
+                  </tr>
                 ))}
-              
-              {informationItems.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  暂无信息，点击"添加信息"开始创建
-                </div>
-              )}
-            </div>
+              </tbody>
+            </table>
           </div>
+
+          {getSortedInformationItems().filter(item => {
+            const matchesSearch = !informationSearchTerm || 
+              item.title.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
+              item.excerpt?.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
+              item.content?.toLowerCase().includes(informationSearchTerm.toLowerCase())
+            const matchesStatus = informationStatusFilter === 'all' || item.status === informationStatusFilter
+            const matchesCategory = informationCategoryFilter === 'all' || item.category === informationCategoryFilter
+            return matchesSearch && matchesStatus && matchesCategory
+          }).length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              {informationSearchTerm || informationStatusFilter !== 'all' || informationCategoryFilter !== 'all' 
+                ? '没有找到匹配的信息' 
+                : '暂无信息，点击"创建信息"开始创建'}
+            </div>
+          )}
         </div>
       )}
 
@@ -1496,7 +1609,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       {/* 活动报名管理模态框 */}
       {selectedEventForRegistration && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-          <div className="bg-white rounded-2xl w-full max-w-[1600px] max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-[1440px] max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-end mb-6">
                 <button
