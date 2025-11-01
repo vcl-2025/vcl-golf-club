@@ -100,7 +100,7 @@ export default function InvestmentAdmin() {
       if (investmentsError) throw investmentsError
       setInvestments(investmentsData || [])
     } catch (error) {
-      console.error('获取投资数据失败:', error)
+      console.error('获取捐赠数据失败:', error)
     } finally {
       setLoading(false)
     }
@@ -121,7 +121,7 @@ export default function InvestmentAdmin() {
   }
 
   const handleDeleteProject = async (projectId: string) => {
-    confirmDelete('确定要删除这个投资项目吗？', async () => {
+    confirmDelete('确定要删除这个捐赠项目吗？', async () => {
       try {
         const { error } = await supabase
           .from('investment_projects')
@@ -131,9 +131,9 @@ export default function InvestmentAdmin() {
         if (error) throw error
 
         setProjects(projects.filter(p => p.id !== projectId))
-        showSuccess('项目删除成功')
+        showSuccess('捐赠项目删除成功')
       } catch (error) {
-        console.error('删除项目失败:', error)
+        console.error('删除捐赠项目失败:', error)
         showError('删除失败，请重试')
       }
     })
@@ -179,7 +179,7 @@ export default function InvestmentAdmin() {
     return Math.min((current / target) * 100, 100)
   }
 
-  // 计算项目的实际已筹集金额
+  // 计算捐赠项目的实际已筹集金额
   const calculateProjectAmount = (projectId: string) => {
     return investments
       .filter(inv => inv.project_id === projectId && inv.status === 'confirmed')
@@ -224,7 +224,7 @@ export default function InvestmentAdmin() {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center">
             <Heart className="w-7 h-7 text-red-500 mr-3" />
-            投资支持管理
+            捐赠管理
           </h2>
           <button
             onClick={() => {
@@ -234,16 +234,16 @@ export default function InvestmentAdmin() {
             className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
             <Plus className="w-5 h-5 mr-2" />
-            创建项目
+            创建捐赠项目
           </button>
         </div>
 
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-gray-600">
-            共 {projects.length} 个项目，{investments.length} 条投资记录
+            共 {projects.length} 个捐赠项目，{investments.length} 条捐赠记录
             {(searchTerm || statusFilter !== 'all') && (
               <span className="text-blue-600 ml-2">
-                (已过滤，共 {filteredProjects.length} 个项目)
+                (已过滤，共 {filteredProjects.length} 个捐赠项目)
               </span>
             )}
           </div>
@@ -251,7 +251,7 @@ export default function InvestmentAdmin() {
             const totalPending = investments.filter(inv => inv.status === 'pending').length
             return totalPending > 0 ? (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 animate-pulse">
-                {totalPending} 个待确认投资
+                {totalPending} 个待确认捐赠
               </span>
             ) : null
           })()}
@@ -262,7 +262,7 @@ export default function InvestmentAdmin() {
           <div className="flex-1 relative">
             <input
               type="text"
-              placeholder="搜索项目名称或描述..."
+              placeholder="搜索捐赠项目名称或描述..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500"
@@ -329,7 +329,7 @@ export default function InvestmentAdmin() {
                           <h3 className="text-lg font-bold text-gray-900">{project.title}</h3>
                           {getStatusBadge(project.status)}
                           <span className="text-sm text-gray-500">
-                            ({projectInvestments.length} 条投资)
+                            ({projectInvestments.length} 条捐赠)
                           </span>
                           {pendingInvestments.length > 0 && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 animate-pulse">
@@ -457,7 +457,7 @@ export default function InvestmentAdmin() {
                     ) : (
                       <div className="p-8 text-center text-gray-500">
                         <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                        <p>该项目暂无投资记录</p>
+                        <p>该捐赠项目暂无捐赠记录</p>
                       </div>
                     )}
                   </div>
@@ -470,7 +470,7 @@ export default function InvestmentAdmin() {
         {projects.length === 0 && (
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600">还没有创建投资项目</p>
+            <p className="text-gray-600">还没有创建捐赠项目</p>
           </div>
         )}
       </div>

@@ -311,7 +311,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-      <div className="bg-white rounded-2xl w-full max-w-[1280px] max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-[1080px] max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">个人资料</h2>

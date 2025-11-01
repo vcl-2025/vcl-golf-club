@@ -130,7 +130,7 @@ export default function InvestmentProjectForm({ project, onClose, onSuccess }: I
       onSuccess()
       onClose()
     } catch (error) {
-      console.error('保存投资项目失败:', error)
+      console.error('保存捐赠项目失败:', error)
       showError('保存失败，请重试')
     } finally {
       setLoading(false)
@@ -142,7 +142,7 @@ export default function InvestmentProjectForm({ project, onClose, onSuccess }: I
       <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">
-            {project ? '编辑投资项目' : '创建投资项目'}
+            {project ? '编辑捐赠项目' : '创建捐赠项目'}
           </h2>
           <button
             onClick={onClose}
@@ -177,7 +177,7 @@ export default function InvestmentProjectForm({ project, onClose, onSuccess }: I
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                placeholder="详细描述投资项目的目的、用途等"
+                placeholder="详细描述捐赠项目的目的、用途等"
               />
             </div>
 
@@ -331,7 +331,7 @@ export default function InvestmentProjectForm({ project, onClose, onSuccess }: I
               disabled={loading}
               className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '保存中...' : project ? '更新项目' : '创建项目'}
+              {loading ? '保存中...' : project ? '更新捐赠项目' : '创建捐赠项目'}
             </button>
           </div>
         </form>
