@@ -1154,620 +1154,89 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                         {/* 折叠内容 - 队员成绩列表 */}
                         {isExpanded && (
                           <div className="border-t border-gray-100 px-4 sm:px-6 pb-4 bg-white rounded-b-2xl">
-                        <div className="space-y-3 mt-4">
-                          {eventScores.length > 0 ? (
-                            eventScores
-                              .sort((a, b) => {
-                                // 按排名排序，有排名的在前，没有排名的在后
-                                if (a.rank && b.rank) {
-                                  return a.rank - b.rank
-                                }
-                                if (a.rank && !b.rank) return -1
-                                if (!a.rank && b.rank) return 1
-                                // 如果都没有排名，按总杆数排序（杆数少的在前）
-                                return a.total_strokes - b.total_strokes
-                              })
-                              .map((score, index) => (
-                              <div key={score.id || index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
-                                <div className="flex-1">
-                                  <div className="font-medium text-gray-900">
-                      {score.user_profiles?.full_name || '未知'}
-                                  </div>
-                                  <div className="text-sm text-gray-600">
-                                    总杆数: {score.total_strokes} | 净杆数: {score.net_strokes || '-'} | 差点: {score.handicap}
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-4">
-                                  {score.rank && (
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      score.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
-                                      score.rank === 2 ? 'bg-gray-100 text-gray-800' :
-                                      score.rank === 3 ? 'bg-amber-100 text-amber-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                                      #{score.rank}
-                        </span>
-                                  )}
-                      <button
+                            <div className="space-y-3 mt-4">
+                              {eventScores.length > 0 ? (
+                                eventScores
+                                  .sort((a, b) => {
+                                    // 按排名排序，有排名的在前，没有排名的在后
+                                    if (a.rank && b.rank) {
+                                      return a.rank - b.rank
+                                    }
+                                    if (a.rank && !b.rank) return -1
+                                    if (!a.rank && b.rank) return 1
+                                    // 如果都没有排名，按总杆数排序（杆数少的在前）
+                                    return a.total_strokes - b.total_strokes
+                                  })
+                                  .map((score, index) => (
+                                    <div key={score.id || index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-gray-900">
+                                          {score.user_profiles?.full_name || '未知'}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                          总杆数: {score.total_strokes} | 净杆数: {score.net_strokes || '-'} | 差点: {score.handicap}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center space-x-4">
+                                        {score.rank && (
+                                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                            score.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+                                            score.rank === 2 ? 'bg-gray-100 text-gray-800' :
+                                            score.rank === 3 ? 'bg-amber-100 text-amber-800' :
+                                            'bg-blue-100 text-blue-800'
+                                          }`}>
+                                            #{score.rank}
+                                          </span>
+                                        )}
+                                        <button
+                                          onClick={() => {
+                                            setSelectedEvent(event)
+                                            setSelectedScore(score)
+                                            setShowScoreForm(true)
+                                          }}
+                                          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                          title="编辑成绩"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))
+                              ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                  <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                  <p>暂无成绩记录</p>
+                                  <button
                                     onClick={() => {
                                       setSelectedEvent(event)
-                                      setSelectedScore(score)
                                       setShowScoreForm(true)
                                     }}
-                                    className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                    title="编辑成绩"
+                                    className="mt-3 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
                                   >
-                                    <Edit className="w-4 h-4" />
-                      </button>
-          </div>
-            </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-8 text-gray-500">
-                              <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                              <p>暂无成绩记录</p>
+                                    开始录入成绩
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* 操作按钮 */}
+                            <div className="flex items-center justify-end mt-4 pt-4 border-t border-gray-100">
                               <button
                                 onClick={() => {
                                   setSelectedEvent(event)
                                   setShowScoreForm(true)
                                 }}
-                                className="mt-3 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                                className="flex items-center text-sm text-blue-600 hover:text-blue-700"
                               >
-                                开始录入成绩
+                                <Edit className="w-4 h-4 mr-2" />
+                                批量录入成绩
                               </button>
-        </div>
-      )}
-          </div>
-
-                        {/* 团体赛结果显示 */}
-                        {event.event_type === '团体赛' && eventScores.length > 0 && (() => {
-                          // 过滤出有分组和团队信息的成绩
-                          const teamScores = eventScores.filter(s => s.group_number && s.team_name && s.hole_scores && Array.isArray(s.hole_scores) && s.hole_scores.length === 18)
-                          
-                          if (teamScores.length === 0) return null
-                          
-                          // 转换为计算所需的格式
-                          const players = teamScores.map(score => {
-                            let holeScores = score.hole_scores || []
-                            if (Array.isArray(holeScores) && holeScores.length > 0 && typeof holeScores[0] === 'string') {
-                              holeScores = holeScores.map(s => parseInt(String(s), 10) || 0)
-                            }
-                            
-                            // 处理头像URL：确保是完整URL，空字符串转为null
-                            let avatarUrl = score.user_profiles?.avatar_url || null
-                            if (avatarUrl && typeof avatarUrl === 'string') {
-                              // 移除首尾空格
-                              avatarUrl = avatarUrl.trim()
-                              // 如果为空字符串，转为null
-                              if (avatarUrl === '') {
-                                avatarUrl = null
-                              } else if (!avatarUrl.startsWith('http://') && !avatarUrl.startsWith('https://') && !avatarUrl.startsWith('data:')) {
-                                // 如果是相对路径，可能需要从 Supabase Storage 获取完整 URL
-                                // 但这里先保留原值，因为 Supabase Storage 的 URL 可能已经是完整路径
-                                console.log(`[头像] ${score.user_profiles?.full_name || '未知'} 的头像URL格式:`, avatarUrl)
-                              }
-                            }
-                            
-                            return {
-                              name: score.user_profiles?.full_name || '未知',
-                              avatarUrl: avatarUrl,
-                              avatarPositionX: score.user_profiles?.avatar_position_x || 50,
-                              avatarPositionY: score.user_profiles?.avatar_position_y || 50,
-                              holeScores: holeScores,
-                              totalStrokes: score.total_strokes || 0,
-                              groupNumber: score.group_number,
-                              teamName: score.team_name
-                            }
-                          })
-                          
-                          // 按分组和团队组织数据
-                          const groups = new Map<number, Map<string, Array<{ name: string; avatarUrl: string | null; avatarPositionX: number; avatarPositionY: number; holeScores: number[]; totalStrokes: number }>>>()
-                          players.forEach(player => {
-                            if (!player.groupNumber || !player.teamName) return
-                            const group = player.groupNumber
-                            const teamName = player.teamName.trim()
-                            if (!groups.has(group)) {
-                              groups.set(group, new Map())
-                            }
-                            const groupTeams = groups.get(group)!
-                            if (!groupTeams.has(teamName)) {
-                              groupTeams.set(teamName, [])
-                            }
-                            groupTeams.get(teamName)!.push({
-                              name: player.name,
-                              avatarUrl: player.avatarUrl,
-                              avatarPositionX: player.avatarPositionX,
-                              avatarPositionY: player.avatarPositionY,
-                              holeScores: player.holeScores,
-                              totalStrokes: player.totalStrokes
-                            })
-                          })
-                          
-                          // 计算每组胜负和总比分
-                          const groupDetails: Array<{
-                            group: number
-                            teams: Array<{ teamName: string; wins: number; playerCount: number; players: Array<{ name: string; avatarUrl: string | null; avatarPositionX: number; avatarPositionY: number; holeScores: number[]; totalStrokes: number }> }>
-                            winner: string | 'tie'
-                          }> = []
-                          const totalScores = new Map<string, number>()
-                          
-                          groups.forEach((teamsMap, groupNumber) => {
-                            const teamEntries = Array.from(teamsMap.entries())
-                            if (teamEntries.length < 2) return
-                            
-                            if (teamEntries.length === 2) {
-                              const [team1Name, team1Players] = teamEntries[0]
-                              const [team2Name, team2Players] = teamEntries[1]
-                              
-                              let team1Wins = 0
-                              let team2Wins = 0
-                              
-                              // 计算每洞胜负（实际杆数，杆数越小越好）
-                              for (let hole = 0; hole < 18; hole++) {
-                                const team1Scores = team1Players.map(p => {
-                                  const score = p.holeScores[hole]
-                                  return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
-                                }).filter(s => s !== Infinity)
-                                const team2Scores = team2Players.map(p => {
-                                  const score = p.holeScores[hole]
-                                  return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
-                                }).filter(s => s !== Infinity)
-                                
-                                const team1Best = team1Scores.length > 0 ? Math.min(...team1Scores) : Infinity
-                                const team2Best = team2Scores.length > 0 ? Math.min(...team2Scores) : Infinity
-                                
-                                // 如果两队都没有有效成绩，算平局
-                                if (team1Best === Infinity && team2Best === Infinity) {
-                                  // 平局，不增加任何队伍的胜利数
-                                  continue
-                                }
-                                // 如果只有一队有成绩，该队获胜
-                                if (team1Best === Infinity) {
-                                  team2Wins++
-                                } else if (team2Best === Infinity) {
-                                  team1Wins++
-                                } else if (team1Best < team2Best) {
-                                  team1Wins++
-                                } else if (team2Best < team1Best) {
-                                  team2Wins++
-                                }
-                                // 如果相等，平局，不增加任何队伍的胜利数
-                              }
-                              
-                              let winner: string | 'tie'
-                              // 确保两个团队都在totalScores中，即使得分是0
-                              if (!totalScores.has(team1Name)) {
-                                totalScores.set(team1Name, 0)
-                              }
-                              if (!totalScores.has(team2Name)) {
-                                totalScores.set(team2Name, 0)
-                              }
-                              
-                              if (team1Wins > team2Wins) {
-                                winner = team1Name
-                                totalScores.set(team1Name, (totalScores.get(team1Name) || 0) + 1)
-                              } else if (team2Wins > team1Wins) {
-                                winner = team2Name
-                                totalScores.set(team2Name, (totalScores.get(team2Name) || 0) + 1)
-                              } else {
-                                winner = 'tie'
-                                totalScores.set(team1Name, (totalScores.get(team1Name) || 0) + 0.5)
-                                totalScores.set(team2Name, (totalScores.get(team2Name) || 0) + 0.5)
-                              }
-                              
-                              groupDetails.push({
-                                group: groupNumber,
-                                teams: [
-                                  { teamName: team1Name, wins: team1Wins, playerCount: team1Players.length, players: team1Players },
-                                  { teamName: team2Name, wins: team2Wins, playerCount: team2Players.length, players: team2Players }
-                                ],
-                                winner
-                              })
-                            }
-                          })
-                          
-                          // 按组号排序，确保显示顺序为1、2、3、4...
-                          groupDetails.sort((a, b) => a.group - b.group)
-                          
-                          // 找到红队和蓝队名称（处理带*的名称）
-                          const allTeamNames = Array.from(totalScores.keys())
-                          
-                          const checkIfRedName = (name: string) => {
-                            const upper = name.toUpperCase().replace(/\*/g, '').replace(/\s/g, '')
-                            return upper.includes('RED') || name.includes('红') || upper === 'RED'
-                          }
-                          
-                          const checkIfBlueName = (name: string) => {
-                            const upper = name.toUpperCase().replace(/\*/g, '').replace(/\s/g, '')
-                            return upper.includes('BLUE') || name.includes('蓝') || upper === 'BLUE'
-                          }
-                          
-                          const redTeamName = allTeamNames.find(checkIfRedName) || allTeamNames[0]
-                          // 确保能找到蓝队：先尝试通过名称识别，如果识别不出，就用另一个团队
-                          let blueTeamName = allTeamNames.find(name => {
-                            if (name === redTeamName) return false
-                            return checkIfBlueName(name) || !checkIfRedName(name)
-                          })
-                          if (!blueTeamName && allTeamNames.length > 1) {
-                            blueTeamName = allTeamNames.find(name => name !== redTeamName) || allTeamNames[1]
-                          }
-                          // 确保能找到蓝队名称
-                          if (!blueTeamName && allTeamNames.length >= 2) {
-                            blueTeamName = allTeamNames.find(name => name !== redTeamName) || allTeamNames[1]
-                          }
-                          
-                          
-                          // 确保两个团队都显示（即使得分是0）
-                          const finalBlueTeamName = blueTeamName || (allTeamNames.length >= 2 ? allTeamNames[1] : undefined)
-                          
-                          return (
-                            <div className="mt-6 pt-6 border-t border-gray-200">
-                              <h3 className="text-lg font-semibold text-gray-900 mb-4">团体赛结果</h3>
-                              
-                              {/* 总比分 */}
-                              <div className="flex flex-col sm:flex-row gap-6 mb-8 justify-center items-center">
-                                {redTeamName && (
-                                  <div className="flex items-center justify-between bg-white rounded-xl p-5 border border-gray-200 min-w-[200px] gap-4">
-                                    <div className="flex items-center space-x-3">
-                                      <div className="w-3 h-3 rounded bg-red-500"></div>
-                                      <span className="font-medium text-gray-900">{redTeamName}</span>
-                                    </div>
-                                    <div className="bg-red-500 text-white rounded-lg px-6 py-2 font-bold text-xl flex-shrink-0">
-                                      {(totalScores.get(redTeamName) ?? 0).toFixed(1)}
-                                    </div>
-                                  </div>
-                                )}
-                                {finalBlueTeamName && (
-                                  <div className="flex items-center justify-between bg-white rounded-xl p-5 border border-gray-200 min-w-[200px] gap-4">
-                                    <div className="flex items-center space-x-3">
-                                      <div className="w-3 h-3 rounded bg-blue-500"></div>
-                                      <span className="font-medium text-gray-900">{finalBlueTeamName}</span>
-                                    </div>
-                                    <div className="bg-blue-500 text-white rounded-lg px-6 py-2 font-bold text-xl flex-shrink-0">
-                                      {(totalScores.get(finalBlueTeamName) ?? 0).toFixed(1)}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* 各组详细结果 */}
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {groupDetails.map(group => {
-                                  // 直接使用group.teams中的两个团队（每组只有两个团队）
-                                  const team1 = group.teams[0]
-                                  const team2 = group.teams[1]
-                                  
-                                  // 根据团队名称判断哪个是红队哪个是蓝队（更严格的匹配）
-                                  const checkIfRed = (teamName: string | undefined) => {
-                                    if (!teamName) return false
-                                    const upper = teamName.toUpperCase().replace(/\*/g, '').replace(/\s/g, '')
-                                    return upper.includes('RED') || teamName.includes('红') || upper === 'RED'
-                                  }
-                                  
-                                  const checkIfBlue = (teamName: string | undefined) => {
-                                    if (!teamName) return false
-                                    const upper = teamName.toUpperCase().replace(/\*/g, '').replace(/\s/g, '')
-                                    return upper.includes('BLUE') || teamName.includes('蓝') || upper === 'BLUE'
-                                  }
-                                  
-                                  // 优先根据团队名称识别，如果识别不出来，再用索引
-                                  let redTeam: typeof team1 | undefined
-                                  let blueTeam: typeof team2 | undefined
-                                  
-                                  if (checkIfRed(team1?.teamName)) {
-                                    redTeam = team1
-                                    blueTeam = team2
-                                  } else if (checkIfRed(team2?.teamName)) {
-                                    redTeam = team2
-                                    blueTeam = team1
-                                  } else if (checkIfBlue(team1?.teamName)) {
-                                    blueTeam = team1
-                                    redTeam = team2
-                                  } else if (checkIfBlue(team2?.teamName)) {
-                                    blueTeam = team2
-                                    redTeam = team1
-                                  } else {
-                                    // 如果都识别不出来，默认第一个是红队，第二个是蓝队
-                                    redTeam = team1
-                                    blueTeam = team2
-                                  }
-                                  
-                                  // 计算每洞胜负（实际杆数，杆数越小越好）
-                                  // 注意：这里要根据实际的team1和team2来比较，而不是redTeam和blueTeam
-                                  const holeResults: Array<'team1' | 'team2' | 'tie'> = []
-                                  const team1Players = team1?.players || []
-                                  const team2Players = team2?.players || []
-                                  
-                                  for (let hole = 0; hole < 18; hole++) {
-                                    // 确保转换为数字
-                                    const team1Scores = team1Players.map(p => {
-                                      const score = p.holeScores && p.holeScores[hole]
-                                      return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
-                                    }).filter(s => s !== Infinity)
-                                    
-                                    const team2Scores = team2Players.map(p => {
-                                      const score = p.holeScores && p.holeScores[hole]
-                                      return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
-                                    }).filter(s => s !== Infinity)
-                                    
-                                    const team1Best = team1Scores.length > 0 ? Math.min(...team1Scores) : Infinity
-                                    const team2Best = team2Scores.length > 0 ? Math.min(...team2Scores) : Infinity
-                                    
-                                    // 如果两队都没有有效成绩，算平局
-                                    if (team1Best === Infinity && team2Best === Infinity) {
-                                      holeResults.push('tie')
-                                    } else if (team1Best === Infinity) {
-                                      // team1无数据，team2获胜
-                                      holeResults.push('team2')
-                                    } else if (team2Best === Infinity) {
-                                      // team2无数据，team1获胜
-                                      holeResults.push('team1')
-                                    } else if (team1Best < team2Best) {
-                                      // team1杆数更少，team1获胜
-                                      holeResults.push('team1')
-                                    } else if (team2Best < team1Best) {
-                                      // team2杆数更少，team2获胜
-                                      holeResults.push('team2')
-                                    } else {
-                                      // 相等，平局
-                                      holeResults.push('tie')
-                                    }
-                                  }
-                                  
-                                  // 将team1/team2的结果转换为red/blue
-                                  const redPlayers = redTeam?.players || []
-                                  const bluePlayers = blueTeam?.players || []
-                                  const isTeam1Red = redTeam === team1
-                                  
-                                  // 转换为red/blue标记
-                                  const redBlueResults: Array<'red' | 'blue' | 'tie'> = holeResults.map(result => {
-                                    if (result === 'tie') return 'tie'
-                                    if (isTeam1Red) {
-                                      return result === 'team1' ? 'red' : 'blue'
-                                    } else {
-                                      return result === 'team1' ? 'blue' : 'red'
-                                    }
-                                  })
-                                  
-                                  const redWins = redBlueResults.filter(r => r === 'red').length
-                                  const blueWins = redBlueResults.filter(r => r === 'blue').length
-                                  const ties = redBlueResults.filter(r => r === 'tie').length
-                                  
-                                  // 使用重新计算的洞数（确保准确）
-                                  const redScore = redWins  // 红队赢的洞数
-                                  const blueScore = blueWins  // 蓝队赢的洞数
-                                  
-                                  // 根据该组的winner来决定比分显示（1-0表示红队赢，0-1表示蓝队赢，0.5-0.5表示平局）
-                                  let groupScoreText = ''
-                                  const groupWinner = group.winner
-                                  if (groupWinner === redTeamName) {
-                                    groupScoreText = '1 - 0'
-                                  } else if (groupWinner === blueTeamName) {
-                                    groupScoreText = '0 - 1'
-                                  } else {
-                                    groupScoreText = '0.5 - 0.5'
-                                  }
-                                  
-                                  // 详细的洞数统计
-                                  const summaryText = `红赢${redScore}洞，蓝赢${blueScore}洞，平${ties}洞`
-                                  
-                                  return (
-                                    <div key={group.group} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-                                      {/* 头部区域：组号和比分 */}
-                                      <div className="mb-6 pb-4 border-b border-gray-100">
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center gap-2">
-                                            <span className="px-3 py-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg text-sm font-semibold text-gray-700 border border-gray-200">
-                                              第{group.group}组
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-2 bg-gradient-to-r from-red-50 via-white to-blue-50 rounded-lg px-4 py-2 border border-gray-100">
-                                            <div className="flex items-center gap-2">
-                                              <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                              <span className="text-2xl font-bold text-red-600 tracking-tight">
-                                                {groupScoreText.split(' - ')[0]}
-                                              </span>
-                                            </div>
-                                            <span className="text-gray-300 text-lg font-light">-</span>
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-2xl font-bold text-blue-600 tracking-tight">
-                                                {groupScoreText.split(' - ')[1]}
-                                              </span>
-                                              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* 球员信息区域 */}
-                                      <div className="flex items-start gap-4 mb-6">
-                                        {/* 红队球员列（左侧） */}
-                                        <div className="flex-1 relative">
-                                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-red-400 to-red-600 rounded-full"></div>
-                                          <div className="pl-4 space-y-3">
-                                            {redPlayers.map((player, idx) => (
-                                              <div key={idx} className="flex items-center gap-3 group">
-                                                <div className="relative">
-                                                  <div className="absolute inset-0 bg-red-500 rounded-full opacity-20 blur-sm group-hover:opacity-30 transition-opacity"></div>
-                                                  <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-300 shadow-sm flex items-center justify-center overflow-hidden">
-                                                    {player.avatarUrl ? (
-                                                      <img 
-                                                        src={player.avatarUrl} 
-                                                        alt={player.name}
-                                                        className="w-full h-full object-cover"
-                                                        style={{
-                                                          objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                        }}
-                                                        onError={(e) => {
-                                                          // 图片加载失败时，替换为默认图标
-                                                          const parent = e.currentTarget.parentElement
-                                                          if (parent) {
-                                                            e.currentTarget.remove()
-                                                            const fallback = document.createElement('div')
-                                                            fallback.className = 'w-full h-full flex items-center justify-center'
-                                                            fallback.innerHTML = '<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>'
-                                                            parent.appendChild(fallback)
-                                                          }
-                                                          console.log(`[头像加载失败] ${player.name}:`, player.avatarUrl)
-                                                        }}
-                                                      />
-                                                    ) : (
-                                                      <User className="w-6 h-6 text-red-500" />
-                                                    )}
-                                                  </div>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-base text-gray-800 font-semibold group-hover:text-red-600 transition-colors">{player.name}</span>
-                                                  <span className="text-sm text-gray-500 font-medium">{player.totalStrokes || 0}杆</span>
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                        
-                                        {/* 分隔线 */}
-                                        <div className="w-px h-full bg-gradient-to-b from-transparent via-gray-200 to-transparent self-stretch"></div>
-                                        
-                                        {/* 蓝队球员列（右侧） */}
-                                        <div className="flex-1 relative">
-                                          <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
-                                          <div className="pr-4 space-y-3">
-                                            {bluePlayers.map((player, idx) => (
-                                              <div key={idx} className="flex items-center gap-3 group justify-end">
-                                                <div className="flex flex-col items-end">
-                                                  <span className="text-base text-gray-800 font-semibold group-hover:text-blue-600 transition-colors">{player.name}</span>
-                                                  <span className="text-sm text-gray-500 font-medium">{player.totalStrokes || 0}杆</span>
-                                                </div>
-                                                <div className="relative">
-                                                  <div className="absolute inset-0 bg-blue-500 rounded-full opacity-20 blur-sm group-hover:opacity-30 transition-opacity"></div>
-                                                  <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 shadow-sm flex items-center justify-center overflow-hidden">
-                                                    {player.avatarUrl ? (
-                                                      <img 
-                                                        src={player.avatarUrl} 
-                                                        alt={player.name}
-                                                        className="w-full h-full object-cover"
-                                                        style={{
-                                                          objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                        }}
-                                                        onError={(e) => {
-                                                          // 图片加载失败时，替换为默认图标
-                                                          const parent = e.currentTarget.parentElement
-                                                          if (parent) {
-                                                            e.currentTarget.remove()
-                                                            const fallback = document.createElement('div')
-                                                            fallback.className = 'w-full h-full flex items-center justify-center'
-                                                            fallback.innerHTML = '<svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>'
-                                                            parent.appendChild(fallback)
-                                                          }
-                                                          console.log(`[头像加载失败] ${player.name}:`, player.avatarUrl)
-                                                        }}
-                                                      />
-                                                    ) : (
-                                                      <User className="w-6 h-6 text-blue-500" />
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* 进度圆圈区域 */}
-                                      <div className="bg-gradient-to-b from-gray-50 to-white rounded-xl p-4 border border-gray-100">
-                                        {/* 红队进度行 */}
-                                        <div className="flex justify-center items-center gap-1 mb-2">
-                                          {redBlueResults.map((result, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="relative group"
-                                              title={`洞${idx + 1}: ${result === 'red' ? '红队获胜' : result === 'blue' ? '蓝队获胜' : '平局'}`}
-                                            >
-                                              <div
-                                                className={`w-3 h-3 rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 group-hover:scale-125 ${
-                                                  result === 'red' ? 'bg-red-500 shadow-md shadow-red-200' : 
-                                                  result === 'blue' ? 'bg-white border-2 border-gray-200 shadow-sm' :
-                                                  'bg-white border-2 border-gray-300 shadow-sm'
-                                                }`}
-                                              >
-                                                {result === 'tie' && (
-                                                  <div className="w-1 h-1 rounded-full bg-gray-500"></div>
-                                                )}
-                                              </div>
-                                              {(idx + 1) % 3 === 0 && idx < 17 && (
-                                                <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-[8px] text-gray-400 font-medium">
-                                                  {idx + 1}
-                                                </div>
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                        
-                                        {/* 蓝队进度行 */}
-                                        <div className="flex justify-center items-center gap-1 mb-3">
-                                          {redBlueResults.map((result, idx) => (
-                                            <div
-                                              key={idx}
-                                              className="relative group"
-                                              title={`洞${idx + 1}: ${result === 'blue' ? '蓝队获胜' : result === 'red' ? '红队获胜' : '平局'}`}
-                                            >
-                                              <div
-                                                className={`w-3 h-3 rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 group-hover:scale-125 ${
-                                                  result === 'blue' ? 'bg-blue-500 shadow-md shadow-blue-200' : 
-                                                  result === 'red' ? 'bg-white border-2 border-gray-200 shadow-sm' :
-                                                  'bg-white border-2 border-gray-300 shadow-sm'
-                                                }`}
-                                              >
-                                                {result === 'tie' && (
-                                                  <div className="w-1 h-1 rounded-full bg-gray-500"></div>
-                                                )}
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                        
-                                        {/* 总结文字 */}
-                                        <div className="text-center pt-2 border-t border-gray-200">
-                                          <span className="inline-block px-4 py-1.5 bg-gradient-to-r from-red-50 to-blue-50 rounded-full text-sm font-semibold text-gray-700 border border-gray-200">
-                                            {summaryText}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
                             </div>
-                          )
-                        })()}
-
-                        {/* 操作按钮 */}
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                          <button
-                            onClick={() => {
-                              setSelectedEventForRegistration(event)
-                            }}
-                            className="flex items-center text-sm text-green-600 hover:text-green-700"
-                          >
-                            <Users className="w-4 h-4 mr-2" />
-                            报名管理
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedEvent(event)
-                              setShowScoreForm(true)
-                            }}
-                            className="flex items-center text-sm text-blue-600 hover:text-blue-700"
-                          >
-                            <Edit className="w-4 h-4 mr-2" />
-                            批量录入成绩
-                          </button>
-                        </div>
-            </div>
-          )}
-                    </div>
-                  )
-                })}
+                          </div>
+                        )}
+                  </div>
+                )
+              })}
                 
                 {filteredEvents.length === 0 && (
                   <div className="text-center py-12">
@@ -1825,296 +1294,13 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
           preselectedScore={selectedScore}
           onClose={() => {
             setShowScoreForm(false)
-            setSelectedScore(null)
             setSelectedEvent(null)
+            setSelectedScore(null)
           }}
           onSuccess={() => {
             setShowScoreForm(false)
-            setSelectedScore(null)
             setSelectedEvent(null)
-            fetchAdminData()
-          }}
-        />
-      )}
-
-
-      {/* 投资管理 */}
-      {currentView === 'investments' && <InvestmentAdmin />}
-
-      {/* 费用管理 */}
-      {currentView === 'expenses' && <ExpenseAdmin />}
-
-      {/* 信息中心管理 */}
-      {currentView === 'information' && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">信息中心管理</h2>
-            <button
-              onClick={() => {
-                setSelectedInformationItem(null)
-                setShowInformationForm(true)
-              }}
-              className="btn-primary flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              创建信息
-            </button>
-          </div>
-
-          {/* 搜索和筛选 */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="搜索标题或内容..."
-                value={informationSearchTerm}
-                onChange={(e) => setInformationSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
-              />
-            </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <select
-                value={informationStatusFilter}
-                onChange={(e) => setInformationStatusFilter(e.target.value)}
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
-              >
-                <option value="all">所有状态</option>
-                <option value="draft">草稿</option>
-                <option value="published">已发布</option>
-                <option value="archived">已归档</option>
-              </select>
-            </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <select
-                value={informationCategoryFilter}
-                onChange={(e) => setInformationCategoryFilter(e.target.value)}
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent appearance-none bg-white"
-              >
-                <option value="all">全部分类</option>
-                <option value="公告">公告</option>
-                <option value="通知">通知</option>
-                <option value="重要资料">重要资料</option>
-                <option value="规则章程">规则章程</option>
-              </select>
-            </div>
-            {(informationSearchTerm || informationStatusFilter !== 'all' || informationCategoryFilter !== 'all') && (
-              <button
-                onClick={() => {
-                  setInformationSearchTerm('')
-                  setInformationStatusFilter('all')
-                  setInformationCategoryFilter('all')
-                }}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                清除筛选
-              </button>
-            )}
-          </div>
-
-          {/* 信息列表表格 */}
-          <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-200">
-            <table className="w-full table-fixed">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th 
-                    className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-48"
-                    onClick={() => {
-                      setSortField('information_title')
-                      setSortDirection(sortField === 'information_title' && sortDirection === 'asc' ? 'desc' : 'asc')
-                    }}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>标题</span>
-                      {sortField === 'information_title' && (
-                        <span className="text-gray-400">
-                          {sortDirection === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-24">分类</th>
-                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-24">状态</th>
-                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-28">优先级</th>
-                  <th 
-                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-32"
-                    onClick={() => {
-                      setSortField('information_published_at')
-                      setSortDirection(sortField === 'information_published_at' && sortDirection === 'asc' ? 'desc' : 'asc')
-                    }}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>发布时间</span>
-                      {sortField === 'information_published_at' && (
-                        <span className="text-gray-400">
-                          {sortDirection === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-4 text-center text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none w-20"
-                    onClick={() => {
-                      setSortField('information_view_count')
-                      setSortDirection(sortField === 'information_view_count' && sortDirection === 'asc' ? 'desc' : 'asc')
-                    }}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>阅读数</span>
-                      {sortField === 'information_view_count' && (
-                        <span className="text-gray-400">
-                          {sortDirection === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-28">操作</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {getSortedInformationItems().filter(item => {
-                  const matchesSearch = !informationSearchTerm || 
-                    item.title.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
-                    item.excerpt?.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
-                    item.content?.toLowerCase().includes(informationSearchTerm.toLowerCase())
-                  const matchesStatus = informationStatusFilter === 'all' || item.status === informationStatusFilter
-                  const matchesCategory = informationCategoryFilter === 'all' || item.category === informationCategoryFilter
-                  return matchesSearch && matchesStatus && matchesCategory
-                }).map((item) => (
-                  <tr key={item.id} className="hover:bg-green-50">
-                    <td className="px-6 py-4 w-48">
-                      <div className="flex items-center space-x-2">
-                        {item.is_pinned && (
-                          <Pin className="w-4 h-4 text-yellow-600 flex-shrink-0" />
-                        )}
-                        <div className="font-medium text-gray-900 truncate" title={item.title}>
-                          {item.title}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center w-24">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.category === '公告' ? 'bg-blue-100 text-blue-800' :
-                        item.category === '通知' ? 'bg-yellow-100 text-yellow-800' :
-                        item.category === '重要资料' ? 'bg-green-100 text-green-800' :
-                        'bg-purple-100 text-purple-800'
-                      }`}>
-                        {item.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center w-24">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        item.status === 'published' ? 'bg-green-100 text-green-800' :
-                        item.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {item.status === 'published' ? '已发布' : item.status === 'draft' ? '草稿' : '已归档'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center w-28">
-                      <div className="space-y-1">
-                        {item.priority > 0 && (
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            item.priority === 1 ? 'bg-orange-100 text-orange-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {item.priority === 1 ? '重要' : '紧急'}
-                          </span>
-                        )}
-                        {item.is_pinned && (
-                          <div className="text-xs text-yellow-600">置顶</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600 w-32">
-                      {item.published_at ? (
-                        <div>
-                          <div>{new Date(item.published_at).toLocaleDateString('zh-CN')}</div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(item.published_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-center text-sm text-gray-600 w-20">
-                      {item.view_count || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium w-28">
-                      <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={() => {
-                            setSelectedInformationItem(item)
-                            setShowInformationForm(true)
-                          }}
-                          className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
-                          title="编辑"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            confirmDelete(`确定要删除"${item.title}"吗？`, async () => {
-                              if (!supabase) return
-                              const { error } = await supabase
-                                .from('information_items')
-                                .delete()
-                                .eq('id', item.id)
-                              
-                              if (error) {
-                                showError('删除失败: ' + error.message)
-                              } else {
-                                showSuccess('删除成功')
-                                fetchAdminData()
-                              }
-                            })
-                          }}
-                          className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
-                          title="删除"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {getSortedInformationItems().filter(item => {
-            const matchesSearch = !informationSearchTerm || 
-              item.title.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
-              item.excerpt?.toLowerCase().includes(informationSearchTerm.toLowerCase()) ||
-              item.content?.toLowerCase().includes(informationSearchTerm.toLowerCase())
-            const matchesStatus = informationStatusFilter === 'all' || item.status === informationStatusFilter
-            const matchesCategory = informationCategoryFilter === 'all' || item.category === informationCategoryFilter
-            return matchesSearch && matchesStatus && matchesCategory
-          }).length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              {informationSearchTerm || informationStatusFilter !== 'all' || informationCategoryFilter !== 'all' 
-                ? '没有找到匹配的信息' 
-                : '暂无信息，点击"创建信息"开始创建'}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 会员管理 */}
-      {currentView === 'members' && <MemberAdmin />}
-
-      {/* 信息中心表单 */}
-      {showInformationForm && (
-        <InformationCenterForm
-          item={selectedInformationItem}
-          onClose={() => {
-            setShowInformationForm(false)
-            setSelectedInformationItem(null)
-          }}
-          onSuccess={() => {
+            setSelectedScore(null)
             fetchAdminData()
           }}
         />
@@ -2134,10 +1320,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                 </button>
               </div>
               
-              <EventRegistrationAdmin 
+              <EventRegistrationAdmin
                 eventId={selectedEventForRegistration.id}
                 eventTitle={selectedEventForRegistration.title}
-                onDataChange={fetchAdminData}
               />
             </div>
           </div>

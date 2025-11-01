@@ -1,5 +1,5 @@
 // 简单的 Service Worker，用于 PWA 功能
-const CACHE_NAME = 'golf-club-v2'
+const CACHE_NAME = 'golf-club-v3'
 const urlsToCache = [
   '/',
   '/index.html',
@@ -8,12 +8,14 @@ const urlsToCache = [
 
 // 安装事件
 self.addEventListener('install', (event) => {
+  // 不自动跳过等待，等待用户确认后再更新
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         return cache.addAll(urlsToCache)
       })
   )
+  // 不调用 skipWaiting()，等待用户手动触发
 })
 
 // 激活事件
@@ -29,6 +31,14 @@ self.addEventListener('activate', (event) => {
       )
     })
   )
+})
+
+// 监听来自客户端的消息，用于手动触发 skipWaiting
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    // 用户点击更新后，立即激活新版本
+    self.skipWaiting()
+  }
 })
 
 // 拦截请求

@@ -506,14 +506,15 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
           }
         })
 
-        setTeamCompetitionData({
-          totalScores: teamStats.totalScores,
-          groupDetails: groupDetails
-        })
-        setShowTeamCompetitionResult(true)
+        // 不再显示弹窗，直接关闭
+        onSuccess()
+        onClose()
       } catch (error: any) {
         console.error('计算团队对抗统计失败:', error)
         showError('计算团队对抗统计失败')
+        // 即使计算失败，也关闭表单
+        onSuccess()
+        onClose()
       }
     } else {
       // 个人赛，保持原有功能
@@ -1512,9 +1513,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                 )}
               </div>
 
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 flex flex-col">
                 {selectedParticipant ? (
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit} className="flex flex-col h-full">
+                    <div className="flex-1 overflow-y-auto space-y-6 pb-24">
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h3 className="text-lg font-semibold text-gray-900 mb-1">
                         {selectedParticipant.user_profiles?.full_name || '未知'}
@@ -1729,25 +1731,29 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                         placeholder="记录比赛情况、天气等..."
                       />
                     </div>
+                    </div>
 
-                    <div className="flex justify-end space-x-4">
-                      <button
-                        type="submit"
-                        className="btn-primary flex items-center"
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            保存中...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="w-4 h-4 mr-2" />
-                            保存并继续
-                          </>
-                        )}
-                      </button>
+                    {/* 固定在底部的保存按钮 */}
+                    <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-6 px-6 shadow-lg">
+                      <div className="flex justify-end">
+                        <button
+                          type="submit"
+                          className="btn-primary flex items-center"
+                          disabled={loading}
+                        >
+                          {loading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                              保存中...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4 mr-2" />
+                              保存并继续
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </form>
                 ) : (

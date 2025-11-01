@@ -246,7 +246,7 @@ export default function UserScoreQuery() {
     <div className="space-y-4 sm:space-y-6">
       {/* 个人统计卡片 */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-2 sm:p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">总轮次</p>
@@ -258,7 +258,7 @@ export default function UserScoreQuery() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-2 sm:p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">平均杆数</p>
@@ -270,7 +270,7 @@ export default function UserScoreQuery() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-2 sm:p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">最佳成绩</p>
@@ -282,7 +282,7 @@ export default function UserScoreQuery() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-3 sm:p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-2 sm:p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">前三名次</p>
@@ -296,8 +296,8 @@ export default function UserScoreQuery() {
       </div>
 
       {/* 成绩查询 */}
-      <div className="bg-white rounded-2xl shadow-sm p-3 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-2xl shadow-sm px-1 sm:px-6 pt-2 pb-2 sm:pt-6 sm:pb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6 px-1 sm:px-0">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center">
             <Trophy className="w-7 h-7 text-yellow-500 mr-3" />
             比赛成绩查询
@@ -305,25 +305,27 @@ export default function UserScoreQuery() {
         </div>
 
         {/* 统一搜索组件 */}
-        <UnifiedSearch
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-          selectedMonth={selectedMonth}
-          onMonthChange={setSelectedMonth}
-          availableYears={availableYears}
-          placeholder="按活动名称搜索..."
-          showLocationFilter={false}
-          onClearFilters={() => {
-            setSearchTerm('')
-            setSelectedYear('')
-            setSelectedMonth('')
-          }}
-        />
+        <div className="px-1 sm:px-0 mb-4 sm:mb-6">
+          <UnifiedSearch
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+            selectedMonth={selectedMonth}
+            onMonthChange={setSelectedMonth}
+            availableYears={availableYears}
+            placeholder="按活动名称搜索..."
+            showLocationFilter={false}
+            onClearFilters={() => {
+              setSearchTerm('')
+              setSelectedYear('')
+              setSelectedMonth('')
+            }}
+          />
+        </div>
 
         {/* 成绩列表 */}
-        <div className="space-y-2">
+        <div className="space-y-2 -mx-1 sm:mx-0">
           {filteredGroups.map((group) => {
             const isExpanded = expandedEvents.has(group.event.id)
             const userScore = group.scores.find(s => s.user_id === user?.id)
@@ -331,11 +333,11 @@ export default function UserScoreQuery() {
             return (
               <div
                 key={group.event.id}
-                className="bg-gray-50 rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-gray-200"
+                className="bg-gray-50 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-gray-200 mx-1 sm:mx-0"
               >
                 {/* 活动卡片头部 */}
                 <div
-                  className="p-3 sm:p-6 cursor-pointer"
+                  className="p-2 sm:p-6 cursor-pointer"
                   onClick={() => toggleEventExpansion(group.event.id)}
                 >
                   <div className="flex items-center justify-between">
@@ -426,7 +428,7 @@ export default function UserScoreQuery() {
 
                 {/* 折叠内容 - 所有参赛者成绩排名或团体赛结果 */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 px-3 sm:px-6 pb-4 bg-white rounded-b-2xl">
+                  <div className="border-t border-gray-100 px-2 sm:px-6 pb-4 bg-white rounded-b-2xl">
                     {/* 如果是团体赛，显示团体赛结果 */}
                     {group.event.event_type === '团体赛' && (() => {
                       // 过滤出有分组和团队信息的成绩
@@ -443,7 +445,7 @@ export default function UserScoreQuery() {
                                 return (
                                   <div 
                                     key={score.id}
-                                    className={`flex items-center justify-between p-4 rounded-xl transition-all ${
+                                    className={`flex items-center justify-between p-2 sm:p-4 rounded-xl transition-all ${
                                       isCurrentUser 
                                         ? 'bg-golf-50 border-2 border-golf-200 shadow-lg' 
                                         : score.rank && score.rank <= 3
@@ -643,7 +645,7 @@ export default function UserScoreQuery() {
                           {/* 总比分 */}
                           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center">
                             {redTeamName && (
-                              <div className="flex items-center justify-between bg-white rounded-xl p-3 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-3 sm:gap-4">
+                              <div className="flex items-center justify-between bg-white rounded-xl p-2 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-2 sm:gap-4">
                                 <div className="flex items-center space-x-3">
                                   <div className="w-3 h-3 rounded bg-red-500"></div>
                                   <span className="font-medium text-gray-900">{redTeamName}</span>
@@ -654,7 +656,7 @@ export default function UserScoreQuery() {
                               </div>
                             )}
                             {finalBlueTeamName && (
-                              <div className="flex items-center justify-between bg-white rounded-xl p-3 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-3 sm:gap-4">
+                              <div className="flex items-center justify-between bg-white rounded-xl p-2 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-2 sm:gap-4">
                                 <div className="flex items-center space-x-3">
                                   <div className="w-3 h-3 rounded bg-blue-500"></div>
                                   <span className="font-medium text-gray-900">{finalBlueTeamName}</span>
@@ -767,27 +769,12 @@ export default function UserScoreQuery() {
                               const summaryText = `红赢${redWins}洞，蓝赢${blueWins}洞，平${ties}洞`
                               
                               return (
-                                <div key={group.group} className="bg-white rounded-2xl p-3 sm:p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+                                <div key={group.group} className="bg-white rounded-2xl p-2 sm:p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
                                         <div className="mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
-                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <div className="flex items-center justify-start flex-wrap gap-2">
                                       <span className="px-2 sm:px-3 py-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg text-xs sm:text-sm font-semibold text-gray-700 border border-gray-200">
                                         第{group.group}组
                                       </span>
-                                      <div className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-red-50 via-white to-blue-50 rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-100">
-                                        <div className="flex items-center gap-1 sm:gap-2">
-                                          <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                          <span className="text-xl sm:text-2xl font-bold text-red-600 tracking-tight">
-                                            {groupScoreText.split(' - ')[0]}
-                                          </span>
-                                        </div>
-                                        <span className="text-gray-300 text-base sm:text-lg font-light">-</span>
-                                        <div className="flex items-center gap-1 sm:gap-2">
-                                          <span className="text-xl sm:text-2xl font-bold text-blue-600 tracking-tight">
-                                            {groupScoreText.split(' - ')[1]}
-                                          </span>
-                                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                        </div>
-                                      </div>
                                     </div>
                                   </div>
                                   
@@ -829,7 +816,24 @@ export default function UserScoreQuery() {
                                       </div>
                                     </div>
                                     
-                                    <div className="w-px h-full bg-gradient-to-b from-transparent via-gray-200 to-transparent self-stretch"></div>
+                                    {/* 比分显示在中间 - 小尺寸 */}
+                                    <div className="flex flex-col items-center justify-center px-1 sm:px-3 flex-shrink-0">
+                                      <div className="flex items-center gap-1 sm:gap-1.5 bg-gradient-to-r from-red-50 via-white to-blue-50 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-200">
+                                        <div className="flex items-center gap-1">
+                                          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500"></div>
+                                          <span className="text-base sm:text-xl font-bold text-red-600 tracking-tight">
+                                            {groupScoreText.split(' - ')[0]}
+                                          </span>
+                                        </div>
+                                        <span className="text-gray-400 text-sm sm:text-base font-light">-</span>
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-base sm:text-xl font-bold text-blue-600 tracking-tight">
+                                            {groupScoreText.split(' - ')[1]}
+                                          </span>
+                                          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500"></div>
+                                        </div>
+                                      </div>
+                                    </div>
                                     
                                     <div className="flex-1 relative">
                                       <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
@@ -912,7 +916,7 @@ export default function UserScoreQuery() {
                             return (
                               <div 
                                 key={score.id}
-                                className={`flex items-center justify-between p-4 rounded-xl transition-all ${
+                                className={`flex items-center justify-between p-2 sm:p-4 rounded-xl transition-all ${
                                   isCurrentUser 
                                     ? 'bg-golf-50 border-2 border-golf-200 shadow-lg' 
                                     : score.rank && score.rank <= 3
