@@ -25,15 +25,29 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
   const [touchStartX, setTouchStartX] = useState<number | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<MemberProfile | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const membersPerPage = 3
+  
+  // 根据屏幕尺寸确定每页数量：手机20个，非手机8个
+  const membersPerPage = isMobile ? 20 : 8
 
   useEffect(() => {
     fetchMembers()
   }, [])
 
-  // 计算总页数
-  const totalPages = Math.ceil(members.length / membersPerPage)
+  // 监听窗口大小变化，判断是否为手机端
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640) // sm breakpoint
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // 计算总页数（使用 useMemo 确保在 isMobile 变化时重新计算）
+  const totalPages = React.useMemo(() => Math.ceil(members.length / membersPerPage), [members.length, membersPerPage])
 
   // 切换页面的动画函数（淡入淡出效果）
   const animatePageChange = (targetPage: number) => {
@@ -191,8 +205,8 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
       )}
 
       <div className="flex flex-col items-center justify-center min-h-screen relative z-10 py-8">
-        {/* Logo和俱乐部名称 */}
-        <div className="mb-8 -mt-6 sm:-mt-8 flex items-center gap-4">
+        {/* Logo和俱乐部名称 - 手机端隐藏 */}
+        <div className="mb-8 -mt-6 sm:-mt-8 hidden sm:flex items-center gap-4">
           <div className="bg-white rounded-full p-2 sm:p-3 border-2 border-white">
             <img 
               src="/logo-192x192.png" 
@@ -217,52 +231,75 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
         <>
           <div className="max-w-[1600px] w-full relative z-10 flex flex-col items-center">
             <div 
-              className="w-full flex items-center gap-6 px-6"
+              className="w-full flex items-center gap-0 sm:gap-6 px-0 sm:px-6"
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-              {/* 左箭头 */}
+              {/* 左箭头 - 手机端隐藏 */}
               {totalPages > 1 && (
                 <button
                   onClick={handlePrev}
-                  className="flex-shrink-0 z-30 bg-white/40 hover:bg-white/60 rounded-full p-3 shadow-lg transition-all hover:scale-110 relative"
+                  className="hidden sm:flex flex-shrink-0 z-30 bg-white/40 hover:bg-white/60 rounded-full p-3 sm:p-4 shadow-lg transition-all hover:scale-110 relative"
                   aria-label="上一页"
                 >
-                  <ChevronLeft className="w-6 h-6 text-white" />
+                  <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </button>
               )}
 
-              <div className="flex-1 relative min-h-[600px] sm:min-h-[700px] flex items-center justify-center overflow-hidden">
+              <div className="flex-1 relative min-h-[600px] sm:min-h-[600px] flex items-center justify-center overflow-hidden px-1 sm:px-0">
                 <div 
-                  className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 sm:gap-20 transition-opacity duration-[1500ms] ease-in-out"
+                  className="w-full grid grid-cols-4 gap-1 sm:gap-6 transition-opacity duration-[1500ms] ease-in-out"
                   style={{
                     opacity: isFading ? 0 : 1
                   }}
                 >
                 {currentMembers.map((member) => (
-              <div
-                key={member.id}
-                className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-col cursor-pointer"
-                onClick={() => {
-                  setSelectedMember(member)
-                  setModalOpen(true)
-                }}
-              >
-                {/* 照片容器 */}
-                <div className="relative aspect-[3/4] bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden">
-                  {member.member_photo_url ? (
+                            <div
+                              key={member.id}
+                              className="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 flex flex-col cursor-pointer"
+                              onClick={() => {
+                                setSelectedMember(member)
+                                setModalOpen(true)
+                              }}
+                            >
+              {/* 照片容器 */}
+              <div className="relative aspect-[3/4] bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg overflow-hidden">
+                {member.member_photo_url ? (
+                  <img
+                    src={member.member_photo_url}
+                    alt={member.real_name || member.full_name || '会员'}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // 如果照片加载失败，显示默认头像
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                      const parent = target.parentElement
+                      if (parent && !parent.querySelector('.fallback-avatar')) {
+                        const fallback = document.createElement('div')
+                        fallback.className = 'fallback-avatar w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg'
+                        fallback.innerHTML = `
+                          <svg class="w-24 h-24 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                          </svg>
+                        `
+                        parent.appendChild(fallback)
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 overflow-hidden rounded-lg">
                     <img
-                      src={member.member_photo_url}
-                      alt={member.real_name || member.full_name || '会员'}
+                      src="/PPG_Paula-Creamer.jpg"
+                      alt="默认头像"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        // 如果照片加载失败，显示默认头像
+                        // 如果默认图片也加载失败，显示图标
                         const target = e.target as HTMLImageElement
                         target.style.display = 'none'
                         const parent = target.parentElement
-                        if (parent && !parent.querySelector('.fallback-avatar')) {
+                        if (parent && !parent.querySelector('.fallback-icon')) {
                           const fallback = document.createElement('div')
-                          fallback.className = 'fallback-avatar w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-emerald-100'
+                          fallback.className = 'fallback-icon w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg'
                           fallback.innerHTML = `
                             <svg class="w-24 h-24 text-green-300" fill="currentColor" viewBox="0 0 20 20">
                               <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
@@ -272,59 +309,36 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
                         }
                       }}
                     />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-green-100 to-emerald-100 overflow-hidden">
-                      <img
-                        src="/PPG_Paula-Creamer.jpg"
-                        alt="默认头像"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // 如果默认图片也加载失败，显示图标
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                          const parent = target.parentElement
-                          if (parent && !parent.querySelector('.fallback-icon')) {
-                            const fallback = document.createElement('div')
-                            fallback.className = 'fallback-icon w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-emerald-100'
-                            fallback.innerHTML = `
-                              <svg class="w-24 h-24 text-green-300" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                              </svg>
-                            `
-                            parent.appendChild(fallback)
-                          }
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* 会员信息 */}
-                <div className="p-4 text-center bg-white/5 backdrop-blur-sm">
-                  <h3 className="text-lg font-bold text-gray-900">
-                    {member.real_name || member.full_name || '会员'}
-                  </h3>
-                </div>
+                  </div>
+                )}
               </div>
+
+                              {/* 会员信息 */}
+                              <div className="p-1 sm:p-4 text-center bg-transparent">
+                                <h3 className="text-xs sm:text-lg font-bold text-white truncate">
+                                  {member.real_name || member.full_name || '会员'}
+                                </h3>
+                              </div>
+                            </div>
                 ))}
                 </div>
               </div>
 
-              {/* 右箭头 */}
+              {/* 右箭头 - 手机端隐藏 */}
               {totalPages > 1 && (
                 <button
                   onClick={handleNext}
-                  className="flex-shrink-0 z-30 bg-white/40 hover:bg-white/60 rounded-full p-3 shadow-lg transition-all hover:scale-110 relative"
+                  className="hidden sm:flex flex-shrink-0 z-30 bg-white/40 hover:bg-white/60 rounded-full p-3 sm:p-4 shadow-lg transition-all hover:scale-110 relative"
                   aria-label="下一页"
                 >
-                  <ChevronRight className="w-6 h-6 text-white" />
+                  <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </button>
               )}
             </div>
 
-            {/* 分页指示器 - 放在照片容器下方 */}
+            {/* 分页指示器 - 放在照片容器下方 - 手机端隐藏 */}
             {totalPages > 1 && (
-              <div className="flex justify-center gap-2 mt-6 w-full">
+              <div className="hidden sm:flex justify-center gap-2 mt-6 w-full">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
