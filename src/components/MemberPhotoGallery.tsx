@@ -204,7 +204,11 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
         </button>
       )}
 
-      <div className="flex flex-col items-center justify-center min-h-screen relative z-10 py-8">
+      <div className="flex flex-col items-center justify-center min-h-screen relative z-10 py-4 sm:py-8">
+        {/* 手机端提示文字 */}
+        <div className="sm:hidden text-white/70 text-xs mb-2 px-4 text-center">
+          左右滑动翻页
+        </div>
         {/* Logo和俱乐部名称 - 手机端隐藏 */}
         <div className="mb-8 -mt-6 sm:-mt-8 hidden sm:flex items-center gap-4">
           <div className="bg-white rounded-full p-2 sm:p-3 border-2 border-white">
@@ -336,9 +340,9 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
               )}
             </div>
 
-            {/* 分页指示器 - 放在照片容器下方 - 手机端隐藏 */}
+            {/* 分页指示器 - 放在照片容器下方 */}
             {totalPages > 1 && (
-              <div className="hidden sm:flex justify-center gap-2 mt-6 w-full">
+              <div className="flex justify-center gap-2 mt-4 sm:mt-6 w-full">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
@@ -347,10 +351,10 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
                       setIsAutoPlaying(false)
                       setTimeout(() => setIsAutoPlaying(true), 5000)
                     }}
-                    className={`w-2 h-2 rounded-full transition-all ${
+                    className={`w-2 h-2 sm:w-2 sm:h-2 rounded-full transition-all ${
                       page === currentPage
-                        ? 'bg-green-600 w-8'
-                        : 'bg-gray-300 hover:bg-gray-400'
+                        ? 'bg-green-600 w-8 sm:w-8'
+                        : 'bg-white/40 hover:bg-white/60'
                     }`}
                     aria-label={`第 ${page} 页`}
                   />
