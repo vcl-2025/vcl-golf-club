@@ -89,14 +89,14 @@ export default function HomePage() {
       {/* 顶部导航栏 */}
       <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between py-2 sm:py-2.5 lg:py-3">
             <div className="flex items-center space-x-3">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 bg-white p-1">
-                <img src="/icon-96x96.png" alt="绿茵高尔夫俱乐部" className="w-full h-full object-cover" />
+              <div className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 bg-white p-1 border-2 border-golf-700">
+                <img src="/logo-192x192.png" alt="溫哥華華人女子高爾夫俱樂部" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">绿茵高尔夫俱乐部</h1>
-                <p className="text-xs text-gray-500">Green Golf Club</p>
+                <h1 className="text-xl font-bold text-gray-900">溫哥華華人女子高爾夫俱樂部</h1>
+                <p className="text-xs text-gray-500">Vancouver Chinese Women's Golf Club</p>
               </div>
             </div>
             <button
@@ -142,7 +142,7 @@ export default function HomePage() {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
               <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 drop-shadow-2xl animate-fade-in">
-                欢迎来到绿茵高尔夫俱乐部
+                欢迎来到溫哥華華人女子高爾夫俱樂部
               </h2>
               <p className="text-xl sm:text-2xl lg:text-3xl text-white/95 mb-12 leading-relaxed drop-shadow-lg animate-fade-in-delay">
                 专业的高尔夫体验，精彩纷呈的比赛活动
@@ -203,7 +203,7 @@ export default function HomePage() {
                   className="text-base sm:text-lg text-[#2d2d2d] leading-[1.85] font-serif"
                   style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
                 >
-                  绿茵高尔夫俱乐部成立于<strong className="font-semibold text-[#1a1a1a]">2015年</strong>，是一家致力于为会员提供优质高尔夫体验的专业俱乐部。
+                  溫哥華華人女子高爾夫俱樂部成立于<strong className="font-semibold text-[#1a1a1a]">2015年</strong>，是一家致力于为会员提供优质高尔夫体验的专业俱乐部。
                   经过近<strong className="font-semibold text-[#1a1a1a]">10年</strong>的发展，我们已建立完善的管理体系和服务标准，为会员营造温馨和谐的俱乐部氛围。
                 </p>
               </div>
@@ -215,7 +215,7 @@ export default function HomePage() {
                   style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
                 >
                   我们相信每个人都能享受专业的高尔夫体验，这就是为什么我们致力于为每一位会员提供最优质的服务和活动。
-                  无论是追求高尔夫的激情，享受精彩比赛，还是建立深厚的会员友谊，加入我们，让绿茵高尔夫俱乐部成为您美好回忆的背景。
+                  无论是追求高尔夫的激情，享受精彩比赛，还是建立深厚的会员友谊，加入我们，让溫哥華華人女子高爾夫俱樂部成为您美好回忆的背景。
                 </p>
                 <p 
                   className="text-base sm:text-lg text-[#2d2d2d] leading-[1.85] font-serif"
@@ -371,12 +371,12 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* 左侧：Logo */}
               <div className="flex items-start">
-                <div className="w-16 h-16 rounded-full mr-4 overflow-hidden flex-shrink-0 bg-white p-1">
-                  <img src="/icon-96x96.png" alt="绿茵高尔夫俱乐部" className="w-full h-full object-cover" />
+                <div className="w-16 h-16 rounded-full mr-4 overflow-hidden flex-shrink-0 bg-white p-1 border-2 border-golf-700">
+                  <img src="/logo-192x192.png" alt="溫哥華華人女子高爾夫俱樂部" className="w-full h-full object-cover" />
                 </div>
                 <div>
-                  <h5 className="text-lg font-semibold mb-2">绿茵高尔夫俱乐部</h5>
-                  <p className="text-gray-300 text-sm">Green Golf Club</p>
+                  <h5 className="text-lg font-semibold mb-2">溫哥華華人女子高爾夫俱樂部</h5>
+                  <p className="text-gray-300 text-sm">Vancouver Chinese Women's Golf Club</p>
                 </div>
               </div>
 
@@ -384,7 +384,7 @@ export default function HomePage() {
               <div className="flex items-start">
                 <MapPin className="w-5 h-5 text-white mr-3 mt-1 flex-shrink-0" />
                 <div>
-                  <p className="font-medium mb-1">绿茵高尔夫俱乐部</p>
+                  <p className="font-medium mb-1">溫哥華華人女子高爾夫俱樂部</p>
                   <p className="text-gray-300 text-sm">地址信息</p>
                   <p className="text-gray-300 text-sm">城市，邮编</p>
                 </div>
@@ -430,8 +430,8 @@ export default function HomePage() {
         <div className="bg-gray-950 py-6 border-t border-gray-800">
           <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-gray-400">
-              <p>©2025 绿茵高尔夫俱乐部. 保留所有权利.</p>
-              <p>Powered by 绿茵高尔夫俱乐部系统</p>
+              <p>©2025 溫哥華華人女子高爾夫俱樂部. 保留所有权利.</p>
+              <p>Powered by 溫哥華華人女子高爾夫俱樂部系统</p>
             </div>
           </div>
         </div>

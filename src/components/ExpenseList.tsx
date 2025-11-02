@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { DollarSign, Calendar, Receipt, TrendingDown, FileText, Filter } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { DollarSign, Calendar, Receipt, TrendingDown, FileText, Search, TrendingUp, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import UnifiedSearch from './UnifiedSearch'
 
 interface Expense {
   id: string
   expense_type: string
+  transaction_type: string | null
   title: string
   amount: number
   expense_date: string
@@ -16,47 +16,20 @@ interface Expense {
   created_at: string
 }
 
+interface GroupedExpenses {
+  [key: string]: Expense[]  // key格式: "2025年5月"
+}
+
 export default function ExpenseList() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterType, setFilterType] = useState<string>('all')
-  const [filterMonth, setFilterMonth] = useState<string>('all')
-  
-  // 统一搜索状态
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedYear, setSelectedYear] = useState('')
-  const [selectedMonth, setSelectedMonth] = useState('')
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set())
+  const [searchExpanded, setSearchExpanded] = useState(false)
 
   useEffect(() => {
     fetchExpenses()
   }, [])
-
-  // 筛选费用记录
-  const filteredExpenses = expenses.filter(expense => {
-    const matchesSearch = expense.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         expense.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const expenseDate = new Date(expense.expense_date)
-    const matchesYear = !selectedYear || expenseDate.getFullYear().toString() === selectedYear
-    const matchesMonth = !selectedMonth || (expenseDate.getMonth() + 1).toString() === selectedMonth
-    const matchesType = filterType === 'all' || expense.expense_type === filterType
-    
-    // 调试筛选逻辑
-    if (filterType !== 'all') {
-      // console.log('筛选调试:', {
-      //   filterType,
-      //   expenseType: expense.expense_type,
-      //   matchesType,
-      //   expenseTitle: expense.title,
-      //   allMatches: matchesSearch && matchesYear && matchesMonth && matchesType
-      // })
-    }
-    
-    return matchesSearch && matchesYear && matchesMonth && matchesType
-  })
-
-  // 获取可用年份
-  const availableYears = [...new Set(expenses.map(e => new Date(e.expense_date).getFullYear()))].sort((a, b) => b - a)
 
   const fetchExpenses = async () => {
     try {
@@ -67,13 +40,6 @@ export default function ExpenseList() {
         .order('expense_date', { ascending: false })
 
       if (error) throw error
-      // console.log('费用数据:', data)
-      if (data && data.length > 0) {
-        // console.log('第一个费用记录:', data[0])
-        // console.log('所有字段名:', Object.keys(data[0]))
-        // console.log('费用类型字段:', data[0].type)
-        // console.log('可能的类型字段:', data[0].category || data[0].expense_type || data[0].type)
-      }
       setExpenses(data || [])
     } catch (error) {
       console.error('获取费用记录失败:', error)
@@ -82,26 +48,128 @@ export default function ExpenseList() {
     }
   }
 
-  const getExpenseTypeText = (type: string) => {
-    switch (type) {
-      case 'equipment': return '设备采购'
-      case 'maintenance': return '场地维护'
-      case 'activity': return '活动支出'
-      case 'salary': return '人员工资'
-      case 'other': return '其他费用'
-      default: return type
-    }
+  // 筛选费用记录（只根据搜索词）
+  const filteredExpenses = useMemo(() => {
+    if (!searchTerm.trim()) return expenses
+    
+    const term = searchTerm.toLowerCase()
+    return expenses.filter(expense => 
+      expense.title.toLowerCase().includes(term) ||
+      expense.notes?.toLowerCase().includes(term)
+    )
+  }, [expenses, searchTerm])
+
+  // 按年月分组
+  const groupedExpenses = useMemo(() => {
+    const grouped: GroupedExpenses = {}
+    
+    filteredExpenses.forEach(expense => {
+      const date = new Date(expense.expense_date)
+      const year = date.getFullYear()
+      const month = date.getMonth() + 1
+      const key = `${year}年${month}月`
+      
+      if (!grouped[key]) {
+        grouped[key] = []
+      }
+      grouped[key].push(expense)
+    })
+    
+    // 对每个月份内的记录按日期倒序排列
+    Object.keys(grouped).forEach(key => {
+      grouped[key].sort((a, b) => 
+        new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
+      )
+    })
+    
+    return grouped
+  }, [filteredExpenses])
+
+  // 获取所有月份，按时间倒序
+  const sortedMonths = useMemo(() => {
+    return Object.keys(groupedExpenses).sort((a, b) => {
+      const [yearA, monthA] = a.split('年').map(v => parseInt(v.replace('月', '')))
+      const [yearB, monthB] = b.split('年').map(v => parseInt(v.replace('月', '')))
+      if (yearA !== yearB) return yearB - yearA
+      return monthB - monthA
+    })
+  }, [groupedExpenses])
+
+  // 计算每个月的收入和支出
+  const calculateMonthStats = (monthExpenses: Expense[]) => {
+    const income = monthExpenses
+      .filter(e => e.transaction_type === 'income')
+      .reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0)
+    const expense = monthExpenses
+      .filter(e => e.transaction_type === 'expense' || !e.transaction_type)
+      .reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0)
+    return { income, expense, net: income - expense }
   }
 
-  const getExpenseTypeColor = (type: string) => {
-    switch (type) {
-      case 'equipment': return 'bg-blue-100 text-blue-800'
-      case 'maintenance': return 'bg-green-100 text-green-800'
-      case 'activity': return 'bg-purple-100 text-purple-800'
-      case 'salary': return 'bg-orange-100 text-orange-800'
-      case 'other': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+  const getExpenseTypeText = (type: string) => {
+    // 新收入分类（4个大类）
+    const incomeTypes: { [key: string]: string } = {
+      'membership_sponsorship': '会费及赞助类',
+      'collection': '代收类',
+      'investment_finance': '投资及理财类',
+      'other_income': '其他杂项',
+      // 旧分类
+      'membership_fee': '会费',
+      'sponsorship_fee': '赞助费',
+      'collected_competition_ball_fee': '代收比赛球费',
+      'collected_handicap_fee': '代收差点费',
+      'interest_income': '利息收入',
+      'collected_meal_fee': '代收餐费',
+      'gic_redemption': 'GIC 赎回',
+      'other': '其他'
     }
+    
+    // 新支出分类（4个大类）
+    const expenseTypes: { [key: string]: string } = {
+      'event_activity': '赛事与活动支出',
+      'payment_on_behalf': '代付类',
+      'finance_deposit': '理财存款',
+      'other_misc': '其他杂费',
+      // 旧分类
+      'competition_prizes_misc': '比赛奖品及杂费',
+      'event_meal_beverage': '活动餐费及酒水',
+      'photographer_fee': '摄影师费用',
+      'paid_handicap_fee': '代付差点费',
+      'gic_deposit': '存GIC',
+      'bank_fee': '银行费',
+      'paid_competition_fee': '代付比赛费用',
+      'refund': '退费',
+      // 最旧分类
+      'equipment': '设备采购',
+      'maintenance': '场地维护',
+      'activity': '活动支出',
+      'salary': '人员工资'
+    }
+    
+    return incomeTypes[type] || expenseTypes[type] || type
+  }
+
+  const getExpenseTypeColor = (type: string, transactionType: string | null) => {
+    // 收入类型颜色
+    const incomeColors: { [key: string]: string } = {
+      'membership_sponsorship': 'bg-green-100 text-green-800',
+      'collection': 'bg-blue-100 text-blue-800',
+      'investment_finance': 'bg-indigo-100 text-indigo-800',
+      'other_income': 'bg-gray-100 text-gray-800'
+    }
+    
+    // 支出类型颜色
+    const expenseColors: { [key: string]: string } = {
+      'event_activity': 'bg-red-100 text-red-800',
+      'payment_on_behalf': 'bg-orange-100 text-orange-800',
+      'finance_deposit': 'bg-purple-100 text-purple-800',
+      'other_misc': 'bg-gray-100 text-gray-800'
+    }
+    
+    if (transactionType === 'income') {
+      return incomeColors[type] || 'bg-green-100 text-green-800'
+    }
+    return expenseColors[type] || 'bg-red-100 text-red-800'
   }
 
   const getPaymentMethodText = (method: string) => {
@@ -128,27 +196,16 @@ export default function ExpenseList() {
     })
   }
 
-  // 合并所有筛选条件
-  const finalFilteredExpenses = filteredExpenses.filter(expense => {
-    if (filterType !== 'all' && expense.expense_type !== filterType) {
-      return false
-    }
-    if (filterMonth !== 'all') {
-      const expenseMonth = new Date(expense.expense_date).getMonth()
-      if (expenseMonth !== parseInt(filterMonth)) {
-        return false
-      }
-    }
-    return true
-  })
-
-  const totalAmount = finalFilteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount.toString()), 0)
-
-  const expensesByType = finalFilteredExpenses.reduce((acc, expense) => {
-    const type = expense.expense_type
-    acc[type] = (acc[type] || 0) + parseFloat(expense.amount.toString())
-    return acc
-  }, {} as Record<string, number>)
+  // 计算总计
+  const totalStats = useMemo(() => {
+    const income = filteredExpenses
+      .filter(e => e.transaction_type === 'income')
+      .reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0)
+    const expense = filteredExpenses
+      .filter(e => e.transaction_type === 'expense' || !e.transaction_type)
+      .reduce((sum, e) => sum + parseFloat(e.amount.toString()), 0)
+    return { income, expense, net: income - expense }
+  }, [filteredExpenses])
 
   if (loading) {
     return (
@@ -160,145 +217,228 @@ export default function ExpenseList() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between mb-4">
+      {/* 统计卡片 */}
+      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-3 sm:p-6 text-white">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div>
-            <h2 className="text-2xl font-bold mb-2">费用公示</h2>
-            <p className="text-green-100">俱乐部财务透明公开</p>
+            <h2 className="text-lg sm:text-2xl font-bold mb-0.5 sm:mb-2">费用公示</h2>
+            <p className="text-xs sm:text-base text-green-100">俱乐部财务透明公开</p>
           </div>
-          <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
-            <Receipt className="w-8 h-8" />
+          <div className="w-10 h-10 sm:w-16 sm:h-16 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+            <Receipt className="w-5 h-5 sm:w-8 sm:h-8" />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white/10 rounded-lg p-4">
-            <div className="flex items-center text-green-100 mb-1">
-              <TrendingDown className="w-4 h-4 mr-2" />
-              <span className="text-sm">总支出</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+          <div className="bg-white/10 rounded-lg p-2 sm:p-4">
+            <div className="flex items-center text-green-100 mb-0.5 sm:mb-1">
+              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+              <span className="text-xs sm:text-sm">总收入</span>
             </div>
-            <div className="text-3xl font-bold">{formatAmount(totalAmount)}</div>
+            <div className="text-base sm:text-2xl font-bold">{formatAmount(totalStats.income)}</div>
           </div>
-          <div className="bg-white/10 rounded-lg p-4">
-            <div className="flex items-center text-green-100 mb-1">
-              <FileText className="w-4 h-4 mr-2" />
-              <span className="text-sm">记录数</span>
+          <div className="bg-white/10 rounded-lg p-2 sm:p-4">
+            <div className="flex items-center text-green-100 mb-0.5 sm:mb-1">
+              <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+              <span className="text-xs sm:text-sm">总支出</span>
             </div>
-            <div className="text-3xl font-bold">{finalFilteredExpenses.length}</div>
+            <div className="text-base sm:text-2xl font-bold">{formatAmount(totalStats.expense)}</div>
+          </div>
+          <div className="bg-white/10 rounded-lg p-2 sm:p-4">
+            <div className="flex items-center text-green-100 mb-0.5 sm:mb-1">
+              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+              <span className="text-xs sm:text-sm">净额</span>
+            </div>
+            <div className={`text-base sm:text-2xl font-bold ${totalStats.net >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+              {formatAmount(totalStats.net)}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 统一搜索组件 */}
-      <UnifiedSearch
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        selectedYear={selectedYear}
-        onYearChange={setSelectedYear}
-        selectedMonth={selectedMonth}
-        onMonthChange={setSelectedMonth}
-        availableYears={availableYears}
-        placeholder="按费用名称或备注搜索..."
-        showLocationFilter={false}
-        showExpenseTypeFilter={true}
-        selectedExpenseType={filterType}
-        onExpenseTypeChange={setFilterType}
-        onClearFilters={() => {
-          setSearchTerm('')
-          setSelectedYear('')
-          setSelectedMonth('')
-          setFilterType('all')
-        }}
-      />
-
-      {Object.keys(expensesByType).length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">支出分类统计</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {Object.entries(expensesByType).map(([type, amount]) => (
-              <div key={type} className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-600 mb-1">{getExpenseTypeText(type)}</div>
-                <div className="text-lg font-bold text-gray-900">{formatAmount(amount)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {finalFilteredExpenses.length === 0 ? (
-        <div className="text-center py-12">
-          <Receipt className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          {expenses.length === 0 ? (
-            <>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">暂无费用记录</h3>
-              <p className="text-gray-600">当前没有费用记录</p>
-            </>
-          ) : (
-            <>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">未找到匹配的记录</h3>
-              <p className="text-gray-600">请尝试调整搜索条件或清除筛选器</p>
-              <button
-                onClick={() => {
-                  setSearchTerm('')
-                  setSelectedYear('')
-                  setSelectedMonth('')
-                }}
-                className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                清除筛选器
-              </button>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {finalFilteredExpenses.map((expense) => (
-            <div
-              key={expense.id}
-              className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+      {/* 搜索框 */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {/* 手机端：显示搜索按钮，默认折叠 */}
+        <div className="sm:hidden">
+          {!searchExpanded ? (
+            <button
+              onClick={() => setSearchExpanded(true)}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getExpenseTypeColor(expense.expense_type)}`}>
-                      {getExpenseTypeText(expense.expense_type)}
-                    </span>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {getPaymentMethodText(expense.payment_method)}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">{expense.title}</h3>
-                  {expense.notes && (
-                    <p className="text-sm text-gray-600">{expense.notes}</p>
-                  )}
-                </div>
-                <div className="text-right ml-4 flex-shrink-0">
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatAmount(parseFloat(expense.amount.toString()))}
-                  </div>
-                </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Search className="w-5 h-5" />
+                <span>搜索费用名称或备注...</span>
               </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  <span>{formatDate(expense.expense_date)}</span>
-                </div>
-                {expense.receipt_url && (
-                  <a
-                    href={expense.receipt_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center text-sm text-green-600 hover:text-green-700 font-medium"
-                  >
-                    <Receipt className="w-4 h-4 mr-1" />
-                    查看凭证
-                  </a>
-                )}
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            </button>
+          ) : (
+            <div className="p-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="搜索费用名称或备注..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => {
+                    setSearchExpanded(false)
+                    setSearchTerm('')
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
-          ))}
+          )}
+        </div>
+        
+        {/* 桌面端：始终显示 */}
+        <div className="hidden sm:block p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="搜索费用名称或备注..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 按年月分组显示 */}
+      {sortedMonths.length === 0 ? (
+        <div className="text-center py-12">
+          <Receipt className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">暂无费用记录</h3>
+          <p className="text-gray-600">当前没有费用记录</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {sortedMonths.map(monthKey => {
+            const monthExpenses = groupedExpenses[monthKey]
+            const stats = calculateMonthStats(monthExpenses)
+            const isExpanded = !collapsedMonths.has(monthKey)
+            
+            return (
+              <div key={monthKey} className="space-y-4">
+                {/* 月份标题和统计 */}
+                <div className={`rounded-xl border shadow-lg p-4 cursor-pointer transition-all duration-200 ${
+                  isExpanded 
+                    ? 'bg-gradient-to-r from-green-100 to-emerald-100 border-green-300 hover:from-green-200 hover:to-emerald-200' 
+                    : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:from-green-100 hover:to-emerald-100 hover:border-green-300'
+                }`}
+                  onClick={() => {
+                    const newCollapsed = new Set(collapsedMonths)
+                    if (newCollapsed.has(monthKey)) {
+                      newCollapsed.delete(monthKey)
+                    } else {
+                      newCollapsed.add(monthKey)
+                    }
+                    setCollapsedMonths(newCollapsed)
+                  }}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900">{monthKey}</h3>
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-green-600" />
+                          <span className="text-gray-600">收入:</span>
+                          <span className="font-semibold text-green-600">{formatAmount(stats.income)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <TrendingDown className="w-4 h-4 text-red-600" />
+                          <span className="text-gray-600">支出:</span>
+                          <span className="font-semibold text-red-600">{formatAmount(stats.expense)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-gray-600" />
+                          <span className="text-gray-600">净额:</span>
+                          <span className={`font-semibold ${stats.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatAmount(stats.net)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {collapsedMonths.has(monthKey) ? (
+                          <ChevronDown className="w-5 h-5 text-gray-600" />
+                        ) : (
+                          <ChevronUp className="w-5 h-5 text-gray-600" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 该月的费用列表 */}
+                {!collapsedMonths.has(monthKey) && (
+                <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                  {monthExpenses.map((expense) => {
+                    const isIncome = expense.transaction_type === 'income'
+                    
+                    return (
+                      <div
+                        key={expense.id}
+                        className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getExpenseTypeColor(expense.expense_type, expense.transaction_type)}`}>
+                                {getExpenseTypeText(expense.expense_type)}
+                              </span>
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                isIncome ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                                {isIncome ? '收入' : '支出'}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-1">{expense.title}</h3>
+                            {expense.notes && (
+                              <p className="text-sm text-gray-600">{expense.notes}</p>
+                            )}
+                          </div>
+                          <div className="text-right ml-4 flex-shrink-0">
+                            <div className={`text-2xl font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                              {isIncome ? '+' : '-'}{formatAmount(parseFloat(expense.amount.toString()))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            <span>{formatDate(expense.expense_date)}</span>
+                          </div>
+                          {expense.receipt_url && (
+                            <a
+                              href={expense.receipt_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center text-sm text-green-600 hover:text-green-700 font-medium"
+                            >
+                              <Receipt className="w-4 h-4 mr-1" />
+                              查看凭证
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
+

@@ -183,10 +183,10 @@ export default function PushNotificationManager({ userId }: PushNotificationMana
 
   const testNotification = () => {
     if (permission === 'granted') {
-      new Notification('🏌️ 高尔夫俱乐部 - 本地测试', {
+      new Notification('🏌️ VCL Golf Club - 本地测试', {
         body: '这是一条本地推送通知，验证浏览器通知功能。',
-        icon: '/icon-192x192-new.png',
-        badge: '/icon-72x72.png',
+        icon: '/logo-192x192.png',
+        badge: '/logo-72x72.png',
         vibrate: [100, 50, 100],
         requireInteraction: true,
         actions: [

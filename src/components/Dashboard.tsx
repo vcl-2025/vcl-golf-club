@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -16,6 +16,7 @@ import InvestmentList from './InvestmentList'
 import InvestmentDetail from './InvestmentDetail'
 import ExpenseList from './ExpenseList'
 import EventReviews from './EventReviews'
+import MemberPhotoGallery from './MemberPhotoGallery'
 import InformationCenterList from './InformationCenterList'
 import InformationCenterDetail from './InformationCenterDetail'
 import { Event, InformationItem } from '../types'
@@ -70,7 +71,7 @@ export default function Dashboard() {
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [adminMenuVisible, setAdminMenuVisible] = useState(true)
-  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'admin'>('dashboard')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin'>('dashboard')
 
   // 监听用户菜单状态变化
   useEffect(() => {
@@ -284,8 +285,13 @@ export default function Dashboard() {
   // 检查是否为管理员
   const isAdmin = userProfile?.role === 'admin'
 
+  // 如果是会员照片页面，直接返回全屏组件
+  if (currentView === 'members') {
+    return <MemberPhotoGallery onClose={() => setCurrentView('dashboard')} />
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
@@ -297,14 +303,14 @@ export default function Dashboard() {
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-2 border-golf-600 rounded-full flex items-center justify-center">
                 <img 
-                  src="/golf-club-logo.png" 
-                  alt="绿茵高尔夫俱乐部" 
+                  src="/logo-192x192.png" 
+                  alt="溫哥華華人女子高爾夫俱樂部" 
                   className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 object-contain"
                 />
               </div>
               <div className="ml-2 sm:ml-3">
-                <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-gray-900">绿茵高尔夫俱乐部</h1>
-                <p className="text-xs text-golf-600 hidden md:block">绿色高尔夫俱乐部</p>
+                <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-gray-900">溫哥華華人女子高爾夫俱樂部</h1>
+                <p className="text-xs text-golf-600 hidden md:block">Vancouver Chinese Women's Golf Club</p>
               </div>
             </div>
 
@@ -912,6 +918,20 @@ export default function Dashboard() {
                     <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </h4>
                   <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看俱乐部财务支出</p>
+                </div>
+
+                <div
+                  onClick={() => setCurrentView('members')}
+                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                >
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
+                    <Users className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  </div>
+                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                    会员照片
+                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </h4>
+                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">浏览所有会员照片</p>
                 </div>
               </div>
             </div>

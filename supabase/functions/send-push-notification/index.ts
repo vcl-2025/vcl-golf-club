@@ -37,7 +37,7 @@ serve(async (req) => {
 
     const payload = JSON.stringify({
       title, body: message,
-      icon: '/icon-192x192.png',
+      icon: '/logo-192x192.png',
       data: { url: url || '/' }
     })
 

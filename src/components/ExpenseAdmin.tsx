@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, Upload, X, Check, FileImage, Search, Filter } from 'lucide-react'
+import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, Upload, X, Check, FileImage, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 
@@ -45,6 +45,29 @@ export default function ExpenseAdmin() {
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
+  // 凭证查看modal状态
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false)
+  const [receiptUrls, setReceiptUrls] = useState<string[]>([])
+  const [currentReceiptIndex, setCurrentReceiptIndex] = useState(0)
+
+  // 键盘事件处理（用于凭证modal中切换图片）
+  useEffect(() => {
+    if (!receiptModalOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && currentReceiptIndex > 0) {
+        setCurrentReceiptIndex(currentReceiptIndex - 1)
+      } else if (e.key === 'ArrowRight' && currentReceiptIndex < receiptUrls.length - 1) {
+        setCurrentReceiptIndex(currentReceiptIndex + 1)
+      } else if (e.key === 'Escape') {
+        setReceiptModalOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [receiptModalOpen, currentReceiptIndex, receiptUrls.length])
+  
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('')
   const [transactionTypeFilter, setTransactionTypeFilter] = useState('all') // 交易类型筛选：all/income/expense
@@ -56,6 +79,9 @@ export default function ExpenseAdmin() {
   // 排序状态
   const [sortField, setSortField] = useState<string>('')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  
+  // 用于追踪交易类型变化，避免编辑时清空费用类型
+  const prevTransactionTypeRef = useRef<string>('')
 
   const [formData, setFormData] = useState<ExpenseFormData>({
     expense_type: '',
@@ -73,24 +99,32 @@ export default function ExpenseAdmin() {
     fetchExpenses()
   }, [])
 
-  // 当交易类型改变时，清空费用类型
+  // 当交易类型改变时，清空费用类型（只在用户主动改变时，不在编辑加载数据时）
   useEffect(() => {
-    if (showForm && formData.transaction_type) {
+    if (showForm && formData.transaction_type && prevTransactionTypeRef.current && 
+        prevTransactionTypeRef.current !== formData.transaction_type && !editingExpense) {
       setFormData(prev => ({ ...prev, expense_type: '' }))
     }
-  }, [formData.transaction_type, showForm])
+    if (formData.transaction_type) {
+      prevTransactionTypeRef.current = formData.transaction_type
+    }
+  }, [formData.transaction_type, showForm, editingExpense])
 
   // 当交易类型筛选改变时，如果费用类型不匹配，则重置费用类型筛选
   useEffect(() => {
     if (transactionTypeFilter === 'income' && typeFilter !== 'all') {
-      // 检查当前选择的费用类型是否是收入类型
-      const incomeTypes = ['membership_fee', 'sponsorship_fee', 'collected_competition_ball_fee', 'collected_handicap_fee', 'interest_income', 'collected_meal_fee', 'gic_redemption', 'other_income']
+      // 检查当前选择的费用类型是否是收入类型（新分类 + 旧分类兼容）
+      const incomeTypes = ['membership_sponsorship', 'collection', 'investment_finance', 'other_income', 
+                          'membership_fee', 'sponsorship_fee', 'collected_competition_ball_fee', 'collected_handicap_fee', 
+                          'interest_income', 'collected_meal_fee', 'gic_redemption', 'other']
       if (!incomeTypes.includes(typeFilter)) {
         setTypeFilter('all')
       }
     } else if (transactionTypeFilter === 'expense' && typeFilter !== 'all') {
-      // 检查当前选择的费用类型是否是支出类型
-      const expenseTypes = ['competition_prizes_misc', 'event_meal_beverage', 'photographer_fee', 'paid_handicap_fee', 'gic_deposit', 'bank_fee', 'paid_competition_fee', 'refund']
+      // 检查当前选择的费用类型是否是支出类型（新分类 + 旧分类兼容）
+      const expenseTypes = ['event_activity', 'payment_on_behalf', 'finance_deposit', 'other_misc',
+                           'competition_prizes_misc', 'event_meal_beverage', 'photographer_fee', 'paid_handicap_fee', 
+                           'gic_deposit', 'bank_fee', 'paid_competition_fee', 'refund']
       if (!expenseTypes.includes(typeFilter)) {
         setTypeFilter('all')
       }
@@ -174,9 +208,14 @@ export default function ExpenseAdmin() {
     const oldTypes = ['equipment', 'maintenance', 'activity', 'salary', 'other']
     const isOldType = oldTypes.includes(expense.expense_type)
     
+    const transactionType = expense.transaction_type || 'expense'
+    
+    // 先设置ref，避免useEffect清空费用类型
+    prevTransactionTypeRef.current = transactionType
+    
     setFormData({
       expense_type: isOldType ? '' : expense.expense_type, // 旧分类清空，让用户重新选择
-      transaction_type: expense.transaction_type || 'expense',
+      transaction_type: transactionType,
       title: expense.title,
       amount: expense.amount.toString(),
       expense_date: expense.expense_date,
@@ -330,8 +369,13 @@ export default function ExpenseAdmin() {
   }
 
   const getExpenseTypeText = (type: string) => {
-    // 收入分类
+    // 收入分类（新版本：4个大类）
     const incomeTypes: { [key: string]: string } = {
+      'membership_sponsorship': '会费及赞助类',
+      'collection': '代收类',
+      'investment_finance': '投资及理财类',
+      'other_income': '其他杂项',
+      // 保留旧分类用于兼容
       'membership_fee': '会费',
       'sponsorship_fee': '赞助费',
       'collected_competition_ball_fee': '代收比赛球费',
@@ -339,11 +383,16 @@ export default function ExpenseAdmin() {
       'interest_income': '利息收入',
       'collected_meal_fee': '代收餐费',
       'gic_redemption': 'GIC 赎回',
-      'other_income': '其他'
+      'other': '其他'
     }
     
-    // 支出分类
+    // 支出分类（新版本：4个大类）
     const expenseTypes: { [key: string]: string } = {
+      'event_activity': '赛事与活动支出',
+      'payment_on_behalf': '代付类',
+      'finance_deposit': '理财存款',
+      'other_misc': '其他杂费',
+      // 保留旧分类用于兼容
       'competition_prizes_misc': '比赛奖品及杂费',
       'event_meal_beverage': '活动餐费及酒水',
       'photographer_fee': '摄影师费用',
@@ -359,16 +408,20 @@ export default function ExpenseAdmin() {
       'equipment': '设备采购（旧分类）',
       'maintenance': '场地维护（旧分类）',
       'activity': '活动支出（旧分类）',
-      'salary': '人员工资（旧分类）',
-      'other': '其他费用（旧分类）'
+      'salary': '人员工资（旧分类）'
     }
     
     return incomeTypes[type] || expenseTypes[type] || oldTypes[type] || type
   }
 
   const getExpenseTypeColor = (type: string) => {
-    // 收入分类颜色
+    // 收入分类颜色（新版本：4个大类）
     const incomeColors: { [key: string]: string } = {
+      'membership_sponsorship': 'bg-green-100 text-green-800',
+      'collection': 'bg-blue-100 text-blue-800',
+      'investment_finance': 'bg-indigo-100 text-indigo-800',
+      'other_income': 'bg-gray-100 text-gray-800',
+      // 保留旧分类颜色用于兼容
       'membership_fee': 'bg-green-100 text-green-800',
       'sponsorship_fee': 'bg-blue-100 text-blue-800',
       'collected_competition_ball_fee': 'bg-purple-100 text-purple-800',
@@ -376,11 +429,16 @@ export default function ExpenseAdmin() {
       'interest_income': 'bg-indigo-100 text-indigo-800',
       'collected_meal_fee': 'bg-pink-100 text-pink-800',
       'gic_redemption': 'bg-teal-100 text-teal-800',
-      'other_income': 'bg-gray-100 text-gray-800'
+      'other': 'bg-gray-100 text-gray-800'
     }
     
-    // 支出分类颜色
+    // 支出分类颜色（新版本：4个大类）
     const expenseColors: { [key: string]: string } = {
+      'event_activity': 'bg-red-100 text-red-800',
+      'payment_on_behalf': 'bg-orange-100 text-orange-800',
+      'finance_deposit': 'bg-purple-100 text-purple-800',
+      'other_misc': 'bg-gray-100 text-gray-800',
+      // 保留旧分类颜色用于兼容
       'competition_prizes_misc': 'bg-red-100 text-red-800',
       'event_meal_beverage': 'bg-orange-100 text-orange-800',
       'photographer_fee': 'bg-purple-100 text-purple-800',
@@ -391,7 +449,15 @@ export default function ExpenseAdmin() {
       'refund': 'bg-pink-100 text-pink-800'
     }
     
-    return incomeColors[type] || expenseColors[type] || 'bg-gray-100 text-gray-800'
+    // 旧分类颜色
+    const oldColors: { [key: string]: string } = {
+      'equipment': 'bg-blue-100 text-blue-800',
+      'maintenance': 'bg-green-100 text-green-800',
+      'activity': 'bg-purple-100 text-purple-800',
+      'salary': 'bg-orange-100 text-orange-800'
+    }
+    
+    return incomeColors[type] || expenseColors[type] || oldColors[type] || 'bg-gray-100 text-gray-800'
   }
 
   const getPaymentMethodText = (method: string) => {
@@ -599,26 +665,18 @@ export default function ExpenseAdmin() {
                 <option value="all">所有费用类型</option>
                 {transactionTypeFilter === 'income' || transactionTypeFilter === 'all' ? (
                   <>
-                    <option value="membership_fee">会费</option>
-                    <option value="sponsorship_fee">赞助费</option>
-                    <option value="collected_competition_ball_fee">代收比赛球费</option>
-                    <option value="collected_handicap_fee">代收差点费</option>
-                    <option value="interest_income">利息收入</option>
-                    <option value="collected_meal_fee">代收餐费</option>
-                    <option value="gic_redemption">GIC 赎回</option>
-                    <option value="other_income">其他收入</option>
+                    <option value="membership_sponsorship">会费及赞助类</option>
+                    <option value="collection">代收类</option>
+                    <option value="investment_finance">投资及理财类</option>
+                    <option value="other_income">其他杂项</option>
                   </>
                 ) : null}
                 {transactionTypeFilter === 'expense' || transactionTypeFilter === 'all' ? (
                   <>
-                    <option value="competition_prizes_misc">比赛奖品及杂费</option>
-                    <option value="event_meal_beverage">活动餐费及酒水</option>
-                    <option value="photographer_fee">摄影师费用</option>
-                    <option value="paid_handicap_fee">代付差点费</option>
-                    <option value="gic_deposit">存GIC</option>
-                    <option value="bank_fee">银行费</option>
-                    <option value="paid_competition_fee">代付比赛费用</option>
-                    <option value="refund">退费</option>
+                    <option value="event_activity">赛事与活动支出</option>
+                    <option value="payment_on_behalf">代付类</option>
+                    <option value="finance_deposit">理财存款</option>
+                    <option value="other_misc">其他杂费</option>
                   </>
                 ) : null}
               </select>
@@ -747,7 +805,7 @@ export default function ExpenseAdmin() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">支付方式</th>
+                <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">收支方式</th>
                 <th 
                   className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                   onClick={() => handleSort('status')}
@@ -813,17 +871,22 @@ export default function ExpenseAdmin() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">
-                      {expense.receipt_url && (
-                        <a
-                          href={expense.receipt_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
-                          title="查看收据"
-                        >
-                          <Receipt className="w-4 h-4" />
-                        </a>
-                      )}
+                      {expense.receipt_url && (() => {
+                        const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
+                        return (
+                          <button
+                            onClick={() => {
+                              setReceiptUrls(urls)
+                              setCurrentReceiptIndex(0)
+                              setReceiptModalOpen(true)
+                            }}
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
+                            title={urls.length > 1 ? `查看收据 (${urls.length}个文件)` : "查看收据"}
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </button>
+                        )
+                      })()}
                       <button
                         onClick={() => handleEdit(expense)}
                         className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
@@ -901,25 +964,17 @@ export default function ExpenseAdmin() {
                       <option value="">请选择</option>
                       {formData.transaction_type === 'income' ? (
                         <>
-                          <option value="membership_fee">会费</option>
-                          <option value="sponsorship_fee">赞助费</option>
-                          <option value="collected_competition_ball_fee">代收比赛球费</option>
-                          <option value="collected_handicap_fee">代收差点费</option>
-                          <option value="interest_income">利息收入</option>
-                          <option value="collected_meal_fee">代收餐费</option>
-                          <option value="gic_redemption">GIC 赎回</option>
-                          <option value="other_income">其他</option>
+                          <option value="membership_sponsorship">会费及赞助类</option>
+                          <option value="collection">代收类</option>
+                          <option value="investment_finance">投资及理财类</option>
+                          <option value="other_income">其他杂项</option>
                         </>
                       ) : formData.transaction_type === 'expense' ? (
                         <>
-                          <option value="competition_prizes_misc">比赛奖品及杂费</option>
-                          <option value="event_meal_beverage">活动餐费及酒水</option>
-                          <option value="photographer_fee">摄影师费用</option>
-                          <option value="paid_handicap_fee">代付差点费</option>
-                          <option value="gic_deposit">存GIC</option>
-                          <option value="bank_fee">银行费</option>
-                          <option value="paid_competition_fee">代付比赛费用 (含联赛及Zone4 费用)</option>
-                          <option value="refund">退费</option>
+                          <option value="event_activity">赛事与活动支出</option>
+                          <option value="payment_on_behalf">代付类</option>
+                          <option value="finance_deposit">理财存款</option>
+                          <option value="other_misc">其他杂费</option>
                         </>
                       ) : null}
                     </select>
@@ -978,7 +1033,7 @@ export default function ExpenseAdmin() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {formData.transaction_type === 'income' ? '收款方式' : '支付方式'} *
+                      收支方式 *
                     </label>
                     <select
                       value={formData.payment_method}
@@ -1130,6 +1185,91 @@ export default function ExpenseAdmin() {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 凭证查看Modal */}
+      {receiptModalOpen && receiptUrls.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[80] p-4" onClick={() => setReceiptModalOpen(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden relative" onClick={(e) => e.stopPropagation()}>
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => setReceiptModalOpen(false)}
+              className="absolute top-4 right-4 z-10 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg transition-colors"
+            >
+              <X className="w-6 h-6 text-gray-600" />
+            </button>
+
+            {/* 图片容器 */}
+            <div className="relative h-[80vh] bg-gray-100 flex items-center justify-center">
+              <img
+                src={receiptUrls[currentReceiptIndex]}
+                alt={`凭证 ${currentReceiptIndex + 1}`}
+                className="max-w-full max-h-full object-contain"
+                onError={(e) => {
+                  // 如果图片加载失败，显示错误信息
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
+                  const errorDiv = document.createElement('div')
+                  errorDiv.className = 'text-gray-500 text-center p-4'
+                  errorDiv.textContent = '图片加载失败'
+                  target.parentElement?.appendChild(errorDiv)
+                }}
+              />
+
+              {/* 左侧箭头（如果有多个文件且不是第一张） */}
+              {receiptUrls.length > 1 && currentReceiptIndex > 0 && (
+                <button
+                  onClick={() => setCurrentReceiptIndex(currentReceiptIndex - 1)}
+                  className="absolute left-4 bg-white/90 hover:bg-white rounded-full p-3 shadow-lg transition-colors z-10"
+                >
+                  <ChevronLeft className="w-6 h-6 text-gray-700" />
+                </button>
+              )}
+
+              {/* 右侧箭头（如果有多个文件且不是最后一张） */}
+              {receiptUrls.length > 1 && currentReceiptIndex < receiptUrls.length - 1 && (
+                <button
+                  onClick={() => setCurrentReceiptIndex(currentReceiptIndex + 1)}
+                  className="absolute right-4 bg-white/90 hover:bg-white rounded-full p-3 shadow-lg transition-colors z-10"
+                >
+                  <ChevronRight className="w-6 h-6 text-gray-700" />
+                </button>
+              )}
+
+              {/* 图片计数指示器 */}
+              {receiptUrls.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm">
+                  {currentReceiptIndex + 1} / {receiptUrls.length}
+                </div>
+              )}
+            </div>
+
+            {/* 缩略图导航（如果有多个文件） */}
+            {receiptUrls.length > 1 && (
+              <div className="p-4 bg-gray-50 border-t border-gray-200 overflow-x-auto">
+                <div className="flex gap-2 justify-center">
+                  {receiptUrls.map((url, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentReceiptIndex(index)}
+                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        currentReceiptIndex === index
+                          ? 'border-green-500 ring-2 ring-green-200'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <img
+                        src={url}
+                        alt={`凭证 ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
