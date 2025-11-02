@@ -17,6 +17,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
   const [phone, setPhone] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
+  const [rememberPassword, setRememberPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -103,6 +104,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
     setPhone('')
     setShowPassword(false)
     setRememberMe(false)
+    setRememberPassword(false)
     setMessage('')
   }
 
@@ -207,11 +209,20 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
           }
         }
         
-        // 如果选择了记住我，保存到localStorage
+        // 如果选择了记住邮箱，保存到localStorage
         if (rememberMe) {
           localStorage.setItem('rememberedEmail', email)
         } else {
           localStorage.removeItem('rememberedEmail')
+        }
+        
+        // 如果选择了记住密码，保存到localStorage
+        if (rememberPassword) {
+          localStorage.setItem('rememberedPassword', password)
+          localStorage.setItem('rememberPasswordChecked', 'true')
+        } else {
+          localStorage.removeItem('rememberedPassword')
+          localStorage.removeItem('rememberPasswordChecked')
         }
         
         // 显示登录后的 session 数据
@@ -272,12 +283,20 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
     }
   }
 
-  // 组件加载时检查是否有记住的邮箱
+  // 组件加载时检查是否有记住的邮箱和密码
   React.useEffect(() => {
     const rememberedEmail = localStorage.getItem('rememberedEmail')
+    const rememberedPassword = localStorage.getItem('rememberedPassword')
+    const rememberPasswordChecked = localStorage.getItem('rememberPasswordChecked')
+    
     if (rememberedEmail) {
       setEmail(rememberedEmail)
       setRememberMe(true)
+    }
+    
+    if (rememberedPassword && rememberPasswordChecked === 'true') {
+      setPassword(rememberedPassword)
+      setRememberPassword(true)
     }
   }, [])
 
@@ -485,26 +504,42 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                 )}
 
                 {mode === 'login' && (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                    <div className="flex items-center">
-                      <input
-                        id="remember-me"
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="h-4 w-4 text-golf-600 focus:ring-golf-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="remember-me" className="ml-2 block text-xs sm:text-sm text-gray-700">
-                       记住邮箱
-                      </label>
+                  <div className="flex flex-col space-y-2 sm:space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            id="remember-me"
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="h-4 w-4 text-golf-600 focus:ring-golf-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor="remember-me" className="ml-2 block text-xs sm:text-sm text-gray-700">
+                            记住邮箱
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            id="remember-password"
+                            type="checkbox"
+                            checked={rememberPassword}
+                            onChange={(e) => setRememberPassword(e.target.checked)}
+                            className="h-4 w-4 text-golf-600 focus:ring-golf-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor="remember-password" className="ml-2 block text-xs sm:text-sm text-gray-700">
+                            记住密码
+                          </label>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setMode('forgot')}
+                        className="text-xs sm:text-sm text-golf-600 hover:text-golf-700 transition-colors text-left sm:text-right"
+                      >
+                        忘记密码？
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setMode('forgot')}
-                      className="text-xs sm:text-sm text-golf-600 hover:text-golf-700 transition-colors text-left sm:text-right"
-                    >
-                      忘记密码？
-                    </button>
                   </div>
                 )}
 

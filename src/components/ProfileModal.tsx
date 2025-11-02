@@ -36,7 +36,8 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
     member_photo_url: '',
     handicap: '',
     bc_handicap: '',
-    clothing_size: '',
+    clothing_size_top: '',
+    clothing_size_bottom: '',
     vancouver_residence: '',
     domestic_residence: '',
     main_club_membership: '',
@@ -72,7 +73,8 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           handicap,
           bc_handicap,
           member_photo_url,
-          clothing_size,
+          clothing_size_top,
+          clothing_size_bottom,
           vancouver_residence,
           domestic_residence,
           main_club_membership,
@@ -97,7 +99,8 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           handicap: data.handicap || '',
           bc_handicap: data.bc_handicap || '',
           member_photo_url: data.member_photo_url || '',
-          clothing_size: data.clothing_size || '',
+          clothing_size_top: data.clothing_size_top || '',
+          clothing_size_bottom: data.clothing_size_bottom || '',
           vancouver_residence: data.vancouver_residence || '',
           domestic_residence: data.domestic_residence || '',
           main_club_membership: data.main_club_membership || '',
@@ -156,7 +159,8 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           handicap: editForm.handicap ? parseFloat(editForm.handicap) : null,
           bc_handicap: editForm.bc_handicap ? parseFloat(editForm.bc_handicap) : null,
           member_photo_url: editForm.member_photo_url,
-          clothing_size: editForm.clothing_size,
+          clothing_size_top: editForm.clothing_size_top,
+          clothing_size_bottom: editForm.clothing_size_bottom,
           vancouver_residence: editForm.vancouver_residence,
           domestic_residence: editForm.domestic_residence,
           main_club_membership: editForm.main_club_membership,
@@ -336,7 +340,8 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
         handicap: userProfile.handicap || '',
         bc_handicap: userProfile.bc_handicap || '',
         member_photo_url: userProfile.member_photo_url || '',
-        clothing_size: userProfile.clothing_size || '',
+        clothing_size_top: userProfile.clothing_size_top || '',
+        clothing_size_bottom: userProfile.clothing_size_bottom || '',
         vancouver_residence: userProfile.vancouver_residence || '',
         domestic_residence: userProfile.domestic_residence || '',
         main_club_membership: userProfile.main_club_membership || '',
@@ -440,7 +445,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                 </div>
                 <div className="flex-1 w-full md:w-auto">
                   <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                    {userProfile.full_name || '未设置姓名'}
+                    {userProfile.full_name || '未设置昵称'}
                   </h3>
                   <p className="text-gray-600 mb-3">{user.email}</p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -484,7 +489,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           <User className="w-4 h-4 inline mr-2" />
-                          姓名
+                          昵称
                         </label>
                         {isEditing ? (
                           <input
@@ -492,14 +497,14 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                             value={editForm.full_name}
                             onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
-                            placeholder="请输入您的姓名"
+                            placeholder="请输入您的昵称"
                           />
                         ) : (
                           <div className="p-3 bg-gray-50 rounded-lg text-gray-700 border">
                             {userProfile.full_name || '未设置'}
                           </div>
                         )}
-                        <p className="text-xs text-gray-500 mt-1">这是您在俱乐部中显示的姓名</p>
+                        <p className="text-xs text-gray-500 mt-1">这是您在俱乐部中显示的昵称</p>
                       </div>
 
                       <div>
@@ -711,30 +716,56 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                       其它信息
                     </h4>
                     <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          衣服尺码
-                        </label>
-                    {isEditing ? (
-                      <select
-                        value={editForm.clothing_size}
-                        onChange={(e) => setEditForm({ ...editForm, clothing_size: e.target.value })}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
-                      >
-                        <option value="">请选择尺码</option>
-                        <option value="XS">XS</option>
-                        <option value="S">S</option>
-                        <option value="M">M</option>
-                        <option value="L">L</option>
-                        <option value="XL">XL</option>
-                        <option value="XXL">XXL</option>
-                        <option value="XXXL">XXXL</option>
-                      </select>
-                    ) : (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        {userProfile.clothing_size || '未设置'}
-                      </div>
-                    )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            上衣
+                          </label>
+                      {isEditing ? (
+                        <select
+                          value={editForm.clothing_size_top}
+                          onChange={(e) => setEditForm({ ...editForm, clothing_size_top: e.target.value })}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+                        >
+                          <option value="">请选择尺码</option>
+                          <option value="XS">XS</option>
+                          <option value="S">S</option>
+                          <option value="M">M</option>
+                          <option value="L">L</option>
+                          <option value="XL">XL</option>
+                          <option value="XXL">XXL</option>
+                        </select>
+                      ) : (
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          {userProfile.clothing_size_top || '未设置'}
+                        </div>
+                      )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            裤（裙）
+                          </label>
+                      {isEditing ? (
+                        <select
+                          value={editForm.clothing_size_bottom}
+                          onChange={(e) => setEditForm({ ...editForm, clothing_size_bottom: e.target.value })}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+                        >
+                          <option value="">请选择尺码</option>
+                          <option value="XS">XS</option>
+                          <option value="S">S</option>
+                          <option value="M">M</option>
+                          <option value="L">L</option>
+                          <option value="XL">XL</option>
+                          <option value="XXL">XXL</option>
+                        </select>
+                      ) : (
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          {userProfile.clothing_size_bottom || '未设置'}
+                        </div>
+                      )}
+                        </div>
                       </div>
 
                       <div>
