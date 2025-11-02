@@ -18,20 +18,26 @@ export default function HomePage() {
   useEffect(() => {
     fetchPublishedArticles()
     
-    // 检测视频是否存在，如果存在则显示视频
+    // 检测视频是否存在，如果存在则显示视频，否则显示图片
     const video = document.getElementById('hero-video') as HTMLVideoElement
     const image = document.getElementById('hero-image') as HTMLElement
     
-    if (video) {
+    if (video && image) {
+      // 默认显示图片
+      image.classList.remove('hidden')
+      
+      // 尝试加载视频
       video.addEventListener('loadeddata', () => {
+        // 视频加载成功，显示视频并隐藏图片
         video.classList.remove('hidden')
         video.classList.add('block')
-        if (image) image.classList.add('hidden')
+        image.classList.add('hidden')
       })
       
       video.addEventListener('error', () => {
         // 视频加载失败，保持显示图片
-        if (image) image.classList.remove('hidden')
+        video.classList.add('hidden')
+        image.classList.remove('hidden')
       })
       
       // 尝试加载视频
@@ -110,7 +116,7 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 英雄区域 - 视频背景 */}
+      {/* 英雄区域 - 视频/图片背景 */}
       <section className="relative h-[85vh] sm:h-[90vh] overflow-hidden">
         <div className="relative w-full h-full">
           {/* 视频背景 - 如果存在视频文件则显示视频，否则显示图片 */}
@@ -126,11 +132,11 @@ export default function HomePage() {
             <source src="/hero-video.webm" type="video/webm" />
           </video>
           
-          {/* 背景图片（视频不存在时的备用） */}
+          {/* 背景图片（视频不存在或加载失败时的备用） */}
           <div 
             className="absolute inset-0 w-full h-full bg-cover bg-center"
             style={{
-              backgroundImage: 'url(https://images.unsplash.com/photo-1535131749006-b7f58c99034b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80)'
+              backgroundImage: 'url(/homepage_image.jpg)'
             }}
             id="hero-image"
           />
