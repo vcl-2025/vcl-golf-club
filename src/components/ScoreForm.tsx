@@ -61,6 +61,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     success: number
     failed: number
     errors: string[]
+    guestSuccess?: number  // 访客成绩成功数量
     teamStats?: {
       totalScores: Array<{ teamName: string; score: number }>
       details: Array<{
@@ -427,8 +428,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
     // 检查活动类型
     if (selectedEvent.event_type === '团体赛') {
-      // 获取所有成绩数据并计算团队对抗统计
+      // 获取所有成绩数据并计算团队对抗统计（包括会员和访客）
       try {
+        // 读取会员成绩
         const { data: allScoresData, error: scoresError } = await supabase
           .from('scores')
           .select(`
@@ -446,13 +448,34 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
           .not('hole_scores', 'is', null)
 
         if (scoresError) {
-          console.error('获取成绩数据失败:', scoresError)
+          console.error('获取会员成绩数据失败:', scoresError)
           showError('获取成绩数据失败')
           return
         }
 
-        // 转换为团队统计所需格式
-        const dbPlayers = (allScoresData || []).map(score => {
+        // 读取访客成绩
+        const { data: allGuestScoresData, error: guestScoresError } = await supabase
+          .from('guest_scores')
+          .select(`
+            id,
+            player_name,
+            event_id,
+            hole_scores,
+            group_number,
+            team_name
+          `)
+          .eq('event_id', selectedEvent.id)
+          .not('group_number', 'is', null)
+          .not('team_name', 'is', null)
+          .not('hole_scores', 'is', null)
+
+        if (guestScoresError) {
+          console.error('获取访客成绩数据失败:', guestScoresError)
+          // 访客成绩获取失败不影响，继续使用会员成绩
+        }
+
+        // 转换为团队统计所需格式 - 会员成绩
+        const memberPlayers = (allScoresData || []).map(score => {
           let holeScores = score.hole_scores || []
           if (Array.isArray(holeScores) && holeScores.length > 0) {
             if (typeof holeScores[0] === 'string') {
@@ -467,6 +490,27 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
             teamName: score.team_name
           }
         })
+
+        // 转换为团队统计所需格式 - 访客成绩
+        const guestPlayers = (allGuestScoresData || []).map(score => {
+          let holeScores = score.hole_scores || []
+          if (Array.isArray(holeScores) && holeScores.length > 0) {
+            if (typeof holeScores[0] === 'string') {
+              holeScores = holeScores.map(s => parseInt(String(s), 10) || 0)
+            }
+          }
+          
+          return {
+            name: score.player_name || '未知',
+            holeScores: holeScores,
+            groupNumber: score.group_number,
+            teamName: score.team_name
+          }
+        })
+
+        // 合并会员和访客成绩
+        const dbPlayers = [...memberPlayers, ...guestPlayers]
+        console.log(`[完成] 合并成绩数据: 会员${memberPlayers.length}条 + 访客${guestPlayers.length}条 = ${dbPlayers.length}条`)
 
         // 计算团队对抗统计
         const teamStats = calculateTeamStats(dbPlayers)
@@ -866,6 +910,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       const success: string[] = []
       const failed: string[] = []
       const errors: string[] = []
+      let guestSuccessCount = 0  // 统计访客成绩成功数量
 
       // 检查当前用户权限
       const { data: currentUserData, error: currentUserError } = await supabase.auth.getUser()
@@ -924,11 +969,84 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
           const userId = userMap.get(player.name.trim())
           console.log(`[导入] 查找用户ID:`, { name: player.name.trim(), userId, allUserNames: Array.from(userMap.keys()).slice(0, 10) })
           
+          // 如果找不到用户，作为访客处理
           if (!userId) {
-            failed.push(player.name)
-            errors.push(`${player.name}: 未找到匹配的用户`)
-            console.warn(`[导入] ${player.name}: 未找到匹配的用户`)
-            continue
+            console.log(`[导入] ${player.name}: 未找到匹配的用户，作为访客处理`)
+            
+            // 计算handicap（如果有净杆）
+            let handicap = 0
+            if (player.netStrokes !== null && player.totalStrokes > 0) {
+              handicap = Math.round(player.totalStrokes - player.netStrokes)
+            }
+
+            // 保持原始团队名称，不做转换
+            const normalizedTeamName = player.teamName ? player.teamName.trim() : null
+
+            const guestScoreData = {
+              player_name: player.name.trim(),
+              event_id: selectedEvent.id,
+              total_strokes: player.totalStrokes,
+              net_strokes: player.netStrokes ? Math.round(player.netStrokes) : null,
+              handicap: handicap,
+              holes_played: 18,
+              hole_scores: player.actualStrokes.length === 18 ? player.actualStrokes : null,
+              group_number: player.groupNumber,
+              team_name: normalizedTeamName,
+              notes: null
+            }
+
+            console.log(`[导入] 准备保存访客成绩数据:`, guestScoreData)
+
+            // 检查是否已存在访客成绩
+            const { data: existingGuest, error: checkGuestError } = await supabase
+              .from('guest_scores')
+              .select('id')
+              .eq('player_name', player.name.trim())
+              .eq('event_id', selectedEvent.id)
+              .maybeSingle()
+
+            if (checkGuestError && checkGuestError.code !== 'PGRST116') {
+              console.error(`[导入] 检查访客成绩失败:`, checkGuestError)
+              failed.push(player.name)
+              errors.push(`${player.name}: 检查访客成绩时出错`)
+              continue
+            }
+
+            if (existingGuest) {
+              // 更新访客成绩
+              console.log(`[导入] 更新访客成绩:`, existingGuest.id)
+              const { error: updateGuestError } = await supabase
+                .from('guest_scores')
+                .update(guestScoreData)
+                .eq('id', existingGuest.id)
+
+              if (updateGuestError) {
+                console.error(`[导入] 更新访客成绩失败:`, updateGuestError)
+                failed.push(player.name)
+                errors.push(`${player.name}: 更新访客成绩失败 - ${updateGuestError.message}`)
+              } else {
+                console.log(`[导入] 访客成绩更新成功:`, player.name)
+                success.push(player.name)
+                guestSuccessCount++
+              }
+            } else {
+              // 插入访客成绩
+              const { error: insertGuestError } = await supabase
+                .from('guest_scores')
+                .insert(guestScoreData)
+
+              if (insertGuestError) {
+                console.error(`[导入] 插入访客成绩失败:`, insertGuestError)
+                failed.push(player.name)
+                errors.push(`${player.name}: 插入访客成绩失败 - ${insertGuestError.message}`)
+              } else {
+                console.log(`[导入] 访客成绩插入成功:`, player.name)
+                success.push(player.name)
+                guestSuccessCount++
+              }
+            }
+            
+            continue // 访客成绩处理完成，继续下一个
           }
 
           // 检查该用户是否已报名该活动
@@ -1058,8 +1176,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       console.log(`[导入] 失败列表:`, failed)
 
       // 从数据库重新读取该活动的所有成绩数据（包括刚导入的和之前已存在的）
-      // 这样可以确保使用完整且准确的数据进行团队统计
+      // 包括会员成绩和访客成绩，用于团队统计
       console.log(`[导入] 从数据库读取活动 ${selectedEvent.id} 的所有成绩数据用于团队统计`)
+      
+      // 读取会员成绩
       const { data: allScoresData, error: scoresError } = await supabase
         .from('scores')
         .select(`
@@ -1077,14 +1197,38 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         .not('hole_scores', 'is', null)
 
       if (scoresError) {
-        console.error(`[导入] 读取成绩数据失败:`, scoresError)
+        console.error(`[导入] 读取会员成绩数据失败:`, scoresError)
       } else {
-        console.log(`[导入] 从数据库读取到 ${allScoresData?.length || 0} 条成绩数据`)
+        console.log(`[导入] 从数据库读取到 ${allScoresData?.length || 0} 条会员成绩数据`)
+      }
+
+      // 读取访客成绩
+      const { data: allGuestScoresData, error: guestScoresError } = await supabase
+        .from('guest_scores')
+        .select(`
+          id,
+          player_name,
+          event_id,
+          hole_scores,
+          group_number,
+          team_name
+        `)
+        .eq('event_id', selectedEvent.id)
+        .not('group_number', 'is', null)
+        .not('team_name', 'is', null)
+        .not('hole_scores', 'is', null)
+
+      if (guestScoresError) {
+        console.error(`[导入] 读取访客成绩数据失败:`, guestScoresError)
+      } else {
+        console.log(`[导入] 从数据库读取到 ${allGuestScoresData?.length || 0} 条访客成绩数据`)
       }
 
       // 将数据库中的数据转换为团队统计所需的格式
       // 注意：数据库中存储的是实际杆数（整数数组），团队对抗需要比较实际杆数的最小值（杆数越少越好）
-      const dbPlayers = (allScoresData || []).map(score => {
+      
+      // 转换会员成绩
+      const memberPlayers = (allScoresData || []).map(score => {
         // 确保hole_scores是数字数组（如果数据库中存储的是字符串数组，需要转换）
         let holeScores = score.hole_scores || []
         if (Array.isArray(holeScores) && holeScores.length > 0) {
@@ -1102,6 +1246,27 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         }
       })
 
+      // 转换访客成绩
+      const guestPlayers = (allGuestScoresData || []).map(score => {
+        let holeScores = score.hole_scores || []
+        if (Array.isArray(holeScores) && holeScores.length > 0) {
+          if (typeof holeScores[0] === 'string') {
+            holeScores = holeScores.map(s => parseInt(String(s), 10) || 0)
+          }
+        }
+        
+        return {
+          name: score.player_name || '未知',
+          holeScores: holeScores,
+          groupNumber: score.group_number,
+          teamName: score.team_name
+        }
+      })
+
+      // 合并会员和访客成绩
+      const dbPlayers = [...memberPlayers, ...guestPlayers]
+      console.log(`[导入] 合并后总成绩数据: 会员${memberPlayers.length}条 + 访客${guestPlayers.length}条 = ${dbPlayers.length}条`)
+
       console.log(`[导入] 转换后的球员数据用于团队统计:`, dbPlayers.map(p => ({
         name: p.name,
         groupNumber: p.groupNumber,
@@ -1116,11 +1281,20 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         success: success.length,
         failed: failed.length,
         errors,
+        guestSuccess: guestSuccessCount > 0 ? guestSuccessCount : undefined,
         teamStats
       })
 
       if (success.length > 0) {
-        showSuccess(`成功导入 ${success.length} 条成绩${failed.length > 0 ? `，失败 ${failed.length} 条` : ''}`)
+        const memberCount = success.length - guestSuccessCount
+        let successMsg = `成功导入 ${success.length} 条成绩`
+        if (guestSuccessCount > 0) {
+          successMsg += `（其中会员 ${memberCount} 条，访客 ${guestSuccessCount} 条）`
+        }
+        if (failed.length > 0) {
+          successMsg += `，失败 ${failed.length} 条`
+        }
+        showSuccess(successMsg)
         // 刷新数据
         await fetchParticipants(selectedEvent.id)
         await checkExistingScores(selectedEvent.id)
@@ -1789,7 +1963,14 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-gray-700">成功:</span>
-                      <span className="text-green-600 font-semibold">{importResult.success} 条</span>
+                      <span className="text-green-600 font-semibold">
+                        {importResult.success} 条
+                        {importResult.guestSuccess !== undefined && importResult.guestSuccess > 0 && (
+                          <span className="text-sm text-gray-500 ml-2">
+                            （会员 {importResult.success - importResult.guestSuccess}，访客 {importResult.guestSuccess}）
+                          </span>
+                        )}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-700">失败:</span>

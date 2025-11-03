@@ -10,7 +10,8 @@ import UnifiedSearch from './UnifiedSearch'
 interface ScoreData {
   id: string
   event_id: string
-  user_id: string
+  user_id?: string  // 会员成绩有 user_id
+  player_name?: string  // 访客成绩有 player_name
   total_strokes: number
   net_strokes: number | null
   handicap: number
@@ -20,6 +21,7 @@ interface ScoreData {
   group_number?: number | null
   team_name?: string | null
   hole_scores?: number[] | null
+  is_guest?: boolean  // 标识是否为访客成绩
   events: {
     id: string
     title: string
@@ -28,13 +30,13 @@ interface ScoreData {
     location: string
     event_type?: string
   }
-  user_profiles: {
+  user_profiles?: {
     id: string
     full_name: string
     avatar_url?: string | null
     avatar_position_x?: number | null
     avatar_position_y?: number | null
-  }
+  } | null
 }
 
 interface UserStats {
@@ -71,8 +73,9 @@ export default function UserScoreQuery() {
     try {
       setLoading(true)
       
-      // 获取所有比赛的成绩记录（所有人可以看到所有比赛的结果）
-      const { data: scoresData, error } = await supabase
+      // 获取所有比赛的成绩记录（包括会员和访客成绩）
+      // 读取会员成绩
+      const { data: memberScoresData, error: memberError } = await supabase
         .from('scores')
         .select(`
           *,
@@ -94,12 +97,52 @@ export default function UserScoreQuery() {
         `)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (memberError) throw memberError
 
-      setScores(scoresData || [])
+      // 读取访客成绩
+      const { data: guestScoresData, error: guestError } = await supabase
+        .from('guest_scores')
+        .select(`
+          *,
+          events (
+            id,
+            title,
+            start_time,
+            end_time,
+            location,
+            event_type
+          )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (guestError) {
+        console.error('获取访客成绩失败:', guestError)
+        // 访客成绩获取失败不影响，继续使用会员成绩
+      }
+
+      // 合并会员和访客成绩，统一格式
+      const memberScores = (memberScoresData || []).map(score => ({
+        ...score,
+        is_guest: false
+      }))
+
+      const guestScores = (guestScoresData || []).map(score => ({
+        ...score,
+        is_guest: true,
+        player_name: score.player_name,
+        user_id: undefined,
+        user_profiles: null
+      }))
+
+      // 合并并排序
+      const allScores = [...memberScores, ...guestScores].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+
+      setScores(allScores)
       
-      // 只计算用户自己的成绩统计
-      const userScores = (scoresData || []).filter(score => score.user_id === user.id)
+      // 只计算用户自己的成绩统计（不包括访客）
+      const userScores = (memberScoresData || []).filter(score => score.user_id === user.id)
       calculateUserStats(userScores)
     } catch (error) {
       console.error('获取成绩数据失败:', error)
@@ -471,7 +514,10 @@ export default function UserScoreQuery() {
                                       </div>
                                       <div>
                                         <div className={`font-medium ${isCurrentUser ? 'text-golf-800' : 'text-gray-900'}`}>
-                                          {score.user_profiles?.full_name || '未知'}
+                                          {score.is_guest ? (score.player_name || '未知访客') : (score.user_profiles?.full_name || '未知')}
+                                          {score.is_guest && (
+                                            <span className="ml-2 text-xs text-gray-500">(访客)</span>
+                                          )}
                                           {isCurrentUser && (
                                             <span className="ml-2 text-xs text-golf-600 font-semibold">(我)</span>
                                           )}
@@ -500,7 +546,7 @@ export default function UserScoreQuery() {
                           holeScores = holeScores.map(s => parseInt(String(s), 10) || 0)
                         }
                         
-                        let avatarUrl = score.user_profiles?.avatar_url || null
+                        let avatarUrl = score.is_guest ? null : (score.user_profiles?.avatar_url || null)
                         if (avatarUrl && typeof avatarUrl === 'string') {
                           avatarUrl = avatarUrl.trim()
                           if (avatarUrl === '') {
@@ -509,10 +555,10 @@ export default function UserScoreQuery() {
                         }
                         
                         return {
-                          name: score.user_profiles?.full_name || '未知',
+                          name: score.is_guest ? (score.player_name || '未知访客') : (score.user_profiles?.full_name || '未知'),
                           avatarUrl: avatarUrl,
-                          avatarPositionX: score.user_profiles?.avatar_position_x || 50,
-                          avatarPositionY: score.user_profiles?.avatar_position_y || 50,
+                          avatarPositionX: score.is_guest ? 50 : (score.user_profiles?.avatar_position_x || 50),
+                          avatarPositionY: score.is_guest ? 50 : (score.user_profiles?.avatar_position_y || 50),
                           holeScores: holeScores,
                           totalStrokes: score.total_strokes || 0,
                           groupNumber: score.group_number,
