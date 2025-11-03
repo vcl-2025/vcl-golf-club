@@ -10,16 +10,16 @@ interface InformationCenterDetailProps {
 }
 
 const categoryColors = {
-  '公告': 'bg-blue-100 text-blue-800',
-  '通知': 'bg-yellow-100 text-yellow-800',
-  '重要资料': 'bg-green-100 text-green-800',
-  '规则章程': 'bg-purple-100 text-purple-800'
+  '公告': 'bg-[#F15B98]/20 text-[#F15B98]',
+  '通知': 'bg-[#F15B98]/20 text-[#F15B98]',
+  '重要资料': 'bg-[#F15B98]/20 text-[#F15B98]',
+  '规则章程': 'bg-[#F15B98]/20 text-[#F15B98]'
 }
 
 const priorityColors = {
   0: '',
-  1: 'bg-orange-100 text-orange-800',
-  2: 'bg-red-100 text-red-800'
+  1: 'bg-[#F15B98]/30 text-[#F15B98]',
+  2: 'bg-[#F15B98]/40 text-[#F15B98]'
 }
 
 export default function InformationCenterDetail({ item, onClose }: InformationCenterDetailProps) {
@@ -87,7 +87,7 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                   {item.category}
                 </span>
                 {item.is_pinned && (
-                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 flex items-center">
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98] flex items-center">
                     <Pin className="w-3 h-3 mr-1" />
                     置顶
                   </span>
@@ -115,7 +115,7 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                   </div>
                 )}
                 {item.expires_at && (
-                  <div className="flex items-center text-orange-600">
+                  <div className="flex items-center text-[#F15B98]">
                     <Clock className="w-4 h-4 mr-1" />
                     <span>有效期至：{formatDate(item.expires_at)}</span>
                   </div>
@@ -185,8 +185,8 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                     className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
                   >
                     <div className="flex items-center flex-1 min-w-0">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                        <FileText className="w-5 h-5 text-blue-600" />
+                      <div className="w-10 h-10 bg-[#F15B98]/20 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                        <FileText className="w-5 h-5 text-[#F15B98]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
@@ -200,7 +200,7 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                         )}
                       </div>
                     </div>
-                    <Download className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors ml-4 flex-shrink-0" />
+                    <Download className="w-5 h-5 text-gray-400 group-hover:text-[#F15B98] transition-colors ml-4 flex-shrink-0" />
                   </a>
                 ))}
               </div>

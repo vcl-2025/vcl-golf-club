@@ -183,7 +183,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
       // })
       
       if (registration.approval_status === 'approved') {
-        return { text: '已报名', disabled: true, color: 'bg-green-500' }
+        return { text: '已报名', disabled: true, color: 'bg-[#F15B98]' }
       } else if (registration.approval_status === 'pending') {
         return { text: '已申请待审批', disabled: true, color: 'bg-yellow-500' }
       } else if (registration.approval_status === 'rejected') {
@@ -201,7 +201,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
       return { text: '名额已满', disabled: true, color: 'bg-red-400' }
     }
 
-    return { text: '立即报名', disabled: false, color: 'bg-golf-600' }
+    return { text: '立即报名', disabled: false, color: 'bg-[#F15B98]' }
   }
 
   // 显示所有活动，不分页
@@ -210,7 +210,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="w-8 h-8 border-4 border-golf-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#F15B98] border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -235,7 +235,6 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
           setSelectedYear('')
           setSelectedMonth('')
           setLocationTerm('')
-          setCurrentPage(1)
         }}
       />
 
@@ -249,11 +248,11 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
           return (
             <div
               key={event.id}
-              className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+              className="bg-white/75 rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
               onClick={() => onEventSelect(event)}
             >
               {/* 活动图片 */}
-              <div className="aspect-[16/9] bg-gradient-to-br from-golf-200 to-golf-300 overflow-hidden">
+              <div className="aspect-[16/9] bg-gradient-to-br from-[#F15B98]/20 to-[#F15B98]/30 overflow-hidden">
                 <img
                   src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
                   alt={event.title}
@@ -299,10 +298,10 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                     ) : eventFull ? (
                       <span className="text-orange-600 font-medium">名额已满</span>
                     ) : (
-                      <span className="text-green-600 font-medium">
+                      <span className="text-[#F15B98] font-medium">
                         {statsLoading ? (
                           <span className="flex items-center">
-                            <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                            <div className="w-3 h-3 border-2 border-[#F15B98] border-t-transparent rounded-full animate-spin mr-2"></div>
                             加载中...
                           </span>
                         ) : (
@@ -322,7 +321,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                       if (registration) {
                         if (registration.approval_status === 'approved') {
                           return (
-                            <div className="flex items-center text-green-600">
+                            <div className="flex items-center text-[#F15B98]">
                               <CheckCircle className="w-4 h-4 mr-1" />
                               已报名
                             </div>
@@ -356,7 +355,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                 )}
 
                 {/* 查看详情按钮 */}
-                <button className="w-full flex items-center justify-center bg-golf-600 hover:bg-golf-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                <button className="w-full flex items-center justify-center bg-[#F15B98] hover:bg-[#F15B98]/80 text-white font-medium py-2 px-4 rounded-lg transition-colors">
                   查看详情
                   <ChevronRight className="w-4 h-4 ml-2" />
                 </button>
@@ -387,9 +386,8 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                   setSelectedYear('')
                   setSelectedMonth('')
                   setLocationTerm('')
-                  setCurrentPage(1)
                 }}
-                className="mt-3 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                className="mt-3 px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
               >
                 清除筛选器
               </button>

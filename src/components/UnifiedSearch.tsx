@@ -106,7 +106,7 @@ export default function UnifiedSearch({
               placeholder={placeholder}
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 text-sm"
+              className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] text-sm"
             />
           </div>
         </div>
@@ -124,7 +124,7 @@ export default function UnifiedSearch({
                 placeholder="按地点搜索..."
                 value={locationTerm}
                 onChange={(e) => onLocationChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] text-sm"
               />
             </div>
           </div>
@@ -140,7 +140,7 @@ export default function UnifiedSearch({
             <select
               value={selectedYear}
               onChange={(e) => onYearChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
             >
               <option value="">全部年份</option>
               {availableYears.map(year => (
@@ -160,7 +160,7 @@ export default function UnifiedSearch({
             <select
               value={selectedMonth}
               onChange={(e) => onMonthChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
             >
               <option value="">全部月份</option>
               {availableMonths.map(month => (
@@ -181,7 +181,7 @@ export default function UnifiedSearch({
               <select
                 value={selectedRole}
                 onChange={(e) => onRoleChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
               >
                 <option value="all">所有角色</option>
                 <option value="admin">管理员</option>
@@ -205,7 +205,7 @@ export default function UnifiedSearch({
                   // console.log('费用类型筛选变化:', e.target.value)
                   onExpenseTypeChange(e.target.value)
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
               >
                 <option value="all">全部类型</option>
                 <option value="equipment">设备采购</option>

@@ -72,6 +72,7 @@ export default function Dashboard() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [adminMenuVisible, setAdminMenuVisible] = useState(true)
   const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin'>('dashboard')
+  const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
 
   // 监听用户菜单状态变化
   useEffect(() => {
@@ -282,6 +283,15 @@ export default function Dashboard() {
 
   const { year, season } = getCurrentDate()
 
+  // 日期卡片在日期和头像之间切换（每5秒）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setShowDateAvatar(prev => !prev)
+    }, 5000) // 每5秒切换一次
+
+    return () => clearInterval(interval)
+  }, [])
+
   // 检查是否为管理员
   const isAdmin = userProfile?.role === 'admin'
 
@@ -291,37 +301,55 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div 
+      className="min-h-screen dashboard-background"
+      style={{
+        backgroundImage: 'url(/flower-pattern.png)',
+        backgroundRepeat: 'repeat',
+        backgroundAttachment: 'fixed',
+        backgroundSize: '480px 480px',
+        backgroundPosition: '-30px 30px'
+      }}
+    >
+      <style>{`
+        @media (min-width: 641px) {
+          .dashboard-background {
+            background-size: 800px 800px !important;
+          }
+        }
+      `}</style>
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+      <header className="shadow-sm border-b sticky top-0 z-50" style={{ backgroundColor: '#619f56', borderColor: 'rgba(255,255,255,0.2)' }}>
+        <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
           <div className="flex justify-between items-center">
             {/* Logo and Brand */}
             <div 
-              className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+              className="flex items-center cursor-pointer hover:opacity-90 transition-opacity duration-200 px-2 py-1 rounded-lg"
               onClick={() => setCurrentView('dashboard')}
+              title="返回首页"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-2 border-golf-600 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center flex-shrink-0">
                 <img 
-                  src="/logo-192x192.png" 
+                  src="/logo.png" 
                   alt="溫哥華華人女子高爾夫俱樂部" 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 object-contain"
+                  className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 object-contain"
+                  draggable="false"
                 />
               </div>
               <div className="ml-2 sm:ml-3">
-                <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-gray-900">溫哥華華人女子高爾夫俱樂部</h1>
-                <p className="text-xs text-golf-600 hidden md:block">Vancouver Chinese Women's Golf Club</p>
+                <h1 className="text-base sm:text-xl lg:text-lg xl:text-xl font-extrabold text-white">溫哥華華人女子高爾夫俱樂部</h1>
+                <p className="text-xs font-bold text-white">Vancouver Chinese Ladies' Golf Club</p>
               </div>
             </div>
 
             {/* Navigation */}
-            <nav className="hidden lg:flex space-x-4 xl:space-x-8">
+            <nav className="hidden lg:flex space-x-2 xl:space-x-3">
               <button 
                 onClick={() => setCurrentView('dashboard')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'dashboard' 
-                    ? 'bg-golf-600 text-white' 
-                    : 'text-gray-700 hover:text-golf-600'
+                    ? 'bg-[#F15B98] text-white' 
+                    : 'text-white hover:text-white/80 hover:bg-white/10'
                 }`}
               >
                 首页
@@ -330,8 +358,8 @@ export default function Dashboard() {
                 onClick={() => setCurrentView('information')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'information'
-                    ? 'bg-golf-600 text-white'
-                    : 'text-gray-700 hover:text-golf-600'
+                    ? 'bg-[#F15B98] text-white'
+                    : 'text-white hover:text-white/80 hover:bg-white/10'
                 }`}
               >
                 信息中心
@@ -340,8 +368,8 @@ export default function Dashboard() {
                 onClick={() => setCurrentView('events')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'events' 
-                    ? 'bg-golf-600 text-white' 
-                    : 'text-gray-700 hover:text-golf-600'
+                    ? 'bg-[#F15B98] text-white' 
+                    : 'text-white hover:text-white/80 hover:bg-white/10'
                 }`}
               >
                 活动报名
@@ -350,8 +378,8 @@ export default function Dashboard() {
                 onClick={() => setCurrentView('reviews')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'reviews'
-                    ? 'bg-golf-600 text-white'
-                    : 'text-gray-700 hover:text-golf-600'
+                    ? 'bg-[#F15B98] text-white'
+                    : 'text-white hover:text-white/80 hover:bg-white/10'
                 }`}
               >
                 精彩回顾
@@ -360,8 +388,8 @@ export default function Dashboard() {
                 onClick={() => setCurrentView('scores')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'scores'
-                    ? 'bg-golf-600 text-white'
-                    : 'text-gray-700 hover:text-golf-600'
+                    ? 'bg-[#F15B98] text-white'
+                    : 'text-white hover:text-white/80 hover:bg-white/10'
                 }`}
               >
                 成绩查询
@@ -370,8 +398,8 @@ export default function Dashboard() {
                 onClick={() => setCurrentView('investments')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'investments'
-                    ? 'bg-golf-600 text-white'
-                    : 'text-gray-700 hover:text-golf-600'
+                    ? 'bg-[#F15B98] text-white'
+                    : 'text-white hover:text-white/80 hover:bg-white/10'
                 }`}
               >
                 捐赠与赞助
@@ -380,8 +408,8 @@ export default function Dashboard() {
                 onClick={() => setCurrentView('expenses')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'expenses'
-                    ? 'bg-golf-600 text-white'
-                    : 'text-gray-700 hover:text-golf-600'
+                    ? 'bg-[#F15B98] text-white'
+                    : 'text-white hover:text-white/80 hover:bg-white/10'
                 }`}
               >
                 费用公示
@@ -394,8 +422,8 @@ export default function Dashboard() {
                   }}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                     currentView === 'admin' 
-                      ? 'bg-golf-600 text-white' 
-                      : 'text-gray-700 hover:text-golf-600'
+                      ? 'bg-[#F15B98] text-white' 
+                      : 'text-white hover:text-white/80 hover:bg-white/10'
                   }`}
                 >
                   管理后台
@@ -409,7 +437,7 @@ export default function Dashboard() {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden text-gray-400 hover:text-gray-600 p-1 sm:p-2"
+                className="lg:hidden text-white hover:text-white/80 p-1 sm:p-2"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -553,113 +581,130 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Mobile Navigation Menu */}
+          {/* Mobile Navigation Menu - Side Drawer */}
+          {/* Backdrop */}
           {mobileMenuOpen && (
-            <div className="lg:hidden border-t border-gray-200 py-4">
-              <div className="flex flex-col space-y-2">
+            <div 
+              className="lg:hidden fixed inset-0 bg-black/50 z-[100] transition-opacity"
+              onClick={() => setMobileMenuOpen(false)}
+            ></div>
+          )}
+          
+          {/* Drawer */}
+          <div className={`lg:hidden fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white shadow-xl z-[101] transform transition-transform duration-300 ease-out ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}>
+            <div className="flex flex-col h-full overflow-y-auto">
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h2 className="text-lg font-bold text-gray-900">菜单</h2>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Menu Items */}
+              <div className="flex flex-col p-4 space-y-1 flex-1">
                 <button 
                   onClick={() => {
                     setCurrentView('dashboard')
                     setMobileMenuOpen(false)
                   }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                  className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
                     currentView === 'dashboard' 
-                      ? 'bg-golf-600 text-white' 
-                      : 'text-gray-700 hover:text-golf-600'
+                      ? 'bg-[#F15B98] text-white' 
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  首页
+                  <Calendar className="w-5 h-5" style={{ color: currentView === 'dashboard' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                  <span>首页</span>
                 </button>
                 <button
                   onClick={() => {
                     setCurrentView('information')
                     setMobileMenuOpen(false)
                   }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                  className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
                     currentView === 'information'
-                      ? 'bg-golf-600 text-white'
-                      : 'text-gray-700 hover:text-golf-600'
+                      ? 'bg-[#F15B98] text-white'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  信息中心
+                  <Bell className="w-5 h-5" style={{ color: currentView === 'information' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                  <span>信息中心</span>
                 </button>
                 <button 
                   onClick={() => {
                     setCurrentView('events')
                     setMobileMenuOpen(false)
                   }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                  className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
                     currentView === 'events' 
-                      ? 'bg-golf-600 text-white' 
-                      : 'text-gray-700 hover:text-golf-600'
+                      ? 'bg-[#F15B98] text-white' 
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  活动报名
+                  <Calendar className="w-5 h-5" style={{ color: currentView === 'events' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                  <span>活动报名</span>
                 </button>
                 <button
                   onClick={() => {
                     setCurrentView('reviews')
                     setMobileMenuOpen(false)
                   }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                  className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
                     currentView === 'reviews'
-                      ? 'bg-golf-600 text-white'
-                      : 'text-gray-700 hover:text-golf-600'
+                      ? 'bg-[#F15B98] text-white'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  活动回顾
+                  <BookOpen className="w-5 h-5" style={{ color: currentView === 'reviews' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                  <span>活动回顾</span>
                 </button>
                 <button
                   onClick={() => {
                     setCurrentView('scores')
                     setMobileMenuOpen(false)
                   }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                  className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
                     currentView === 'scores'
-                      ? 'bg-golf-600 text-white'
-                      : 'text-gray-700 hover:text-golf-600'
+                      ? 'bg-[#F15B98] text-white'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  成绩查询
+                  <Trophy className="w-5 h-5" style={{ color: currentView === 'scores' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                  <span>成绩查询</span>
                 </button>
                 <button
                   onClick={() => {
                     setCurrentView('investments')
                     setMobileMenuOpen(false)
                   }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                  className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
                     currentView === 'investments'
-                      ? 'bg-golf-600 text-white'
-                      : 'text-gray-700 hover:text-golf-600'
+                      ? 'bg-[#F15B98] text-white'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  捐赠与赞助
+                  <Heart className="w-5 h-5" style={{ color: currentView === 'investments' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                  <span>捐赠与赞助</span>
                 </button>
                 <button
                   onClick={() => {
                     setCurrentView('expenses')
                     setMobileMenuOpen(false)
                   }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                  className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
                     currentView === 'expenses'
-                      ? 'bg-golf-600 text-white'
-                      : 'text-gray-700 hover:text-golf-600'
+                      ? 'bg-[#F15B98] text-white'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  费用公示
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentView('information')
-                    setMobileMenuOpen(false)
-                  }}
-                  className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
-                    currentView === 'information'
-                      ? 'bg-golf-600 text-white'
-                      : 'text-gray-700 hover:text-golf-600'
-                  }`}
-                >
-                  信息中心
+                  <Receipt className="w-5 h-5" style={{ color: currentView === 'expenses' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                  <span>费用公示</span>
                 </button>
                 {isAdmin && (
                   <button 
@@ -668,20 +713,21 @@ export default function Dashboard() {
                       setMobileMenuOpen(false)
                       setAdminMenuVisible(true)
                     }}
-                    className={`px-3 py-2 rounded-lg font-medium text-sm text-left transition-colors ${
+                    className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
                       currentView === 'admin' 
-                        ? 'bg-golf-600 text-white' 
-                        : 'text-gray-700 hover:text-golf-600'
+                        ? 'bg-[#F15B98] text-white' 
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                     }`}
                   >
-                    管理后台
+                    <Settings className="w-5 h-5" style={{ color: currentView === 'admin' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                    <span>管理后台</span>
                   </button>
                 )}
                 
 
                 {/* Mobile User Info */}
-                <div className="flex items-center space-x-3 px-3 py-2 border-t border-gray-200 mt-2 pt-4 md:hidden">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="flex items-center space-x-3 px-3 py-4 border-t border-gray-200 mt-auto">
+                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                     {userProfile?.avatar_url ? (
                       <img 
                         src={userProfile.avatar_url} 
@@ -692,14 +738,14 @@ export default function Dashboard() {
                         }}
                       />
                     ) : (
-                      <User className="w-4 h-4 text-white" />
+                      <User className="w-5 h-5 text-white" />
                     )}
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">
                       {userProfile?.full_name || '未设置姓名'}
                     </div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 truncate">
                       {user?.email}
                     </div>
                   </div>
@@ -711,9 +757,9 @@ export default function Dashboard() {
                     setProfileModalOpen(true)
                     setMobileMenuOpen(false)
                   }}
-                  className="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:text-golf-600 font-medium text-sm text-left w-full md:hidden"
+                  className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#F15B98] font-medium text-sm text-left w-full rounded-lg transition-colors"
                 >
-                  <User className="w-4 h-4" />
+                  <User className="w-5 h-5" />
                   <span>个人资料</span>
                 </button>
                 
@@ -723,10 +769,11 @@ export default function Dashboard() {
                     onClick={() => {
                       setCurrentView('admin')
                       setMobileMenuOpen(false)
+                      setAdminMenuVisible(true)
                     }}
-                    className="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:text-golf-600 font-medium text-sm text-left w-full md:hidden"
+                    className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#F15B98] font-medium text-sm text-left w-full rounded-lg transition-colors"
                   >
-                    <Settings className="w-4 h-4" />
+                    <Settings className="w-5 h-5" />
                     <span>管理后台</span>
                   </button>
                 )}
@@ -737,27 +784,30 @@ export default function Dashboard() {
                     handleSignOut()
                     setMobileMenuOpen(false)
                   }}
-                  className="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:text-golf-600 font-medium text-sm text-left w-full md:hidden"
+                  className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#F15B98] font-medium text-sm text-left w-full rounded-lg transition-colors"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-5 h-5" />
                   <span>退出登录</span>
                 </button>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1440px] mx-auto px-1 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+      <main className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-10 py-4 sm:py-6 lg:py-8">
         {currentView === 'dashboard' ? (
           <>
             {/* Welcome Banner - 高尔夫主题设计 */}
-            <div className="relative rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden shadow-2xl">
-              {/* 背景渐变 + 草地纹理 */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-green-700 to-green-800"></div>
-              
-              {/* 草地纹理叠加层 */}
+            <div 
+              className="relative rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden transition-all duration-300 welcome-card group"
+              style={{ 
+                background: 'linear-gradient(145deg, #F36C92, #F26B99)',
+                boxShadow: 'inset 0 0 8px rgba(255,255,255,0.4), 0 6px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.1)'
+              }}
+            >
+              {/* 点状纹理叠加层 */}
               <div 
                 className="absolute inset-0 opacity-20"
                 style={{
@@ -771,167 +821,387 @@ export default function Dashboard() {
                 }}
               ></div>
               
-              {/* 高尔夫球轨迹线条 */}
-              <div className="absolute inset-0">
-                <svg className="w-full h-full opacity-30" viewBox="0 0 400 200">
-                  <path 
-                    d="M50,150 Q150,50 250,100 T350,80" 
-                    stroke="rgba(255,255,255,0.3)" 
-                    strokeWidth="2" 
-                    fill="none"
-                    strokeDasharray="5,5"
-                  />
-                  <path 
-                    d="M80,160 Q180,60 280,110 T380,90" 
-                    stroke="rgba(255,255,255,0.2)" 
-                    strokeWidth="1.5" 
-                    fill="none"
-                    strokeDasharray="3,7"
-                  />
-                </svg>
-              </div>
-              
-              
-              {/* 高尔夫球窝点装饰 */}
-              <div className="absolute top-4 right-4 w-8 h-8 sm:w-12 sm:h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                <div className="w-4 h-4 sm:w-6 sm:h-6 bg-white bg-opacity-40 rounded-full"></div>
-              </div>
-              
+              {/* 人物线稿右侧雾层 */}
+              <div 
+                className="absolute right-0 top-0 bottom-0 w-1/3 opacity-30 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(to left, rgba(255,255,255,0.15), transparent)'
+                }}
+              ></div>
               
               {/* 主要内容 */}
               <div className="relative z-10">
-                <div className="flex items-center mb-4">
-                  <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold mr-2 sm:mr-4">
+                <div className="flex items-center mb-4 sm:mb-5">
+                  <h2 
+                    className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-extrabold mr-2 sm:mr-4 transition-all duration-300 group-hover:brightness-110"
+                    style={{ 
+                      letterSpacing: '0.02em',
+                      color: '#FFFFFF',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)'
+                    }}
+                  >
                     欢迎回来，{userProfile?.full_name || '用户'}！
                   </h2>
-                  <span className="bg-white bg-opacity-25 px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+                  <span 
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm border"
+                    style={{
+                      background: 'rgba(255,255,255,0.25)',
+                      borderColor: 'rgba(255,255,255,0.3)',
+                      color: '#FFFFFF',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.4)'
+                    }}
+                  >
                     {getMembershipTypeText(userProfile?.membership_type || 'standard')}
                   </span>
                 </div>
-                <p className="text-green-100 text-sm sm:text-base lg:text-lg mb-3 sm:mb-4">
+                <p 
+                  className="text-sm sm:text-base lg:text-lg mb-4 sm:mb-5 transition-all duration-300 group-hover:brightness-105"
+                  style={{ 
+                    letterSpacing: '0.3px',
+                    lineHeight: '1.6',
+                    color: '#FFF8F5',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                  }}
+                >
                   祝您今天有美好的高尔夫体验
                 </p>
-                <div className="text-xs text-green-100 flex items-center space-x-4">
+                <div className="text-xs flex items-center space-x-4" style={{ color: 'rgba(255, 248, 245, 0.9)' }}>
                   <span className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-green-200 rounded-full mr-2"></div>
+                    <div className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: 'rgba(255, 248, 245, 0.8)' }}></div>
                     会员数量：{memberCount}
                   </span>
                   <span className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-green-200 rounded-full mr-2"></div>
+                    <div className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: 'rgba(255, 248, 245, 0.8)' }}></div>
                     加入日期：{new Date().toLocaleDateString('zh-CN')}
                   </span>
                 </div>
               </div>
               
-              {/* 日期显示区域 - 现代设计 */}
-              <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white bg-opacity-25 rounded-xl p-3 sm:p-4 text-center shadow-lg backdrop-blur-sm">
-                <div className="text-sm sm:text-lg lg:text-2xl font-bold">{year}</div>
-                <div className="text-xs text-green-100">{season}</div>
-                <div className="w-full h-0.5 bg-white bg-opacity-30 my-1"></div>
-                <div className="text-xs text-green-200 font-medium">GOLF DAY</div>
+              {/* 日期显示区域 - 右上角 */}
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  padding: 0,
+                  borderRadius: '12px',
+                  background: 'linear-gradient(145deg, rgba(255, 160, 200, 0.4), rgba(255, 111, 168, 0.35))',
+                  boxShadow: '0 4px 10px rgba(255, 120, 180, 0.3), 0 0 0 1px rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  zIndex: 20,
+                  minWidth: '90px',
+                  minHeight: '90px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden'
+                }}
+                className="date-card-new group/date"
+              >
+                {/* 日期内容 */}
+                <div 
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: showDateAvatar ? 0 : 1,
+                    transition: 'opacity 1s ease-in-out',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    padding: '12px 16px',
+                    pointerEvents: showDateAvatar ? 'none' : 'auto'
+                  }}
+                >
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>{year}</div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.9)', marginBottom: '6px' }}>{season}</div>
+                  <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.4)', margin: '4px 0' }}></div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.95)', fontWeight: '500' }}>GOLF DAY</div>
+                </div>
+
+                {/* 头像内容 */}
+                <div 
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: showDateAvatar ? 1 : 0,
+                    transition: 'opacity 1s ease-in-out',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    padding: '3px',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    pointerEvents: showDateAvatar ? 'auto' : 'none'
+                  }}
+                >
+                  {userProfile?.avatar_url ? (
+                    <img 
+                      src={userProfile.avatar_url} 
+                      alt={userProfile.full_name || '用户头像'}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: '8px',
+                        objectPosition: `${userProfile.avatar_position_x || 50}% ${userProfile.avatar_position_y || 50}%`
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '8px'
+                    }}>
+                      <User className="w-8 h-8" style={{ color: 'rgba(255, 255, 255, 0.8)' }} />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+            
+            {/* 添加hover效果的样式 */}
+            <style>{`
+              .welcome-card:hover {
+                transform: translateY(-3px);
+                box-shadow: inset 0 0 8px rgba(255,255,255,0.4), 0 8px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.15) !important;
+              }
+              
+              @keyframes shimmer {
+                0% {
+                  transform: translateX(-100%) skewX(-15deg);
+                }
+                100% {
+                  transform: translateX(200%) skewX(-15deg);
+                }
+              }
+              
+              .date-shimmer {
+                animation: shimmer 1.5s infinite;
+              }
+              
+              .date-card:hover {
+                box-shadow: 0 6px 15px rgba(255, 120, 180, 0.4), 0 0 0 1px rgba(255,255,255,0.3) !important;
+                transform: translateY(-2px);
+              }
+            `}</style>
 
             {/* Quick Actions */}
             <div className="mb-4 sm:mb-6 lg:mb-8">
               <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6">快捷操作</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
                 <div 
                   onClick={() => setCurrentView('information')}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-purple-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <Bell className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                        <Bell className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                      </div>
+                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                        信息中心
+                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </h4>
+                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看公告通知和重要信息</p>
+                    </div>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                      <img 
+                        src="/golf_gesture1.png" 
+                        alt="Golf gesture" 
+                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                        draggable="false"
+                        onDragStart={(e) => e.preventDefault()}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    </div>
                   </div>
-                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    信息中心
-                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看公告通知和重要信息</p>
                 </div>
 
                 <div 
                   onClick={() => setCurrentView('events')}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-blue-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                        <Calendar className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#07bc5d', fillOpacity: 1 }} strokeWidth={2} />
+                      </div>
+                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                        活动报名
+                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </h4>
+                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看并报名参加俱乐部活动</p>
+                    </div>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                      <img 
+                        src="/golf_gesture2.png" 
+                        alt="Golf gesture" 
+                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                        draggable="false"
+                        onDragStart={(e) => e.preventDefault()}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    </div>
                   </div>
-                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    活动报名
-                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看并报名参加俱乐部活动</p>
                 </div>
 
                 <div
                   onClick={() => setCurrentView('reviews')}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-orange-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                        <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                      </div>
+                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                        精彩回顾
+                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </h4>
+                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">浏览活动精彩回顾文章</p>
+                    </div>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                      <img 
+                        src="/golf_gesture3.png" 
+                        alt="Golf gesture" 
+                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                        draggable="false"
+                        onDragStart={(e) => e.preventDefault()}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    </div>
                   </div>
-                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    精彩回顾
-                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">浏览活动精彩回顾文章</p>
                 </div>
 
                 <div
                   onClick={() => setCurrentView('scores')}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <Trophy className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                        <Trophy className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                      </div>
+                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                        成绩查询
+                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </h4>
+                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看您的比赛成绩和排名</p>
+                    </div>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                      <img 
+                        src="/golf_gesture4.png" 
+                        alt="Golf gesture" 
+                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                        draggable="false"
+                        onDragStart={(e) => e.preventDefault()}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    </div>
                   </div>
-                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    成绩查询
-                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看您的比赛成绩和排名</p>
                 </div>
 
                 <div
                   onClick={() => setCurrentView('investments')}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-red-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <Heart className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                        <Heart className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                      </div>
+                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                        捐赠与赞助
+                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </h4>
+                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">捐赠与赞助俱乐部建设发展</p>
+                    </div>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                      <img 
+                        src="/golf_gesture5.png" 
+                        alt="Golf gesture" 
+                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                        draggable="false"
+                        onDragStart={(e) => e.preventDefault()}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    </div>
                   </div>
-                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    捐赠与赞助
-                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">捐赠与赞助俱乐部建设发展</p>
                 </div>
 
                 <div
                   onClick={() => setCurrentView('expenses')}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-green-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <Receipt className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                        <Receipt className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                      </div>
+                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                        费用公示
+                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </h4>
+                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看俱乐部财务支出</p>
+                    </div>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                      <img 
+                        src="/golf_gesture6.png" 
+                        alt="Golf gesture" 
+                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                        draggable="false"
+                        onDragStart={(e) => e.preventDefault()}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    </div>
                   </div>
-                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    费用公示
-                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看俱乐部财务支出</p>
                 </div>
 
                 <div
                   onClick={() => setCurrentView('members')}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
                 >
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4">
-                    <Users className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                        <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                      </div>
+                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                        会员照片
+                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </h4>
+                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">浏览所有会员照片</p>
+                    </div>
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                      <img 
+                        src="/golf_gesture7.png" 
+                        alt="Golf gesture" 
+                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                        draggable="false"
+                        onDragStart={(e) => e.preventDefault()}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    </div>
                   </div>
-                  <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                    会员照片
-                    <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">浏览所有会员照片</p>
                 </div>
               </div>
             </div>
@@ -939,15 +1209,15 @@ export default function Dashboard() {
             {/* Main Content Sections */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
               {/* 即将举行的活动 */}
-              <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
+              <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
-                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 mr-2" />
+                    <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
                     即将举行的活动
                   </h3>
                   <button 
                     onClick={() => setCurrentView('events')}
-                    className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base flex items-center"
+                    className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base flex items-center"
                   >
                     查看全部
                     <ArrowRight className="w-4 h-4 ml-1" />
@@ -955,37 +1225,28 @@ export default function Dashboard() {
                 </div>
                 {loading ? (
                   <div className="text-center py-6 sm:py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98] mx-auto"></div>
                     <p className="text-gray-500 mt-2 text-sm">加载中...</p>
                   </div>
                 ) : upcomingEvents.length > 0 ? (
                   <div className="space-y-3">
                     {upcomingEvents.map((event) => (
-                      <div key={event.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3">
-                            <Calendar className="w-4 h-4 text-white" />
+                      <div key={event.id} className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'rgba(252, 250, 248, 0.95)' }}>
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1">{event.title}</div>
+                          <div className="text-xs sm:text-sm text-gray-600 mb-1">
+                            日期: {new Date(event.start_time).toLocaleDateString('zh-CN')}
                           </div>
-                          <div>
-                            <div className="font-semibold text-gray-900 text-sm">{event.title}</div>
-                            <div className="text-xs text-gray-600">
-                              {new Date(event.start_time).toLocaleDateString('zh-CN')}
-                            </div>
-                            <div className="text-xs text-golf-600 font-medium mt-1">
-                              {event.event_type}
-                            </div>
+                          <div className="text-xs sm:text-sm text-[#F15B98]">
+                            {event.location || '地点未设置'} · {event.max_participants || 0}人
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-bold text-blue-600">{event.location}</div>
-                          <div className="text-xs text-gray-600">{event.max_participants}人</div>
                         </div>
                       </div>
                     ))}
                     <div className="text-center pt-2">
                       <button 
                         onClick={() => setCurrentView('events')}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm"
                       >
                         查看更多活动
                       </button>
@@ -996,7 +1257,7 @@ export default function Dashboard() {
                     <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无即将举行的活动</p>
                     <button 
                       onClick={() => setCurrentView('events')}
-                      className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
+                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base"
                     >
                       查看更多活动
                     </button>
@@ -1005,15 +1266,15 @@ export default function Dashboard() {
               </div>
 
               {/* 最新发布的成绩活动 */}
-              <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
+              <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
-                    <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 mr-2" />
+                    <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
                     最新发布的成绩活动
                   </h3>
                   <button 
                     onClick={() => setCurrentView('scores')}
-                    className="text-yellow-600 hover:text-yellow-700 font-medium text-sm sm:text-base flex items-center"
+                    className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base flex items-center"
                   >
                     查看全部
                     <ArrowRight className="w-4 h-4 ml-1" />
@@ -1021,36 +1282,27 @@ export default function Dashboard() {
                 </div>
                 {loading ? (
                   <div className="text-center py-6 sm:py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98] mx-auto"></div>
                     <p className="text-gray-500 mt-2 text-sm">加载中...</p>
                   </div>
                 ) : recentScores.length > 0 ? (
                   <div className="space-y-3 sm:space-y-4">
                     {recentScores.map((score) => (
-                      <div key={score.id} className="flex items-center justify-between p-3 sm:p-4 bg-yellow-50 rounded-lg">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-500 rounded-full flex items-center justify-center mr-2 sm:mr-3">
-                            <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                      <div key={score.id} className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'rgba(252, 250, 248, 0.95)' }}>
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1">
+                            {score.competition_name || '比赛'}
                           </div>
-                          <div>
-                            <div className="font-semibold text-gray-900 text-sm sm:text-base">
-                              {score.competition_name || '比赛'}
-                            </div>
-                            <div className="text-xs sm:text-sm text-gray-600">
-                              {new Date(score.competition_date).toLocaleDateString('zh-CN')}
-                            </div>
+                          <div className="text-xs sm:text-sm text-gray-600">
+                            日期: {new Date(score.competition_date).toLocaleDateString('zh-CN')}
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg sm:text-2xl font-bold text-yellow-600">{score.total_strokes}</div>
-                          <div className="text-xs sm:text-sm text-gray-600">{score.holes_played}洞</div>
                         </div>
                       </div>
                     ))}
                     <div className="text-center pt-3 sm:pt-4">
                       <button 
                         onClick={() => setCurrentView('scores')}
-                        className="text-yellow-600 hover:text-yellow-700 font-medium text-sm sm:text-base"
+                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm sm:text-base"
                       >
                         查看完整成绩单
                       </button>
@@ -1061,7 +1313,7 @@ export default function Dashboard() {
                     <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无成绩记录</p>
                     <button 
                       onClick={() => setCurrentView('scores')}
-                      className="text-yellow-600 hover:text-yellow-700 font-medium text-sm sm:text-base"
+                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm sm:text-base"
                     >
                       查看成绩查询
                     </button>
@@ -1070,15 +1322,15 @@ export default function Dashboard() {
               </div>
 
               {/* 最新捐赠与赞助 */}
-              <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
+              <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
-                    <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 mr-2" />
+                    <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
                     最新捐赠与赞助
                   </h3>
                   <button 
                     onClick={() => setCurrentView('investments')}
-                    className="text-red-600 hover:text-red-700 font-medium text-sm sm:text-base flex items-center"
+                    className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base flex items-center"
                   >
                     查看全部
                     <ArrowRight className="w-4 h-4 ml-1" />
@@ -1086,30 +1338,17 @@ export default function Dashboard() {
                 </div>
                 {loading ? (
                   <div className="text-center py-6 sm:py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98] mx-auto"></div>
                     <p className="text-gray-500 mt-2 text-sm">加载中...</p>
                   </div>
                 ) : recentInvestments.length > 0 ? (
                   <div className="space-y-3">
                     {recentInvestments.map((investment) => (
-                      <div key={investment.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mr-3">
-                            <Heart className="w-4 h-4 text-white" />
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-900 text-sm">{investment.title}</div>
-                            <div className="text-xs text-gray-600">
-                              目标: CA${investment.target_amount.toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-bold text-red-600">
-                            CA${(investment.current_amount || 0).toLocaleString()}
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            {Math.round(((investment.current_amount || 0) / investment.target_amount) * 100)}%
+                      <div key={investment.id} className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'rgba(252, 250, 248, 0.95)' }}>
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1">{investment.title}</div>
+                          <div className="text-xs sm:text-sm text-gray-600">
+                            日期: {new Date(investment.created_at).toLocaleDateString('zh-CN')}
                           </div>
                         </div>
                       </div>
@@ -1117,7 +1356,7 @@ export default function Dashboard() {
                     <div className="text-center pt-2">
                       <button 
                         onClick={() => setCurrentView('investments')}
-                        className="text-red-600 hover:text-red-700 font-medium text-sm"
+                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm"
                       >
                         查看投资项目
                       </button>
@@ -1128,7 +1367,7 @@ export default function Dashboard() {
                     <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无投资项目</p>
                     <button 
                       onClick={() => setCurrentView('investments')}
-                      className="text-red-600 hover:text-red-700 font-medium text-sm sm:text-base"
+                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm sm:text-base"
                     >
                       查看投资项目
                     </button>
@@ -1137,15 +1376,15 @@ export default function Dashboard() {
               </div>
 
               {/* 最新费用公示 */}
-              <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm">
+              <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
-                    <Receipt className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 mr-2" />
+                    <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
                     最新费用公示
                   </h3>
                   <button 
                     onClick={() => setCurrentView('expenses')}
-                    className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base flex items-center"
+                    className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base flex items-center"
                   >
                     查看全部
                     <ArrowRight className="w-4 h-4 ml-1" />
@@ -1153,36 +1392,25 @@ export default function Dashboard() {
                 </div>
                 {loading ? (
                   <div className="text-center py-6 sm:py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98] mx-auto"></div>
                     <p className="text-gray-500 mt-2 text-sm">加载中...</p>
                   </div>
                 ) : recentExpenses.length > 0 ? (
                   <div className="space-y-3">
                     {recentExpenses.map((expense) => (
-                      <div key={expense.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
-                            <Receipt className="w-4 h-4 text-white" />
+                      <div key={expense.id} className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'rgba(252, 250, 248, 0.95)' }}>
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1">{expense.title || '费用项目'}</div>
+                          <div className="text-xs sm:text-sm text-gray-600">
+                            日期: {new Date(expense.created_at).toLocaleDateString('zh-CN')}
                           </div>
-                          <div>
-                            <div className="font-semibold text-gray-900 text-sm">{expense.title || '费用项目'}</div>
-                            <div className="text-xs text-gray-600">
-                              {new Date(expense.created_at).toLocaleDateString('zh-CN')}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-bold text-green-600">
-                            ¥{expense.amount?.toLocaleString() || '0'}
-                          </div>
-                          <div className="text-xs text-gray-600">{expense.category || '其他'}</div>
                         </div>
                       </div>
                     ))}
                     <div className="text-center pt-2">
                       <button 
                         onClick={() => setCurrentView('expenses')}
-                        className="text-green-600 hover:text-green-700 font-medium text-sm"
+                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm"
                       >
                         查看费用公示
                       </button>
@@ -1193,7 +1421,7 @@ export default function Dashboard() {
                     <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无费用公示</p>
                     <button 
                       onClick={() => setCurrentView('expenses')}
-                      className="text-green-600 hover:text-green-700 font-medium text-sm sm:text-base"
+                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base"
                     >
                       查看费用公示
                     </button>

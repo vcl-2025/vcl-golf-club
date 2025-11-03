@@ -16,17 +16,17 @@ const categoryIcons = {
 }
 
 const categoryColors = {
-  '公告': 'bg-blue-100 text-blue-800',
-  '通知': 'bg-yellow-100 text-yellow-800',
-  '重要资料': 'bg-green-100 text-green-800',
-  '规则章程': 'bg-purple-100 text-purple-800'
+  '公告': 'bg-[#F15B98]/20 text-[#F15B98]',
+  '通知': 'bg-[#F15B98]/20 text-[#F15B98]',
+  '重要资料': 'bg-[#F15B98]/20 text-[#F15B98]',
+  '规则章程': 'bg-[#F15B98]/20 text-[#F15B98]'
 }
 
 const categoryBackgroundColors = {
-  '公告': 'bg-blue-50',
-  '通知': 'bg-yellow-50',
-  '重要资料': 'bg-green-50',
-  '规则章程': 'bg-purple-50'
+  '公告': 'bg-white/75',
+  '通知': 'bg-white/75',
+  '重要资料': 'bg-white/75',
+  '规则章程': 'bg-white/75'
 }
 
 const priorityLabels = {
@@ -37,8 +37,8 @@ const priorityLabels = {
 
 const priorityColors = {
   0: '',
-  1: 'bg-orange-100 text-orange-800',
-  2: 'bg-red-100 text-red-800'
+  1: 'bg-[#F15B98]/30 text-[#F15B98]',
+  2: 'bg-[#F15B98]/40 text-[#F15B98]'
 }
 
 export default function InformationCenterList({ onItemSelect }: InformationCenterListProps) {
@@ -163,6 +163,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
     if (!user) return
 
     try {
+      // 记录阅读记录
       await supabase
         .from('information_item_reads')
         .upsert({
@@ -170,9 +171,35 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
           user_id: user.id
         })
 
+      // 增加浏览次数
+      const currentItem = items.find(item => item.id === itemId)
+      if (currentItem) {
+        try {
+          // 先尝试使用 RPC 函数
+          await supabase.rpc('increment_information_item_views', {
+            item_id: itemId
+          })
+        } catch (rpcError) {
+          // 如果 RPC 不存在，直接更新
+          await supabase
+            .from('information_items')
+            .update({ view_count: (currentItem.view_count || 0) + 1 })
+            .eq('id', itemId)
+        }
+      }
+
       // 更新本地状态
       setItems(prev => prev.map(item => 
-        item.id === itemId ? { ...item, is_read: true } : item
+        item.id === itemId 
+          ? { ...item, is_read: true, view_count: (item.view_count || 0) + 1 } 
+          : item
+      ))
+      
+      // 更新筛选后的列表
+      setFilteredItems(prev => prev.map(item => 
+        item.id === itemId 
+          ? { ...item, is_read: true, view_count: (item.view_count || 0) + 1 } 
+          : item
       ))
     } catch (error) {
       console.error('标记已读失败:', error)
@@ -198,7 +225,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98]"></div>
       </div>
     )
   }
@@ -212,7 +239,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
             <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2" />
             <h3 className="text-base sm:text-lg font-semibold text-gray-900">筛选条件</h3>
             {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
-              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
                 已筛选
               </span>
             )}
@@ -238,9 +265,9 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
         </div>
         
         {/* 桌面端始终显示，移动端根据状态显示 */}
-        <div className={`flex flex-col lg:flex-row gap-3 sm:gap-4 ${isExpanded ? 'block' : 'hidden md:flex'}`}>
-          {/* 标题搜索 */}
-          <div className="flex-1">
+        <div className={`flex flex-col gap-3 sm:gap-4 ${isExpanded ? 'flex' : 'hidden md:flex'}`}>
+          {/* 标题搜索 - 独占一行 */}
+          <div className="w-full">
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
               搜索
             </label>
@@ -251,49 +278,52 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
                 placeholder="搜索标题、内容..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 text-sm"
+                className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] text-sm"
               />
             </div>
           </div>
 
-          {/* 分类筛选 */}
-          <div className="w-32 sm:w-40">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-              分类
-            </label>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
-              >
-                <option value="all">全部分类</option>
-                <option value="公告">公告</option>
-                <option value="通知">通知</option>
-                <option value="重要资料">重要资料</option>
-                <option value="规则章程">规则章程</option>
-              </select>
+          {/* 分类和优先级 - 放在一行 */}
+          <div className="flex flex-row gap-3 sm:gap-4">
+            {/* 分类筛选 */}
+            <div className="w-32 sm:w-40">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                分类
+              </label>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
+                >
+                  <option value="all">全部分类</option>
+                  <option value="公告">公告</option>
+                  <option value="通知">通知</option>
+                  <option value="重要资料">重要资料</option>
+                  <option value="规则章程">规则章程</option>
+                </select>
+              </div>
             </div>
-          </div>
 
-          {/* 优先级筛选 */}
-          <div className="w-32 sm:w-40">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-              优先级
-            </label>
-            <div className="relative">
-              <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
-              >
-                <option value="all">全部</option>
-                <option value="0">普通</option>
-                <option value="1">重要</option>
-                <option value="2">紧急</option>
-              </select>
+            {/* 优先级筛选 */}
+            <div className="w-32 sm:w-40">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                优先级
+              </label>
+              <div className="relative">
+                <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
+                >
+                  <option value="all">全部</option>
+                  <option value="0">普通</option>
+                  <option value="1">重要</option>
+                  <option value="2">紧急</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -323,17 +353,14 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
       <div className="space-y-4">
         {filteredItems.map((item) => {
           const categoryBg = categoryBackgroundColors[item.category as keyof typeof categoryBackgroundColors] || 'bg-white'
-          const hoverBg = item.category === '公告' ? 'hover:bg-blue-100' 
-                          : item.category === '通知' ? 'hover:bg-yellow-100'
-                          : item.category === '重要资料' ? 'hover:bg-green-100'
-                          : 'hover:bg-purple-100'
+          const hoverBg = 'hover:bg-[#F15B98]/10'
           
           return (
             <div
               key={item.id}
               onClick={() => handleItemClick(item)}
               className={`${categoryBg} rounded-2xl shadow-sm p-4 sm:p-6 ${hoverBg} cursor-pointer transition-colors ${
-                !item.is_read ? 'ring-2 ring-blue-400' : ''
+                !item.is_read ? 'ring-2 ring-[#F15B98]' : ''
               }`}
             >
               <div className="flex items-start justify-between">
@@ -341,7 +368,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
                   {/* 标题行 */}
                   <div className="flex items-center gap-2 mb-2">
                     {item.is_pinned && (
-                      <Pin className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                      <Pin className="w-4 h-4 text-[#F15B98] flex-shrink-0" />
                     )}
                     <h3 className={`text-base sm:text-lg font-semibold text-gray-900 truncate ${
                       !item.is_read ? 'font-bold' : ''
@@ -379,7 +406,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
                       </div>
                     )}
                     {item.expires_at && (
-                      <div className="flex items-center text-orange-600">
+                      <div className="flex items-center text-[#F15B98]">
                         <Clock className="w-3 h-3 mr-1" />
                         <span>有效期至 {formatDate(item.expires_at)}</span>
                       </div>
@@ -389,7 +416,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
                       <span>{item.view_count} 次阅读</span>
                     </div>
                     {item.attachments && item.attachments.length > 0 && (
-                      <div className="flex items-center text-blue-600">
+                      <div className="flex items-center text-[#F15B98]">
                         <FileText className="w-3 h-3 mr-1" />
                         <span>{item.attachments.length} 个附件</span>
                       </div>

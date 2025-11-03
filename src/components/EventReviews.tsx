@@ -56,7 +56,7 @@ export default function EventReviews() {
   if (loading) {
     return (
       <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-golf-600 mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98] mx-auto"></div>
         <p className="text-gray-500 mt-2">加载中...</p>
       </div>
     )
@@ -89,7 +89,7 @@ export default function EventReviews() {
             onClick={() => setSelectedEvent(event)}
           >
             {/* 活动图片 */}
-            <div className="aspect-[16/9] bg-gradient-to-br from-golf-200 to-golf-300 overflow-hidden">
+            <div className="aspect-[16/9] bg-gradient-to-br from-[#F15B98]/20 to-[#F15B98]/30 overflow-hidden">
               <img
                 src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
                 alt={event.title}
@@ -106,11 +106,11 @@ export default function EventReviews() {
               {/* 活动日期和地点 */}
               <div className="space-y-2 mb-4">
                 <div className="flex items-center text-sm text-gray-600">
-                  <Calendar className="w-4 h-4 mr-2 text-golf-600" />
+                  <Calendar className="w-4 h-4 mr-2 text-golf-500" />
                   <span>{formatEventDate(event.start_time)}</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 mr-2 text-golf-600" />
+                  <MapPin className="w-4 h-4 mr-2 text-golf-500" />
                   <span className="truncate">{event.location}</span>
                 </div>
               </div>
@@ -128,7 +128,7 @@ export default function EventReviews() {
                   <Clock className="w-3 h-3 mr-1" />
                   <span>发布于 {formatDate(event.article_published_at || '')}</span>
                 </div>
-                <div className="flex items-center text-golf-600">
+                <div className="flex items-center text-[#F15B98]">
                   <span className="text-sm font-medium">查看回顾</span>
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
@@ -162,21 +162,21 @@ export default function EventReviews() {
               {/* 活动信息 */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="flex items-center text-gray-600">
-                  <Calendar className="w-5 h-5 mr-3 text-golf-600" />
+                  <Calendar className="w-5 h-5 mr-3 text-golf-500" />
                   <div>
                     <div className="font-medium">活动日期</div>
                     <div className="text-sm">{formatDate(selectedEvent.start_time)}</div>
                   </div>
                 </div>
                 <div className="flex items-center text-gray-600">
-                  <MapPin className="w-5 h-5 mr-3 text-golf-600" />
+                  <MapPin className="w-5 h-5 mr-3 text-golf-500" />
                   <div>
                     <div className="font-medium">活动地点</div>
                     <div className="text-sm">{selectedEvent.location}</div>
                   </div>
                 </div>
                 <div className="flex items-center text-gray-600">
-                  <Users className="w-5 h-5 mr-3 text-golf-600" />
+                  <Users className="w-5 h-5 mr-3 text-golf-500" />
                   <div>
                     <div className="font-medium">参与人数</div>
                     <div className="text-sm">最多 {selectedEvent.max_participants} 人</div>

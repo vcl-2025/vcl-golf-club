@@ -130,7 +130,7 @@ export default function ScoreList({ userId, onScoreSelect }: ScoreListProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="w-8 h-8 border-4 border-golf-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#F15B98] border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -140,32 +140,32 @@ export default function ScoreList({ userId, onScoreSelect }: ScoreListProps) {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Trophy className="w-5 h-5 text-blue-500" />
+            <div className="mb-2" style={{ backgroundColor: 'transparent' }}>
+              <Trophy className="w-5 h-5 lg:w-7 lg:h-7 xl:w-8 xl:h-8 text-golf-500" style={{ fill: 'none', backgroundColor: 'transparent' }} />
             </div>
             <div className="text-2xl font-bold text-gray-900">{stats.totalRounds}</div>
             <div className="text-sm text-gray-600">总轮次</div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <TrendingUp className="w-5 h-5 text-green-500" />
+            <div className="mb-2" style={{ backgroundColor: 'transparent' }}>
+              <TrendingUp className="w-5 h-5 lg:w-7 lg:h-7 xl:w-8 xl:h-8 text-golf-500" style={{ fill: 'none', backgroundColor: 'transparent' }} />
             </div>
             <div className="text-2xl font-bold text-gray-900">{stats.avgStrokes}</div>
             <div className="text-sm text-gray-600">平均杆数</div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Award className="w-5 h-5 text-yellow-500" />
+            <div className="mb-2" style={{ backgroundColor: 'transparent' }}>
+              <Award className="w-5 h-5 lg:w-7 lg:h-7 xl:w-8 xl:h-8 text-golf-500" style={{ fill: 'none', backgroundColor: 'transparent' }} />
             </div>
             <div className="text-2xl font-bold text-gray-900">{stats.bestScore}</div>
             <div className="text-sm text-gray-600">最佳成绩</div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Trophy className="w-5 h-5 text-orange-500" />
+            <div className="mb-2" style={{ backgroundColor: 'transparent' }}>
+              <Trophy className="w-5 h-5 lg:w-7 lg:h-7 xl:w-8 xl:h-8 text-golf-500" style={{ fill: 'none', backgroundColor: 'transparent' }} />
             </div>
             <div className="text-2xl font-bold text-gray-900">{stats.topRanks}</div>
             <div className="text-sm text-gray-600">前三名次</div>
@@ -175,7 +175,7 @@ export default function ScoreList({ userId, onScoreSelect }: ScoreListProps) {
 
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center mb-4">
-          <Filter className="w-5 h-5 text-golf-600 mr-2" />
+          <Filter className="w-5 h-5 text-[#F15B98] mr-2" />
           <h3 className="text-lg font-semibold text-gray-900">筛选条件</h3>
         </div>
 
@@ -249,7 +249,7 @@ export default function ScoreList({ userId, onScoreSelect }: ScoreListProps) {
                 </h3>
                 <div className="flex items-center space-x-2">
                   <div className="text-right">
-                    <div className="text-xl font-bold text-golf-600">{score.total_strokes}杆</div>
+                    <div className="text-xl font-bold text-[#F15B98]">{score.total_strokes}杆</div>
                     {score.rank && (
                       <div className="flex items-center justify-end mt-1">
                         <Trophy className={`w-4 h-4 mr-1 ${
@@ -269,7 +269,7 @@ export default function ScoreList({ userId, onScoreSelect }: ScoreListProps) {
               
               <div className="flex items-center justify-between text-xs text-gray-600">
                 <div className="flex items-center space-x-3">
-                  <span className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded">
+                  <span className="inline-flex items-center px-2 py-1 bg-[#F15B98]/20 text-[#F15B98] rounded">
                     {getCompetitionTypeText(score.competition_type)}
                   </span>
                   <span className="inline-flex items-center">
@@ -295,7 +295,7 @@ export default function ScoreList({ userId, onScoreSelect }: ScoreListProps) {
                         {score.competition_name}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                        <span className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded-lg">
+                        <span className="inline-flex items-center px-2 py-1 bg-[#F15B98]/20 text-[#F15B98] rounded-lg">
                           {getCompetitionTypeText(score.competition_type)}
                         </span>
                         <span className="inline-flex items-center">
@@ -313,13 +313,13 @@ export default function ScoreList({ userId, onScoreSelect }: ScoreListProps) {
 
                 <div className="flex items-center gap-6">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-golf-600">{score.total_strokes}</div>
+                    <div className="text-3xl font-bold text-[#F15B98]">{score.total_strokes}</div>
                     <div className="text-xs text-gray-500 mt-1">总杆数</div>
                   </div>
 
                   {score.net_strokes && (
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">{score.net_strokes}</div>
+                      <div className="text-2xl font-bold text-[#F15B98]">{score.net_strokes}</div>
                       <div className="text-xs text-gray-500 mt-1">净杆数</div>
                     </div>
                   )}

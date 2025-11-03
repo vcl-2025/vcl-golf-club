@@ -428,7 +428,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                 <button
                   type="submit"
                   disabled={loading || !userProfile?.full_name}
-                  className="flex-1 py-3 px-4 bg-golf-600 text-white rounded-lg hover:bg-golf-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 py-3 px-4 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   onClick={() => {
                     // console.log('按钮点击调试信息:', {
                     //   loading,
@@ -576,7 +576,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                     
                     handleRegistrationSubmit()
                   }}
-                  className="flex-1 py-3 px-4 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                  className="flex-1 py-3 px-4 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
                 >
                   提交报名申请
                 </button>

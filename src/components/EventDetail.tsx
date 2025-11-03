@@ -419,7 +419,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
                     </h3>
                     <button
                       onClick={() => setIsFullscreenEditing(true)}
-                      className="flex items-center px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                      className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
                     >
                       <Maximize2 className="w-4 h-4 mr-2" />
                       {event.article_content ? '编辑文章' : '写精彩回顾'}

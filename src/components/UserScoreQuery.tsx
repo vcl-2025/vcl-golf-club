@@ -280,7 +280,7 @@ export default function UserScoreQuery() {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="w-8 h-8 border-4 border-golf-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#F15B98] border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -295,8 +295,8 @@ export default function UserScoreQuery() {
               <p className="text-sm text-gray-600">总轮次</p>
               <p className="text-2xl font-bold text-gray-900">{userStats.totalRounds}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Trophy className="w-6 h-6 text-blue-600" />
+            <div className="flex items-center justify-center">
+              <Trophy className="w-6 h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-golf-500" style={{ fill: 'none' }} />
             </div>
           </div>
         </div>
@@ -307,8 +307,8 @@ export default function UserScoreQuery() {
               <p className="text-sm text-gray-600">平均杆数</p>
               <p className="text-2xl font-bold text-gray-900">{userStats.averageStrokes}</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+            <div className="flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-golf-500" style={{ fill: 'none' }} />
             </div>
           </div>
         </div>
@@ -319,8 +319,8 @@ export default function UserScoreQuery() {
               <p className="text-sm text-gray-600">最佳成绩</p>
               <p className="text-2xl font-bold text-gray-900">{userStats.bestScore}</p>
             </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-              <Award className="w-6 h-6 text-yellow-600" />
+            <div className="flex items-center justify-center">
+              <Award className="w-6 h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-golf-500" style={{ fill: 'none' }} />
             </div>
           </div>
         </div>
@@ -331,8 +331,8 @@ export default function UserScoreQuery() {
               <p className="text-sm text-gray-600">前三名次</p>
               <p className="text-2xl font-bold text-gray-900">{userStats.topThreeCount}</p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Star className="w-6 h-6 text-orange-600" />
+            <div className="flex items-center justify-center">
+              <Star className="w-6 h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 text-golf-500" style={{ fill: 'none' }} />
             </div>
           </div>
         </div>
@@ -413,7 +413,7 @@ export default function UserScoreQuery() {
                             <div className="flex items-center space-x-3">
                               {userScore && (
                                 <div className="flex items-center">
-                                  <span className="font-medium text-golf-600">{userScore.total_strokes}杆</span>
+                                  <span className="font-medium text-[#F15B98]">{userScore.total_strokes}杆</span>
                                   {userScore.rank && (
                                     <div className="flex items-center ml-2">
                                       {getRankIcon(userScore.rank)}
@@ -499,7 +499,7 @@ export default function UserScoreQuery() {
                                     key={score.id}
                                     className={`flex items-center justify-between p-2 sm:p-4 rounded-xl transition-all ${
                                       isCurrentUser 
-                                        ? 'bg-golf-50 border-2 border-golf-200 shadow-lg' 
+                                        ? 'bg-[#F15B98]/10 border-2 border-[#F15B98]/30 shadow-lg' 
                                         : score.rank && score.rank <= 3
                                         ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-200 shadow-md'
                                         : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
@@ -513,13 +513,13 @@ export default function UserScoreQuery() {
                                         </span>
                                       </div>
                                       <div>
-                                        <div className={`font-medium ${isCurrentUser ? 'text-golf-800' : 'text-gray-900'}`}>
+                                        <div className={`font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
                                           {score.is_guest ? (score.player_name || '未知访客') : (score.user_profiles?.full_name || '未知')}
                                           {score.is_guest && (
                                             <span className="ml-2 text-xs text-gray-500">(访客)</span>
                                           )}
                                           {isCurrentUser && (
-                                            <span className="ml-2 text-xs text-golf-600 font-semibold">(我)</span>
+                                            <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
                                           )}
                                         </div>
                                         <div className="text-sm text-gray-600">
@@ -1027,7 +1027,7 @@ export default function UserScoreQuery() {
                     setSelectedYear('')
                     setSelectedMonth('')
                   }}
-                  className="mt-3 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                  className="mt-3 px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
                 >
                   清除过滤器
                 </button>

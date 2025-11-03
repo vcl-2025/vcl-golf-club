@@ -122,11 +122,11 @@ export default function ScoreDetail({ score, onClose }: ScoreDetailProps) {
         </div>
 
         <div className="p-6 space-y-6">
-          <div className="bg-gradient-to-br from-golf-600 to-golf-700 rounded-xl p-6 text-white">
+          <div className="bg-gradient-to-br from-[#F15B98] to-[#F15B98]/90 rounded-xl p-6 text-white">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-2xl font-bold mb-2">{score.competition_name}</h3>
-                <div className="flex items-center space-x-3 text-golf-100">
+                <div className="flex items-center space-x-3 text-white/90">
                   <span className="px-3 py-1 bg-white bg-opacity-20 rounded-lg text-sm">
                     {getCompetitionTypeText(score.competition_type)}
                   </span>
@@ -146,7 +146,7 @@ export default function ScoreDetail({ score, onClose }: ScoreDetailProps) {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
               <div className="bg-white bg-opacity-10 rounded-lg p-4">
-                <div className="text-golf-100 text-sm mb-1">总杆数</div>
+                <div className="text-white/90 text-sm mb-1">总杆数</div>
                 <div className="text-3xl font-bold">{score.total_strokes}</div>
               </div>
 
@@ -172,7 +172,7 @@ export default function ScoreDetail({ score, onClose }: ScoreDetailProps) {
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <h4 className="font-semibold text-gray-900 flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-golf-600" />
+                <Calendar className="w-5 h-5 mr-2 text-golf-500" />
                 比赛信息
               </h4>
 
@@ -205,7 +205,7 @@ export default function ScoreDetail({ score, onClose }: ScoreDetailProps) {
 
             <div className="space-y-4">
               <h4 className="font-semibold text-gray-900 flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2 text-golf-600" />
+                <TrendingUp className="w-5 h-5 mr-2 text-golf-500" />
                 成绩分析
               </h4>
 

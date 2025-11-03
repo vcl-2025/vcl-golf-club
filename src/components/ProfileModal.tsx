@@ -405,7 +405,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
               {/* 头像和基本信息 */}
               <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-6 p-6 bg-gradient-to-r from-golf-50 to-blue-50 rounded-xl border border-golf-100">
                 <div className="flex flex-col items-center">
-                  <div className="w-20 h-20 bg-golf-600 rounded-full flex items-center justify-center overflow-hidden shadow-lg">
+                  <div className="w-20 h-20 bg-[#F15B98] rounded-full flex items-center justify-center overflow-hidden shadow-lg">
                     {userProfile.avatar_url ? (
                       <img 
                         src={userProfile.avatar_url} 
@@ -424,7 +424,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploadingAvatar}
-                        className="w-8 h-8 bg-golf-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-golf-700 transition-colors disabled:opacity-50"
+                        className="w-8 h-8 bg-[#F15B98] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#F15B98]/80 transition-colors disabled:opacity-50"
                         title={userProfile.avatar_url ? "更换头像" : "上传头像"}
                       >
                         {uploadingAvatar ? (
@@ -457,7 +457,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                 {!isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="w-full md:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                    className="w-full md:w-auto flex items-center justify-center space-x-2 px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                     <span>编辑资料</span>
@@ -1050,7 +1050,7 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
               <button
                 onClick={handleCropConfirm}
                 disabled={uploadingAvatar}
-                className="px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors disabled:opacity-50"
               >
                 {uploadingAvatar ? '上传中...' : '确认上传'}
               </button>
