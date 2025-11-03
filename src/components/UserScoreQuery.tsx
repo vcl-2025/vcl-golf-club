@@ -698,7 +698,7 @@ export default function UserScoreQuery() {
                           <h4 className="text-base sm:text-lg font-semibold text-gray-900">团体赛结果</h4>
                           
                           {/* 总比分 */}
-                          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center">
+                          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mx-1 sm:mx-0">
                             {redTeamName && (
                               <div className="flex items-center justify-between bg-white rounded-xl p-2 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-2 sm:gap-4">
                                 <div className="flex items-center space-x-3">
