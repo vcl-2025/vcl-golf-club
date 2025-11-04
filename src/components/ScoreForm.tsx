@@ -1401,8 +1401,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     })))
 
     // 计算每组每洞的胜负
-    // 注意：如果一组内有超过2个团队，需要特殊处理
-    // 目前假设每组只有2个团队进行对抗
+    // 支持每组多个团队（不限制为2个）
     const groupDetails: Array<{ 
       group: number
       teams: Array<{ teamName: string; wins: number; playerCount: number }>
@@ -1413,93 +1412,93 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       const teamEntries = Array.from(teamsMap.entries())
       console.log(`[团队统计] 计算组${groupNumber}: ${teamEntries.length}个团队`, teamEntries.map(([name, players]) => `${name}(${players.length}人)`))
       
-      if (teamEntries.length < 2) {
-        console.warn(`[团队统计] 组${groupNumber}只有${teamEntries.length}个团队，无法进行对抗统计`)
+      if (teamEntries.length < 1) {
+        console.warn(`[团队统计] 组${groupNumber}没有团队，跳过`)
         return
       }
 
-      // 如果只有2个团队，进行两两对抗
-      if (teamEntries.length === 2) {
-        const [team1Name, team1Players] = teamEntries[0]
-        const [team2Name, team2Players] = teamEntries[1]
-        
-        let team1Wins = 0
-        let team2Wins = 0
+      // 初始化每个团队的胜利数
+      const teamWins = new Map<string, number>()
+      teamEntries.forEach(([teamName]) => {
+        teamWins.set(teamName, 0)
+      })
 
-        // 对每个洞进行比较
-        for (let hole = 0; hole < 18; hole++) {
-          // 找团队1该洞的最佳成绩（最小值，杆数越少越好）
-          const team1Scores = team1Players.map(p => {
+      // 对每个洞进行比较，找出最佳成绩的团队
+      for (let hole = 0; hole < 18; hole++) {
+        const holeBestScores: Array<{ teamName: string; bestScore: number }> = []
+        
+        // 计算每个团队在该洞的最佳成绩
+        teamEntries.forEach(([teamName, players]) => {
+          const scores = players.map(p => {
             const score = p.holeScores?.[hole]
-            console.log(`[团队统计] 组${groupNumber} 洞${hole + 1} ${team1Name} ${p.name}: ${score}`)
+            console.log(`[团队统计] 组${groupNumber} 洞${hole + 1} ${teamName} ${p.name}: ${score}`)
             return score
           }).filter(s => s !== undefined && s !== null && !isNaN(s))
-          const team1Best = team1Scores.length > 0 ? Math.min(...team1Scores) : Infinity
           
-          // 找团队2该洞的最佳成绩
-          const team2Scores = team2Players.map(p => {
-            const score = p.holeScores?.[hole]
-            console.log(`[团队统计] 组${groupNumber} 洞${hole + 1} ${team2Name} ${p.name}: ${score}`)
-            return score
-          }).filter(s => s !== undefined && s !== null && !isNaN(s))
-          const team2Best = team2Scores.length > 0 ? Math.min(...team2Scores) : Infinity
-
-          console.log(`[团队统计] 组${groupNumber} 洞${hole + 1}: ${team1Name}最佳=${team1Best}, ${team2Name}最佳=${team2Best}`)
-
-          if (team1Best === Infinity || team2Best === Infinity) {
-            console.warn(`[团队统计] 组${groupNumber} 洞${hole + 1}: 跳过（缺少数据）`)
-            continue
+          const bestScore = scores.length > 0 ? Math.min(...scores) : Infinity
+          if (bestScore !== Infinity) {
+            holeBestScores.push({ teamName, bestScore })
           }
-
-          if (team1Best < team2Best) {
-            team1Wins++
-            console.log(`[团队统计] 组${groupNumber} 洞${hole + 1}: ${team1Name}获胜`)
-          } else if (team2Best < team1Best) {
-            team2Wins++
-            console.log(`[团队统计] 组${groupNumber} 洞${hole + 1}: ${team2Name}获胜`)
-          } else {
-            console.log(`[团队统计] 组${groupNumber} 洞${hole + 1}: 平局`)
-          }
-        }
-        
-        console.log(`[团队统计] 组${groupNumber} 最终结果: ${team1Name}${team1Wins}洞, ${team2Name}${team2Wins}洞`)
-
-        let winner: string | 'tie'
-        if (team1Wins > team2Wins) {
-          winner = team1Name
-        } else if (team2Wins > team1Wins) {
-          winner = team2Name
-        } else {
-          winner = 'tie'
-        }
-
-        groupDetails.push({
-          group: groupNumber,
-          teams: [
-            { teamName: team1Name, wins: team1Wins, playerCount: team1Players.length },
-            { teamName: team2Name, wins: team2Wins, playerCount: team2Players.length }
-          ],
-          winner
         })
-      } else {
-        // 如果超过2个团队，暂时不处理（未来可以扩展为循环赛）
-        console.warn(`[团队统计] 组${groupNumber}有${teamEntries.length}个团队，暂不支持多团队对抗统计`)
+
+        if (holeBestScores.length === 0) {
+          console.warn(`[团队统计] 组${groupNumber} 洞${hole + 1}: 跳过（所有团队都缺少数据）`)
+          continue
+        }
+
+        // 找出该洞的最佳成绩（最小值）
+        const minBestScore = Math.min(...holeBestScores.map(h => h.bestScore))
+        
+        // 找出所有达到最佳成绩的团队（可能有平局）
+        const winners = holeBestScores.filter(h => h.bestScore === minBestScore)
+        
+        console.log(`[团队统计] 组${groupNumber} 洞${hole + 1}: 最佳成绩=${minBestScore}, 获胜团队=${winners.map(w => w.teamName).join(', ')}`)
+
+        // 每洞只有一个获胜结果：如果只有一个团队获胜，该团队得1分；如果有多个团队平局，每个团队得1/n分（n为平局团队数），这样总分数不超过18
+        const pointsPerTeam = 1 / winners.length
+        winners.forEach(winner => {
+          const currentWins = teamWins.get(winner.teamName) || 0
+          teamWins.set(winner.teamName, currentWins + pointsPerTeam)
+        })
       }
+      
+      // 构建该组的团队统计
+      const groupTeams = teamEntries.map(([teamName, players]) => ({
+        teamName,
+        wins: teamWins.get(teamName) || 0,
+        playerCount: players.length
+      }))
+
+      // 找出获胜者（得分最高的团队）
+      const sortedTeams = [...groupTeams].sort((a, b) => b.wins - a.wins)
+      const maxWins = sortedTeams[0]?.wins || 0
+      const winners = sortedTeams.filter(t => t.wins === maxWins)
+      
+      let winner: string | 'tie'
+      if (winners.length === 1) {
+        winner = winners[0].teamName
+      } else if (winners.length > 1) {
+        winner = 'tie' // 多个团队得分相同
+      } else {
+        winner = 'tie' // 没有有效数据
+      }
+
+      console.log(`[团队统计] 组${groupNumber} 最终结果:`, groupTeams.map(t => `${t.teamName}${t.wins.toFixed(2)}洞`).join(', '), `获胜者: ${winner}`)
+
+      groupDetails.push({
+        group: groupNumber,
+        teams: groupTeams,
+        winner
+      })
     })
 
-    // 计算总比分（所有组的胜利数累加）
+    // 计算总比分（所有组的胜利洞数累加）
     let totalScores = new Map<string, number>()
     groupDetails.forEach(detail => {
       detail.teams.forEach(team => {
         const current = totalScores.get(team.teamName) || 0
-        // 如果该团队赢了这一组，加1分；如果平局，加0.5分
-        if (detail.winner === team.teamName) {
-          totalScores.set(team.teamName, current + 1)
-        } else if (detail.winner === 'tie') {
-          totalScores.set(team.teamName, current + 0.5)
-        } else {
-          totalScores.set(team.teamName, current)
-        }
+        // 累加每个团队的获胜洞数（整数）
+        totalScores.set(team.teamName, current + Math.round(team.wins))
       })
     })
 

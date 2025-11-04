@@ -10,7 +10,7 @@ interface MemberLoginProps {
 
 export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
   const navigate = useNavigate()
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login')
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset' | 'changePassword'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
@@ -18,6 +18,14 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [rememberPassword, setRememberPassword] = useState(false)
+  // 修改密码相关状态
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showOldPassword, setShowOldPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [rememberNewPassword, setRememberNewPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -81,11 +89,11 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
 
   // 5张高尔夫球场背景图片
   const backgroundImages = [
-    'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=1920', // 高尔夫球场全景
-    'https://images.pexels.com/photos/1325736/pexels-photo-1325736.jpeg?auto=compress&cs=tinysrgb&w=1920', // 高尔夫球洞特写
-    'https://images.pexels.com/photos/1325734/pexels-photo-1325734.jpeg?auto=compress&cs=tinysrgb&w=1920', // 高尔夫球场绿地
-    'https://images.pexels.com/photos/2002717/pexels-photo-2002717.jpeg?auto=compress&cs=tinysrgb&w=1920', // 高尔夫球场湖景
-    'https://images.pexels.com/photos/1325733/pexels-photo-1325733.jpeg?auto=compress&cs=tinysrgb&w=1920'  // 高尔夫球场日落
+    '/photo1.jpg',
+    '/photo2.jpg',
+    '/photo3.jpg',
+    '/photo4.jpg',
+    '/photo5.jpg'
   ]
 
   useEffect(() => {
@@ -106,6 +114,14 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
     setRememberMe(false)
     setRememberPassword(false)
     setMessage('')
+    // 重置修改密码相关状态
+    setOldPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setShowOldPassword(false)
+    setShowNewPassword(false)
+    setShowConfirmPassword(false)
+    setRememberNewPassword(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,6 +143,75 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         if (error) throw error
         setMessage('密码重置成功！请使用新密码登录。')
         setMode('login')
+      } else if (mode === 'changePassword') {
+        // 修改密码功能
+        if (!email) {
+          setMessage('请输入邮箱地址')
+          setLoading(false)
+          return
+        }
+        
+        if (!oldPassword || !newPassword || !confirmPassword) {
+          setMessage('请填写所有密码字段')
+          setLoading(false)
+          return
+        }
+        
+        if (newPassword !== confirmPassword) {
+          setMessage('新密码和确认密码不一致')
+          setLoading(false)
+          return
+        }
+        
+        if (newPassword.length < 6) {
+          setMessage('新密码长度至少为6位')
+          setLoading(false)
+          return
+        }
+        
+        if (oldPassword === newPassword) {
+          setMessage('新密码不能与旧密码相同')
+          setLoading(false)
+          return
+        }
+        
+        // 先验证旧密码是否正确（通过尝试登录）
+        const { error: verifyError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: oldPassword,
+        })
+        
+        if (verifyError) {
+          setMessage('旧密码错误，请重新输入')
+          setLoading(false)
+          return
+        }
+        
+        // 旧密码正确，更新密码
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: newPassword
+        })
+        
+        if (updateError) throw updateError
+        
+        // 如果选择了记住新密码，保存到localStorage
+        if (rememberNewPassword) {
+          localStorage.setItem('rememberedPassword', newPassword)
+          localStorage.setItem('rememberPasswordChecked', 'true')
+        } else {
+          localStorage.removeItem('rememberedPassword')
+          localStorage.removeItem('rememberPasswordChecked')
+        }
+        
+        setMessage('密码修改成功！系统将自动退出，请使用新密码重新登录。')
+        
+        // 等待2秒后登出并返回登录页面
+        setTimeout(async () => {
+          await supabase.auth.signOut()
+          setMode('login')
+          resetForm()
+        }, 2000)
+        
       } else if (mode === 'register') {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -316,6 +401,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
       case 'register': return '会员注册'
       case 'forgot': return '重置密码'
       case 'reset': return '重置密码'
+      case 'changePassword': return '修改密码'
       default: return '会员登录'
     }
   }
@@ -325,6 +411,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
       case 'register': return '加入溫哥華華人女子高爾夫俱樂部'
       case 'forgot': return '输入您的邮箱地址，我们将发送重置链接'
       case 'reset': return '请输入您的新密码'
+      case 'changePassword': return '请输入您的旧密码和新密码'
       default: return '欢迎回到溫哥華華人女子高爾夫俱樂部'
     }
   }
@@ -371,7 +458,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         <div className="flex-1 flex items-end justify-center px-4 py-4 sm:py-6 lg:items-center lg:py-12 lg:px-12">
           <div className="max-w-lg text-center lg:text-left w-full">
             {/* Logo */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-white rounded-full flex items-center justify-center mx-auto lg:mx-0 mb-3 sm:mb-4 lg:mb-8 border-2 border-golf-700 shadow-lg">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-white rounded-full flex items-center justify-center mx-auto lg:mx-0 mb-3 sm:mb-4 lg:mb-8 border-2 border-[#F15B98] shadow-lg">
               <img 
                 src="/logo-192x192.png" 
                 alt="VCL Golf Club" 
@@ -383,7 +470,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
             <h1 className="text-2xl sm:text-3xl lg:text-5xl xl:text-6xl font-bold text-white mb-2 sm:mb-3 lg:mb-6 leading-tight">
               溫哥華華人女子高爾夫俱樂部
             </h1>
-            <p className="text-golf-200 text-base sm:text-lg lg:text-xl mb-3 sm:mb-4 lg:mb-8 font-medium">
+            <p className="text-white/90 text-base sm:text-lg lg:text-xl mb-3 sm:mb-4 lg:mb-8 font-medium">
               Vancouver Chinese Women's Golf Club
             </p>
             
@@ -396,15 +483,15 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
             <div className="hidden lg:flex justify-start space-x-12">
               <div className="text-center lg:text-left">
                 <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1">{memberCount}+</div>
-                <div className="text-xs sm:text-sm lg:text-base text-golf-200">尊贵会员</div>
+                <div className="text-xs sm:text-sm lg:text-base text-white/80">尊贵会员</div>
               </div>
               <div className="text-center lg:text-left">
                 <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1">18洞</div>
-                <div className="text-xs sm:text-sm lg:text-base text-golf-200">锦标球场</div>
+                <div className="text-xs sm:text-sm lg:text-base text-white/80">锦标球场</div>
               </div>
               <div className="text-center lg:text-left">
                 <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1">{yearsEstablished}年</div>
-                <div className="text-xs sm:text-sm lg:text-base text-golf-200">专业经验</div>
+                <div className="text-xs sm:text-sm lg:text-base text-white/80">专业经验</div>
               </div>
             </div>
           </div>
@@ -413,9 +500,9 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         {/* Right Side - Login Form */}
         <div className="flex-1 flex items-start justify-center px-4 py-2 sm:py-4 lg:items-center lg:px-12 lg:py-8">
           <div className="w-full max-w-sm sm:max-w-md">
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-white/20">
+            <div className="bg-gradient-to-br from-white/90 via-rose-50/85 to-orange-50/85 rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-rose-200/40">
               <div className="text-center mb-6 sm:mb-8">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border-2 border-golf-700 shadow-lg">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border-2 border-[#F15B98] shadow-lg">
                   <img 
                     src="/logo-192x192.png" 
                     alt="VCL Golf Club" 
@@ -437,7 +524,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-golf-500 focus:border-transparent transition-all duration-200 bg-white/80"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#F15B98] focus:border-transparent transition-all duration-200 bg-white/80"
                         placeholder="请输入您的姓名"
                         required
                       />
@@ -451,7 +538,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-golf-500 focus:border-transparent transition-all duration-200 bg-white/80"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#F15B98] focus:border-transparent transition-all duration-200 bg-white/80"
                         placeholder="请输入您的手机号码"
                         required
                       />
@@ -459,48 +546,158 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                   </>
                 )}
 
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                    邮箱地址
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-golf-500 focus:border-transparent transition-all duration-200 bg-white/80"
-                      placeholder="请输入您的邮箱"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {mode !== 'forgot' && (
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                      密码
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-8 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-golf-500 focus:border-transparent transition-all duration-200 bg-white/80"
-                        placeholder="请输入您的密码"
-                        required
-                        minLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
-                      </button>
+                {mode === 'changePassword' ? (
+                  <>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                        邮箱地址
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#F15B98] focus:border-transparent transition-all duration-200 bg-white/80"
+                          placeholder="请输入您的邮箱"
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                        旧密码
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                        <input
+                          type={showOldPassword ? 'text' : 'password'}
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                          className="w-full pl-8 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#F15B98] focus:border-transparent transition-all duration-200 bg-white/80"
+                          placeholder="请输入您的旧密码"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                          className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showOldPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                        新密码
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full pl-8 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#F15B98] focus:border-transparent transition-all duration-200 bg-white/80"
+                          placeholder="请输入您的新密码（至少6位）"
+                          required
+                          minLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showNewPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                        确认新密码
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full pl-8 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#F15B98] focus:border-transparent transition-all duration-200 bg-white/80"
+                          placeholder="请再次输入新密码"
+                          required
+                          minLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <input
+                        id="remember-new-password"
+                        type="checkbox"
+                        checked={rememberNewPassword}
+                        onChange={(e) => setRememberNewPassword(e.target.checked)}
+                        className="h-4 w-4 text-golf-600 focus:ring-golf-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="remember-new-password" className="ml-2 block text-xs sm:text-sm text-gray-700">
+                        记住新密码
+                      </label>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                        邮箱地址
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#F15B98] focus:border-transparent transition-all duration-200 bg-white/80"
+                          placeholder="请输入您的邮箱"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {mode !== 'forgot' && (
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                          密码
+                        </label>
+                        <div className="relative">
+                          <Lock className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full pl-8 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-[#F15B98] focus:border-transparent transition-all duration-200 bg-white/80"
+                            placeholder="请输入您的密码"
+                            required
+                            minLength={6}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {mode === 'login' && (
@@ -513,7 +710,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                             type="checkbox"
                             checked={rememberMe}
                             onChange={(e) => setRememberMe(e.target.checked)}
-                            className="h-4 w-4 text-golf-600 focus:ring-golf-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-[#F15B98] focus:ring-[#F15B98] border-gray-300 rounded"
                           />
                           <label htmlFor="remember-me" className="ml-2 block text-xs sm:text-sm text-gray-700">
                             记住邮箱
@@ -525,7 +722,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                             type="checkbox"
                             checked={rememberPassword}
                             onChange={(e) => setRememberPassword(e.target.checked)}
-                            className="h-4 w-4 text-golf-600 focus:ring-golf-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-[#F15B98] focus:ring-[#F15B98] border-gray-300 rounded"
                           />
                           <label htmlFor="remember-password" className="ml-2 block text-xs sm:text-sm text-gray-700">
                             记住密码
@@ -535,7 +732,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                       <button
                         type="button"
                         onClick={() => setMode('forgot')}
-                        className="text-xs sm:text-sm text-golf-600 hover:text-golf-700 transition-colors text-left sm:text-right"
+                        className="text-xs sm:text-sm text-[#F15B98] hover:text-[#F15B98]/80 transition-colors text-left sm:text-right"
                       >
                         忘记密码？
                       </button>
@@ -556,11 +753,11 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-golf-600 to-golf-700 hover:from-golf-700 hover:to-golf-800 text-white font-semibold py-2 sm:py-3 px-4 text-sm sm:text-base rounded-lg sm:rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  className="w-full bg-gradient-to-r from-[#F15B98] to-[#F15B98]/90 hover:from-[#F15B98]/90 hover:to-[#F15B98]/80 text-white font-semibold py-2 sm:py-3 px-4 text-sm sm:text-base rounded-lg sm:rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   {loading ? 
-                    (mode === 'register' ? '注册中...' : mode === 'forgot' ? '发送中...' : mode === 'reset' ? '重置中...' : '登录中...') : 
-                    (mode === 'register' ? '注册' : mode === 'forgot' ? '发送重置邮件' : mode === 'reset' ? '重置密码' : '登录')
+                    (mode === 'register' ? '注册中...' : mode === 'forgot' ? '发送中...' : mode === 'reset' ? '重置中...' : mode === 'changePassword' ? '修改中...' : '登录中...') : 
+                    (mode === 'register' ? '注册' : mode === 'forgot' ? '发送重置邮件' : mode === 'reset' ? '重置密码' : mode === 'changePassword' ? '修改密码' : '登录')
                   }
                 </button>
               </form>
@@ -594,7 +791,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                           }
                         }
                       }}
-                      className="text-golf-600 hover:text-golf-700 text-xs sm:text-sm underline transition-colors"
+                      className="text-[#F15B98] hover:text-[#F15B98]/80 text-xs sm:text-sm underline transition-colors"
                       disabled={loading || !email}
                     >
                       重新发送验证邮件
@@ -610,7 +807,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                         setMode('login')
                         resetForm()
                       }}
-                      className="text-golf-600 hover:text-golf-700 font-medium ml-1 transition-colors"
+                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium ml-1 transition-colors"
                     >
                       返回登录
                     </button>
@@ -619,19 +816,49 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                   <p className="text-xs sm:text-sm text-gray-600">
                     密码重置成功！请使用新密码登录。
                   </p>
-                ) : (
+                ) : mode === 'changePassword' ? (
                   <p className="text-xs sm:text-sm text-gray-600">
-                    {mode === 'register' ? '已有账户？' : '还不是会员？'}
+                    记起旧密码了？
                     <button 
                       onClick={() => {
-                        setMode(mode === 'register' ? 'login' : 'register')
+                        setMode('login')
                         resetForm()
                       }}
-                      className="text-golf-600 hover:text-golf-700 font-medium ml-1 transition-colors"
+                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium ml-1 transition-colors"
                     >
-                      {mode === 'register' ? '立即登录' : '立即注册'}
+                      返回登录
                     </button>
                   </p>
+                ) : (
+                  mode === 'register' ? (
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      已有账户？
+                      <button 
+                        onClick={() => {
+                          setMode('login')
+                          resetForm()
+                        }}
+                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium ml-1 transition-colors"
+                      >
+                        立即登录
+                      </button>
+                    </p>
+                  ) : (
+                    // 暂时屏蔽注册功能
+                    null
+                    // <p className="text-xs sm:text-sm text-gray-600">
+                    //   还不是会员？
+                    //   <button 
+                    //     onClick={() => {
+                    //       setMode('register')
+                    //       resetForm()
+                    //     }}
+                    //     className="text-golf-600 hover:text-golf-700 font-medium ml-1 transition-colors"
+                    //   >
+                    //     立即注册
+                    //   </button>
+                    // </p>
+                  )
                 )}
               </div>
             </div>

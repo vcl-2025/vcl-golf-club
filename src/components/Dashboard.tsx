@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -69,8 +69,19 @@ export default function Dashboard() {
   const [memberCount, setMemberCount] = useState<number>(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [adminMenuVisible, setAdminMenuVisible] = useState(true)
+  // 修改密码相关状态
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showOldPassword, setShowOldPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [rememberNewPassword, setRememberNewPassword] = useState(false)
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false)
+  const [passwordChangeMessage, setPasswordChangeMessage] = useState('')
   const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin'>('dashboard')
   const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
 
@@ -80,6 +91,20 @@ export default function Dashboard() {
       setAdminMenuVisible(true)
     }
   }, [userMenuOpen, currentView])
+
+  // 当修改密码modal打开时，禁止背景滚动
+  useEffect(() => {
+    if (changePasswordModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [changePasswordModalOpen])
+
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedPoster, setSelectedPoster] = useState<Poster | null>(null)
   const [selectedScore, setSelectedScore] = useState<Score | null>(null)
@@ -528,6 +553,22 @@ export default function Dashboard() {
                         <User className="w-4 h-4 mr-3" />
                         个人资料
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setChangePasswordModalOpen(true)
+                          setUserMenuOpen(false)
+                          // 恢复管理员菜单显示
+                          if (currentView === 'admin') {
+                            setAdminMenuVisible(true)
+                          }
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Lock className="w-4 h-4 mr-3" />
+                        修改密码
+                      </button>
                       {isAdmin && (
                         <button
                           onClick={(e) => {
@@ -761,6 +802,18 @@ export default function Dashboard() {
                 >
                   <User className="w-5 h-5" />
                   <span>个人资料</span>
+                </button>
+                
+                {/* Mobile Change Password Button */}
+                <button
+                  onClick={() => {
+                    setChangePasswordModalOpen(true)
+                    setMobileMenuOpen(false)
+                  }}
+                  className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#F15B98] font-medium text-sm text-left w-full rounded-lg transition-colors"
+                >
+                  <Lock className="w-5 h-5" />
+                  <span>修改密码</span>
                 </button>
                 
                 {/* Mobile Admin Button */}
@@ -1432,14 +1485,20 @@ export default function Dashboard() {
           </>
         ) : currentView === 'events' ? (
           <div>
-            <div className="mb-6">
+            <div className="mb-6 text-center">
               <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">活动报名</h2>
               <p className="text-gray-600">参加俱乐部精彩活动，与球友们一起享受高尔夫乐趣</p>
             </div>
             <EventList onEventSelect={setSelectedEvent} user={user} />
           </div>
         ) : currentView === 'scores' ? (
-          <UserScoreQuery />
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">成绩查询</h2>
+              <p className="text-gray-600">查看您的比赛成绩和排名</p>
+            </div>
+            <UserScoreQuery />
+          </div>
         ) : currentView === 'investments' ? (
           <div className="space-y-6">
             <div className="text-center">
@@ -1479,6 +1538,249 @@ export default function Dashboard() {
         onClose={() => setProfileModalOpen(false)}
         user={user}
       />
+
+      {/* Change Password Modal */}
+      {changePasswordModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4"
+          onClick={() => setChangePasswordModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl w-full max-w-md shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">修改密码</h2>
+                <button
+                  onClick={() => {
+                    setChangePasswordModalOpen(false)
+                    setOldPassword('')
+                    setNewPassword('')
+                    setConfirmPassword('')
+                    setPasswordChangeMessage('')
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault()
+                setPasswordChangeLoading(true)
+                setPasswordChangeMessage('')
+
+                try {
+                  if (!oldPassword || !newPassword || !confirmPassword) {
+                    setPasswordChangeMessage('请填写所有密码字段')
+                    setPasswordChangeLoading(false)
+                    return
+                  }
+
+                  if (newPassword !== confirmPassword) {
+                    setPasswordChangeMessage('新密码和确认密码不一致')
+                    setPasswordChangeLoading(false)
+                    return
+                  }
+
+                  if (newPassword.length < 6) {
+                    setPasswordChangeMessage('新密码长度至少为6位')
+                    setPasswordChangeLoading(false)
+                    return
+                  }
+
+                  if (oldPassword === newPassword) {
+                    setPasswordChangeMessage('新密码不能与旧密码相同')
+                    setPasswordChangeLoading(false)
+                    return
+                  }
+
+                  if (!user?.email) {
+                    setPasswordChangeMessage('无法获取用户邮箱')
+                    setPasswordChangeLoading(false)
+                    return
+                  }
+
+                  // 先验证旧密码是否正确（通过尝试登录）
+                  const { error: verifyError } = await supabase.auth.signInWithPassword({
+                    email: user.email,
+                    password: oldPassword,
+                  })
+
+                  if (verifyError) {
+                    setPasswordChangeMessage('旧密码错误，请重新输入')
+                    setPasswordChangeLoading(false)
+                    return
+                  }
+
+                  // 旧密码正确，更新密码
+                  const { error: updateError } = await supabase.auth.updateUser({
+                    password: newPassword
+                  })
+
+                  if (updateError) throw updateError
+
+                  // 如果选择了记住新密码，保存到localStorage
+                  if (rememberNewPassword) {
+                    localStorage.setItem('rememberedPassword', newPassword)
+                    localStorage.setItem('rememberPasswordChecked', 'true')
+                  } else {
+                    localStorage.removeItem('rememberedPassword')
+                    localStorage.removeItem('rememberPasswordChecked')
+                  }
+
+                  setPasswordChangeMessage('密码修改成功！系统将自动退出，请使用新密码重新登录。')
+
+                  // 等待2秒后登出并返回登录页面
+                  setTimeout(async () => {
+                    await supabase.auth.signOut()
+                    setChangePasswordModalOpen(false)
+                    setOldPassword('')
+                    setNewPassword('')
+                    setConfirmPassword('')
+                    setPasswordChangeMessage('')
+                  }, 2000)
+
+                } catch (error: any) {
+                  console.error('修改密码失败:', error)
+                  setPasswordChangeMessage(error.message || '修改密码失败，请重试')
+                } finally {
+                  setPasswordChangeLoading(false)
+                }
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    旧密码
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type={showOldPassword ? 'text' : 'password'}
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all"
+                      placeholder="请输入您的旧密码"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOldPassword(!showOldPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showOldPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    新密码
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all"
+                      placeholder="请输入您的新密码（至少6位）"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    确认新密码
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all"
+                      placeholder="请再次输入新密码"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    id="remember-new-password-checkbox"
+                    type="checkbox"
+                    checked={rememberNewPassword}
+                    onChange={(e) => setRememberNewPassword(e.target.checked)}
+                    className="h-4 w-4 text-[#F15B98] focus:ring-[#F15B98] border-gray-300 rounded"
+                  />
+                  <label htmlFor="remember-new-password-checkbox" className="ml-2 block text-sm text-gray-700">
+                    记住新密码
+                  </label>
+                </div>
+
+                {passwordChangeMessage && (
+                  <div className={`p-3 rounded-lg text-sm border ${
+                    passwordChangeMessage.includes('成功')
+                      ? 'bg-green-50 text-green-700 border-green-200' 
+                      : 'bg-red-50 text-red-700 border-red-200'
+                  }`}>
+                    {passwordChangeMessage}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChangePasswordModalOpen(false)
+                      setOldPassword('')
+                      setNewPassword('')
+                      setConfirmPassword('')
+                      setPasswordChangeMessage('')
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    disabled={passwordChangeLoading}
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={passwordChangeLoading || !oldPassword || !newPassword || !confirmPassword}
+                    className="px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {passwordChangeLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
+                        修改中...
+                      </>
+                    ) : (
+                      '确认修改'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Event Detail Modal */}
       {selectedEvent && (

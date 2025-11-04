@@ -501,12 +501,14 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     <div className="space-y-6">
       {/* 管理员导航 */}
       <div 
-        className={`bg-gradient-to-r from-green-700 to-green-800 rounded-3xl p-4 shadow-lg sticky top-0 z-[60] transition-all duration-400 ease-in-out ${
+        className={`rounded-3xl p-4 shadow-lg sticky top-0 z-[60] transition-all duration-400 ease-in-out ${
           adminMenuVisible 
             ? 'opacity-100 transform translate-y-0 scale-100' 
             : 'opacity-0 transform -translate-y-4 scale-95 pointer-events-none'
         }`}
         style={{
+          backgroundColor: '#619f56',
+          borderColor: 'rgba(255,255,255,0.2)',
           transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out'
         }}
       >

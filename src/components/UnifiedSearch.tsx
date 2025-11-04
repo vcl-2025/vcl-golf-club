@@ -130,43 +130,44 @@ export default function UnifiedSearch({
           </div>
         )}
 
-        {/* 年份选择 */}
-        <div className="w-32">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-            年份
-          </label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <select
-              value={selectedYear}
-              onChange={(e) => onYearChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
-            >
-              <option value="">全部年份</option>
-              {availableYears.map(year => (
-                <option key={year} value={year.toString()}>{year}年</option>
-              ))}
-            </select>
+        {/* 年份和月份选择 - 一行显示 */}
+        <div className="flex flex-row gap-2 sm:gap-4">
+          <div className="w-32">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+              年份
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={selectedYear}
+                onChange={(e) => onYearChange(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
+              >
+                <option value="">全部年份</option>
+                {availableYears.map(year => (
+                  <option key={year} value={year.toString()}>{year}年</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
 
-        {/* 月份选择 */}
-        <div className="w-32">
-          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-            月份
-          </label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <select
-              value={selectedMonth}
-              onChange={(e) => onMonthChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
-            >
-              <option value="">全部月份</option>
-              {availableMonths.map(month => (
-                <option key={month.value} value={month.value}>{month.label}</option>
-              ))}
-            </select>
+          <div className="w-32">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+              月份
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={selectedMonth}
+                onChange={(e) => onMonthChange(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
+              >
+                <option value="">全部月份</option>
+                {availableMonths.map(month => (
+                  <option key={month.value} value={month.value}>{month.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

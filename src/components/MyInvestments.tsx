@@ -95,8 +95,8 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
       confirmed: {
         icon: CheckCircle,
         label: '已确认',
-        color: 'text-green-600 bg-green-50 border-green-200',
-        iconColor: 'text-green-600'
+        color: 'text-[#F15B98] bg-[#F15B98]/10 border-[#F15B98]/30',
+        iconColor: 'text-[#F15B98]'
       },
       rejected: {
         icon: XCircle,
@@ -125,35 +125,35 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F15B98]"></div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-100">
-        <div className="flex items-center mb-6">
-          <Heart className="w-8 h-8 text-red-500 mr-3" />
-          <h2 className="text-2xl font-bold text-gray-900">我的捐赠与赞助</h2>
+      <div className="bg-gradient-to-br from-[#F15B98]/10 to-[#F15B98]/5 rounded-2xl p-3 sm:p-4 border border-[#F15B98]/20">
+        <div className="flex items-center mb-3 sm:mb-4">
+          <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-golf-400 mr-2 sm:mr-3" style={{ fill: 'none' }} />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">我的捐赠与赞助</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">累计捐赠</div>
-            <div className="text-2xl font-bold text-green-600">{formatAmount(getTotalInvested())}</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">累计捐赠</div>
+            <div className="text-lg sm:text-xl font-bold text-[#F15B98]">{formatAmount(getTotalInvested())}</div>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">支持项目</div>
-            <div className="text-2xl font-bold text-gray-900">{investments.length}</div>
+          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">支持项目</div>
+            <div className="text-lg sm:text-xl font-bold text-gray-900">{investments.length}</div>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">待确认</div>
-            <div className="text-2xl font-bold text-yellow-600">{getStatusCount('pending')}</div>
+          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">待确认</div>
+            <div className="text-lg sm:text-xl font-bold text-yellow-600">{getStatusCount('pending')}</div>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">已确认</div>
-            <div className="text-2xl font-bold text-green-600">{getStatusCount('confirmed')}</div>
+          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">已确认</div>
+            <div className="text-lg sm:text-xl font-bold text-[#F15B98]">{getStatusCount('confirmed')}</div>
           </div>
         </div>
       </div>
@@ -185,7 +185,7 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                     </div>
                     <div className="text-right ml-4">
                       <div className="text-sm text-gray-500 mb-1">我的捐赠</div>
-                      <div className="text-2xl font-bold text-green-600">
+                      <div className="text-2xl font-bold text-[#F15B98]">
                         {formatAmount(investment.amount)}
                       </div>
                     </div>
@@ -201,7 +201,7 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                         <div
-                          className="bg-green-600 h-2 rounded-full transition-all"
+                          className="bg-gradient-to-r from-golf-400 to-golf-500 h-2 rounded-full transition-all"
                           style={{ width: `${calculateProgress(calculateProjectAmount(investment.project_id), project.target_amount)}%` }}
                         ></div>
                       </div>

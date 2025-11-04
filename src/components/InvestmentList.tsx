@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Heart, TrendingUp, Calendar, DollarSign, ChevronRight, List, RefreshCw } from 'lucide-react'
+import { Heart, TrendingUp, Calendar, DollarSign, ChevronRight, List } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import MyInvestments from './MyInvestments'
 import { useAuth } from '../hooks/useAuth'
@@ -150,20 +150,20 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F15B98]"></div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <div className="bg-white rounded-xl border border-gray-200 p-1 inline-flex">
           <button
             onClick={() => setActiveTab('all')}
             className={`px-6 py-2 rounded-lg font-medium text-sm transition-colors ${
               activeTab === 'all'
-                ? 'bg-green-600 text-white'
+                ? 'bg-[#F15B98] text-white'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -173,22 +173,13 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
             onClick={() => setActiveTab('my')}
             className={`px-6 py-2 rounded-lg font-medium text-sm transition-colors ${
               activeTab === 'my'
-                ? 'bg-green-600 text-white'
+                ? 'bg-[#F15B98] text-white'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             我的捐赠
           </button>
         </div>
-        
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? '刷新中...' : '刷新数据'}
-        </button>
       </div>
 
       {activeTab === 'all' ? (
@@ -209,38 +200,38 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
                 <div
                   key={project.id}
                   onClick={() => onProjectSelect(project)}
-                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer border border-gray-100 hover:border-green-200"
+                  className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-lg transition-all cursor-pointer border border-gray-100 hover:border-[#F15B98]/30"
                 >
                   <div className="flex items-start justify-between mb-3 sm:mb-4">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2">{project.title}</h3>
                       <p className="text-gray-600 text-sm line-clamp-2">{project.description}</p>
                     </div>
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-xl flex items-center justify-center ml-3 sm:ml-4 flex-shrink-0">
-                      <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
+                    <div className="flex items-center justify-center ml-3 sm:ml-4 flex-shrink-0">
+                      <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-golf-400" style={{ fill: 'none' }} />
                     </div>
                   </div>
 
                   <div className="mb-3 sm:mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs sm:text-sm text-gray-600">筹款进度</span>
-                      <span className="text-xs sm:text-sm font-semibold text-green-600">{progress.toFixed(1)}%</span>
+                      <span className="text-xs sm:text-sm font-semibold text-[#F15B98]">{progress.toFixed(1)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-3 overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-green-500 to-green-600 h-2.5 sm:h-3 rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-golf-400 to-golf-500 h-2.5 sm:h-3 rounded-full transition-all duration-500"
                         style={{ width: `${progress}%` }}
                       ></div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-3 sm:mb-4">
-                    <div className="bg-green-50 rounded-lg p-2.5 sm:p-3">
-                      <div className="flex items-center text-green-700 mb-1">
+                    <div className="bg-[#F15B98]/10 rounded-lg p-2.5 sm:p-3">
+                      <div className="flex items-center text-[#F15B98] mb-1">
                         <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
                         <span className="text-[10px] sm:text-xs font-medium">已筹集</span>
                       </div>
-                      <div className="text-sm sm:text-base font-bold text-green-900 leading-tight">
+                      <div className="text-sm sm:text-base font-bold text-[#F15B98] leading-tight">
                         {formatAmount(actualAmount)}
                       </div>
                     </div>
@@ -262,7 +253,7 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
                         {daysLeft > 0 ? `剩余 ${daysLeft} 天` : '已结束'}
                       </span>
                     </div>
-                    <button className="flex items-center text-green-600 font-medium text-xs sm:text-sm hover:text-green-700 whitespace-nowrap">
+                    <button className="flex items-center text-[#F15B98] font-medium text-xs sm:text-sm hover:text-[#F15B98]/80 whitespace-nowrap">
                       立即支持
                       <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1" />
                     </button>

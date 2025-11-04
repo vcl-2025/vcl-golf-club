@@ -340,12 +340,6 @@ export default function UserScoreQuery() {
 
       {/* 成绩查询 */}
       <div className="bg-white rounded-2xl shadow-sm px-1 sm:px-6 pt-2 pb-2 sm:pt-6 sm:pb-6">
-        <div className="flex items-center justify-between mb-4 sm:mb-6 px-1 sm:px-0">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-            <Trophy className="w-7 h-7 text-yellow-500 mr-3" />
-            比赛成绩查询
-          </h2>
-        </div>
 
         {/* 统一搜索组件 */}
         <div className="px-1 sm:px-0 mb-4 sm:mb-6">
@@ -460,19 +454,15 @@ export default function UserScoreQuery() {
                     </div>
                     <div className="flex items-center space-x-2">
                       {group.event.event_type && (
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          group.event.event_type === '团体赛' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
                           {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
                         </span>
                       )}
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
                         {group.scores.length}人参赛
                       </span>
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+                      <div className="flex items-center justify-center flex-shrink-0">
+                        <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-golf-400" style={{ fill: 'none' }} />
                       </div>
                     </div>
                   </div>
@@ -480,7 +470,7 @@ export default function UserScoreQuery() {
 
                 {/* 折叠内容 - 所有参赛者成绩排名或团体赛结果 */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 px-2 sm:px-6 pb-4 bg-white rounded-b-2xl">
+                  <div className="border-t border-gray-100 px-0 sm:px-6 pb-4 bg-white rounded-b-2xl">
                     {/* 如果是团体赛，显示团体赛结果 */}
                     {group.event.event_type === '团体赛' && (() => {
                       // 过滤出有分组和团队信息的成绩
@@ -599,233 +589,244 @@ export default function UserScoreQuery() {
                       
                       groups.forEach((teamsMap, groupNumber) => {
                         const teamEntries = Array.from(teamsMap.entries())
-                        if (teamEntries.length < 2) return
+                        if (teamEntries.length < 1) return
                         
-                        if (teamEntries.length === 2) {
-                          const [team1Name, team1Players] = teamEntries[0]
-                          const [team2Name, team2Players] = teamEntries[1]
+                        // 初始化每个团队的胜利数
+                        const teamWins = new Map<string, number>()
+                        teamEntries.forEach(([teamName]) => {
+                          teamWins.set(teamName, 0)
+                          if (!totalScores.has(teamName)) {
+                            totalScores.set(teamName, 0)
+                          }
+                        })
+                        
+                        // 对每个洞进行比较，找出最佳成绩的团队
+                        for (let hole = 0; hole < 18; hole++) {
+                          const holeBestScores: Array<{ teamName: string; bestScore: number }> = []
                           
-                          let team1Wins = 0
-                          let team2Wins = 0
-                          
-                          // 计算每洞胜负
-                          for (let hole = 0; hole < 18; hole++) {
-                            const team1Scores = team1Players.map(p => {
-                              const score = p.holeScores[hole]
-                              return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
-                            }).filter(s => s !== Infinity)
-                            const team2Scores = team2Players.map(p => {
-                              const score = p.holeScores[hole]
+                          // 计算每个团队在该洞的最佳成绩
+                          teamEntries.forEach(([teamName, players]) => {
+                            const scores = players.map(p => {
+                              const score = p.holeScores?.[hole]
                               return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
                             }).filter(s => s !== Infinity)
                             
-                            const team1Best = team1Scores.length > 0 ? Math.min(...team1Scores) : Infinity
-                            const team2Best = team2Scores.length > 0 ? Math.min(...team2Scores) : Infinity
-                            
-                            if (team1Best === Infinity && team2Best === Infinity) {
-                              continue
+                            const bestScore = scores.length > 0 ? Math.min(...scores) : Infinity
+                            if (bestScore !== Infinity) {
+                              holeBestScores.push({ teamName, bestScore })
                             }
-                            if (team1Best === Infinity) {
-                              team2Wins++
-                            } else if (team2Best === Infinity) {
-                              team1Wins++
-                            } else if (team1Best < team2Best) {
-                              team1Wins++
-                            } else if (team2Best < team1Best) {
-                              team2Wins++
-                            }
-                          }
+                          })
                           
-                          let winner: string | 'tie'
-                          if (!totalScores.has(team1Name)) {
-                            totalScores.set(team1Name, 0)
-                          }
-                          if (!totalScores.has(team2Name)) {
-                            totalScores.set(team2Name, 0)
-                          }
+                          if (holeBestScores.length === 0) continue
                           
-                          if (team1Wins > team2Wins) {
-                            winner = team1Name
-                            totalScores.set(team1Name, (totalScores.get(team1Name) || 0) + 1)
-                          } else if (team2Wins > team1Wins) {
-                            winner = team2Name
-                            totalScores.set(team2Name, (totalScores.get(team2Name) || 0) + 1)
-                          } else {
-                            winner = 'tie'
-                            totalScores.set(team1Name, (totalScores.get(team1Name) || 0) + 0.5)
-                            totalScores.set(team2Name, (totalScores.get(team2Name) || 0) + 0.5)
-                          }
+                          // 找出该洞的最佳成绩（最小值）
+                          const minBestScore = Math.min(...holeBestScores.map(h => h.bestScore))
                           
-                          groupDetails.push({
-                            group: groupNumber,
-                            teams: [
-                              { teamName: team1Name, wins: team1Wins, playerCount: team1Players.length, players: team1Players },
-                              { teamName: team2Name, wins: team2Wins, playerCount: team2Players.length, players: team2Players }
-                            ],
-                            winner
+                          // 找出所有达到最佳成绩的团队（可能有平局）
+                          const winners = holeBestScores.filter(h => h.bestScore === minBestScore)
+                          
+                          // 每洞只有一个获胜结果：如果只有一个团队获胜，该团队得1分；如果有多个团队平局，每个团队得1/n分（n为平局团队数）
+                          const pointsPerTeam = 1 / winners.length
+                          winners.forEach(winner => {
+                            const currentWins = teamWins.get(winner.teamName) || 0
+                            teamWins.set(winner.teamName, currentWins + pointsPerTeam)
                           })
                         }
+                        
+                        // 构建该组的团队统计
+                        const groupTeams = teamEntries.map(([teamName, players]) => ({
+                          teamName,
+                          wins: teamWins.get(teamName) || 0,
+                          playerCount: players.length,
+                          players: players
+                        }))
+                        
+                        // 找出获胜者（得分最高的团队）
+                        const sortedTeams = [...groupTeams].sort((a, b) => b.wins - a.wins)
+                        const maxWins = sortedTeams[0]?.wins || 0
+                        const winners = sortedTeams.filter(t => t.wins === maxWins)
+                        
+                        let winner: string | 'tie'
+                        if (winners.length === 1) {
+                          winner = winners[0].teamName
+                          totalScores.set(winner, (totalScores.get(winner) || 0) + 1)
+                        } else if (winners.length > 1) {
+                          winner = 'tie'
+                          // 平局时每个团队加0.5分
+                          winners.forEach(w => {
+                            totalScores.set(w.teamName, (totalScores.get(w.teamName) || 0) + 0.5)
+                          })
+                        } else {
+                          winner = 'tie'
+                        }
+                        
+                        groupDetails.push({
+                          group: groupNumber,
+                          teams: groupTeams,
+                          winner
+                        })
                       })
                       
                       // 按组号排序
                       groupDetails.sort((a, b) => a.group - b.group)
                       
-                      // 找到红队和蓝队名称
+                      // 获取所有团队名称并按得分排序
                       const allTeamNames = Array.from(totalScores.keys())
-                      
-                      const checkIfRedName = (name: string) => {
-                        const upper = name.toUpperCase().replace(/\*/g, '').replace(/\s/g, '')
-                        return upper.includes('RED') || name.includes('红') || upper === 'RED'
-                      }
-                      
-                      const checkIfBlueName = (name: string) => {
-                        const upper = name.toUpperCase().replace(/\*/g, '').replace(/\s/g, '')
-                        return upper.includes('BLUE') || name.includes('蓝') || upper === 'BLUE'
-                      }
-                      
-                      const redTeamName = allTeamNames.find(checkIfRedName) || allTeamNames[0]
-                      let blueTeamName = allTeamNames.find(name => {
-                        if (name === redTeamName) return false
-                        return checkIfBlueName(name) || !checkIfRedName(name)
+                      const sortedTeamNames = allTeamNames.sort((a, b) => {
+                        const scoreA = totalScores.get(a) || 0
+                        const scoreB = totalScores.get(b) || 0
+                        return scoreB - scoreA // 按得分降序
                       })
-                      if (!blueTeamName && allTeamNames.length > 1) {
-                        blueTeamName = allTeamNames.find(name => name !== redTeamName) || allTeamNames[1]
-                      }
-                      const finalBlueTeamName = blueTeamName || (allTeamNames.length >= 2 ? allTeamNames[1] : undefined)
+                      
+                      // 定义颜色数组（支持多个团队）
+                      const teamColors = [
+                        { bg: '#F15B98', text: '#F15B98', dot: '#F15B98' }, // 粉色
+                        { bg: '#92c648', text: '#92c648', dot: '#92c648' }, // 绿色
+                        { bg: '#3B82F6', text: '#3B82F6', dot: '#3B82F6' }, // 蓝色
+                        { bg: '#F59E0B', text: '#F59E0B', dot: '#F59E0B' }, // 橙色
+                        { bg: '#8B5CF6', text: '#8B5CF6', dot: '#8B5CF6' }, // 紫色
+                        { bg: '#EF4444', text: '#EF4444', dot: '#EF4444' }, // 红色
+                      ]
+                      
+                      // 为每个团队分配颜色
+                      const teamColorMap = new Map<string, typeof teamColors[0]>()
+                      sortedTeamNames.forEach((teamName, index) => {
+                        teamColorMap.set(teamName, teamColors[index % teamColors.length])
+                      })
                       
                       return (
                         <div className="space-y-4 sm:space-y-6 mt-4">
-                          <h4 className="text-base sm:text-lg font-semibold text-gray-900">团体赛结果</h4>
+                          <h4 className="text-base sm:text-lg font-semibold text-gray-900 mx-1 sm:mx-0">团体赛结果</h4>
                           
-                          {/* 总比分 */}
-                          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mx-1 sm:mx-0">
-                            {redTeamName && (
-                              <div className="flex items-center justify-between bg-white rounded-xl p-2 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-2 sm:gap-4">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-3 h-3 rounded bg-red-500"></div>
-                                  <span className="font-medium text-gray-900">{redTeamName}</span>
+                          {/* 总比分 - 显示所有团队 */}
+                          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mx-1 sm:mx-0 flex-wrap">
+                            {sortedTeamNames.map(teamName => {
+                              const color = teamColorMap.get(teamName) || teamColors[0]
+                              return (
+                                <div key={teamName} className="flex items-center justify-between bg-white rounded-xl p-2 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-2 sm:gap-4">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
+                                    <span className="font-medium text-gray-900">{teamName}</span>
+                                  </div>
+                                  <div className="text-white rounded-lg px-4 sm:px-6 py-2 font-bold text-lg sm:text-xl flex-shrink-0" style={{ backgroundColor: color.bg }}>
+                                    {(totalScores.get(teamName) ?? 0).toFixed(1)}
+                                  </div>
                                 </div>
-                                <div className="bg-red-500 text-white rounded-lg px-4 sm:px-6 py-2 font-bold text-lg sm:text-xl flex-shrink-0">
-                                  {(totalScores.get(redTeamName) ?? 0).toFixed(1)}
-                                </div>
-                              </div>
-                            )}
-                            {finalBlueTeamName && (
-                              <div className="flex items-center justify-between bg-white rounded-xl p-2 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-2 sm:gap-4">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-3 h-3 rounded bg-blue-500"></div>
-                                  <span className="font-medium text-gray-900">{finalBlueTeamName}</span>
-                                </div>
-                                <div className="bg-blue-500 text-white rounded-lg px-4 sm:px-6 py-2 font-bold text-lg sm:text-xl flex-shrink-0">
-                                  {(totalScores.get(finalBlueTeamName) ?? 0).toFixed(1)}
-                                </div>
-                              </div>
-                            )}
+                              )
+                            })}
                           </div>
                           
                           {/* 各组详细结果 */}
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mx-1 sm:mx-0">
                             {groupDetails.map(group => {
-                              const team1 = group.teams[0]
-                              const team2 = group.teams[1]
+                              // 按得分排序团队
+                              const sortedGroupTeams = [...group.teams].sort((a, b) => b.wins - a.wins)
                               
-                              const checkIfRed = (teamName: string | undefined) => {
-                                if (!teamName) return false
-                                const upper = teamName.toUpperCase().replace(/\*/g, '').replace(/\s/g, '')
-                                return upper.includes('RED') || teamName.includes('红') || upper === 'RED'
-                              }
-                              
-                              const checkIfBlue = (teamName: string | undefined) => {
-                                if (!teamName) return false
-                                const upper = teamName.toUpperCase().replace(/\*/g, '').replace(/\s/g, '')
-                                return upper.includes('BLUE') || teamName.includes('蓝') || upper === 'BLUE'
-                              }
-                              
-                              let redTeam: typeof team1 | undefined
-                              let blueTeam: typeof team2 | undefined
-                              
-                              if (checkIfRed(team1?.teamName)) {
-                                redTeam = team1
-                                blueTeam = team2
-                              } else if (checkIfRed(team2?.teamName)) {
-                                redTeam = team2
-                                blueTeam = team1
-                              } else if (checkIfBlue(team1?.teamName)) {
-                                blueTeam = team1
-                                redTeam = team2
-                              } else if (checkIfBlue(team2?.teamName)) {
-                                blueTeam = team2
-                                redTeam = team1
-                              } else {
-                                redTeam = team1
-                                blueTeam = team2
-                              }
-                              
-                              const holeResults: Array<'team1' | 'team2' | 'tie'> = []
-                              const team1Players = team1?.players || []
-                              const team2Players = team2?.players || []
+                              // 计算每洞的胜负（支持多团队）
+                              const holeResults: Array<{ teamName: string; won: boolean }> = []
                               
                               for (let hole = 0; hole < 18; hole++) {
-                                const team1Scores = team1Players.map(p => {
-                                  const score = p.holeScores && p.holeScores[hole]
-                                  return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
-                                }).filter(s => s !== Infinity)
+                                const holeBestScores: Array<{ teamName: string; bestScore: number }> = []
                                 
-                                const team2Scores = team2Players.map(p => {
-                                  const score = p.holeScores && p.holeScores[hole]
-                                  return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
-                                }).filter(s => s !== Infinity)
+                                // 计算每个团队在该洞的最佳成绩
+                                sortedGroupTeams.forEach(team => {
+                                  const scores = team.players.map(p => {
+                                    const score = p.holeScores?.[hole]
+                                    return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
+                                  }).filter(s => s !== Infinity)
+                                  
+                                  const bestScore = scores.length > 0 ? Math.min(...scores) : Infinity
+                                  if (bestScore !== Infinity) {
+                                    holeBestScores.push({ teamName: team.teamName, bestScore })
+                                  }
+                                })
                                 
-                                const team1Best = team1Scores.length > 0 ? Math.min(...team1Scores) : Infinity
-                                const team2Best = team2Scores.length > 0 ? Math.min(...team2Scores) : Infinity
-                                
-                                if (team1Best === Infinity && team2Best === Infinity) {
-                                  holeResults.push('tie')
-                                } else if (team1Best === Infinity) {
-                                  holeResults.push('team2')
-                                } else if (team2Best === Infinity) {
-                                  holeResults.push('team1')
-                                } else if (team1Best < team2Best) {
-                                  holeResults.push('team1')
-                                } else if (team2Best < team1Best) {
-                                  holeResults.push('team2')
-                                } else {
-                                  holeResults.push('tie')
+                                if (holeBestScores.length === 0) {
+                                  sortedGroupTeams.forEach(team => {
+                                    holeResults.push({ teamName: team.teamName, won: false })
+                                  })
+                                  continue
                                 }
+                                
+                                // 找出该洞的最佳成绩
+                                const minBestScore = Math.min(...holeBestScores.map(h => h.bestScore))
+                                const winners = holeBestScores.filter(h => h.bestScore === minBestScore).map(w => w.teamName)
+                                
+                                // 标记获胜团队
+                                sortedGroupTeams.forEach(team => {
+                                  holeResults.push({ teamName: team.teamName, won: winners.includes(team.teamName) })
+                                })
                               }
                               
-                              const redPlayers = redTeam?.players || []
-                              const bluePlayers = blueTeam?.players || []
-                              const isTeam1Red = redTeam === team1
+                              // 统计每个团队的获胜洞数（重新计算，确保与显示一致）
+                              const teamWinsCount = new Map<string, number>()
                               
-                              const redBlueResults: Array<'red' | 'blue' | 'tie'> = holeResults.map(result => {
-                                if (result === 'tie') return 'tie'
-                                if (isTeam1Red) {
-                                  return result === 'team1' ? 'red' : 'blue'
-                                } else {
-                                  return result === 'team1' ? 'blue' : 'red'
-                                }
+                              // 重新计算每洞的胜负（更准确的方法）
+                              for (let hole = 0; hole < 18; hole++) {
+                                const holeBestScores: Array<{ teamName: string; bestScore: number }> = []
+                                
+                                sortedGroupTeams.forEach(team => {
+                                  const scores = team.players.map(p => {
+                                    const score = p.holeScores?.[hole]
+                                    return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
+                                  }).filter(s => s !== Infinity)
+                                  
+                                  const bestScore = scores.length > 0 ? Math.min(...scores) : Infinity
+                                  if (bestScore !== Infinity) {
+                                    holeBestScores.push({ teamName: team.teamName, bestScore })
+                                  }
+                                })
+                                
+                                if (holeBestScores.length === 0) continue
+                                
+                                const minBestScore = Math.min(...holeBestScores.map(h => h.bestScore))
+                                const winners = holeBestScores.filter(h => h.bestScore === minBestScore).map(w => w.teamName)
+                                
+                                // 每洞只有一个获胜结果：如果只有一个团队获胜，该团队得1分；如果有多个团队平局，每个团队得1/n分（n为平局团队数）
+                                const pointsPerTeam = 1 / winners.length
+                                winners.forEach(winner => {
+                                  const current = teamWinsCount.get(winner) || 0
+                                  teamWinsCount.set(winner, current + pointsPerTeam)
+                                })
+                              }
+                              
+                              // 构建比分文本（使用整数显示，但保持小数精度）
+                              const groupScoreText = sortedGroupTeams.map(team => {
+                                const wins = teamWinsCount.get(team.teamName) || 0
+                                return wins % 1 === 0 ? wins.toString() : wins.toFixed(1)
+                              }).join(' - ')
+                              
+                              // 构建摘要文本
+                              const summaryParts = sortedGroupTeams.map(team => {
+                                const wins = teamWinsCount.get(team.teamName) || 0
+                                const winsText = wins % 1 === 0 ? wins.toString() : wins.toFixed(1)
+                                return `${team.teamName}赢${winsText}洞`
+                              })
+                              const summaryText = summaryParts.join('，')
+                              
+                              // 为每个团队分配颜色
+                              const groupTeamColors = sortedGroupTeams.map((team, index) => ({
+                                team,
+                                color: teamColorMap.get(team.teamName) || teamColors[index % teamColors.length]
+                              }))
+                              
+                              // 计算每洞的胜负结果（用于显示圆点）
+                              const holeResultsByTeam = new Map<string, Array<boolean>>()
+                              sortedGroupTeams.forEach(team => {
+                                holeResultsByTeam.set(team.teamName, [])
                               })
                               
-                              const redWins = redBlueResults.filter(r => r === 'red').length
-                              const blueWins = redBlueResults.filter(r => r === 'blue').length
-                              const ties = redBlueResults.filter(r => r === 'tie').length
-                              
-                              let groupScoreText = ''
-                              const groupWinner = group.winner
-                              if (groupWinner === redTeamName) {
-                                groupScoreText = '1 - 0'
-                              } else if (groupWinner === finalBlueTeamName) {
-                                groupScoreText = '0 - 1'
-                              } else {
-                                groupScoreText = '0.5 - 0.5'
+                              for (let hole = 0; hole < 18; hole++) {
+                                const startIdx = hole * sortedGroupTeams.length
+                                sortedGroupTeams.forEach(team => {
+                                  const result = holeResults[startIdx + sortedGroupTeams.indexOf(team)]
+                                  holeResultsByTeam.get(team.teamName)?.push(result?.won || false)
+                                })
                               }
-                              
-                              const summaryText = `红赢${redWins}洞，蓝赢${blueWins}洞，平${ties}洞`
                               
                               return (
                                 <div key={group.group} className="bg-white rounded-2xl p-2 sm:p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-                                        <div className="mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+                                  <div className="mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
                                     <div className="flex items-center justify-start flex-wrap gap-2">
                                       <span className="px-2 sm:px-3 py-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg text-xs sm:text-sm font-semibold text-gray-700 border border-gray-200">
                                         第{group.group}组
@@ -833,116 +834,127 @@ export default function UserScoreQuery() {
                                     </div>
                                   </div>
                                   
-                                  <div className="flex items-start gap-2 sm:gap-4 mb-4 sm:mb-6">
-                                    <div className="flex-1 relative">
-                                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-red-400 to-red-600 rounded-full"></div>
-                                      <div className="pl-3 sm:pl-4 space-y-2 sm:space-y-3">
-                                        {redPlayers.map((player, idx) => (
-                                          <div key={idx} className="flex items-center gap-2 sm:gap-3 group">
-                                            <div className="relative">
-                                              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-300 shadow-sm flex items-center justify-center overflow-hidden">
-                                                {player.avatarUrl ? (
-                                                  <img 
-                                                    src={player.avatarUrl} 
-                                                    alt={player.name}
-                                                    className="w-full h-full object-cover"
-                                                    style={{
-                                                      objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                    }}
-                                                    onError={(e) => {
-                                                      e.currentTarget.style.display = 'none'
-                                                      const parent = e.currentTarget.parentElement
-                                                      if (parent) {
-                                                        parent.innerHTML = '<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>'
-                                                      }
-                                                    }}
-                                                  />
-                                                ) : (
-                                                  <User className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
-                                                )}
+                                  {/* 显示所有团队 */}
+                                  <div className="space-y-4 mb-4 sm:mb-6">
+                                    {groupTeamColors.map(({ team, color }, teamIndex) => {
+                                      const teamHoleResults = holeResultsByTeam.get(team.teamName) || []
+                                      return (
+                                        <div key={team.teamName} className="relative">
+                                          <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
+                                          <div className="pl-3 sm:pl-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
+                                                <span className="font-semibold text-gray-900">{team.teamName}</span>
                                               </div>
+                                              <span className="text-lg font-bold" style={{ color: color.text }}>
+                                                {(() => {
+                                                  const wins = teamWinsCount.get(team.teamName) || 0
+                                                  return wins % 1 === 0 ? `${wins}洞` : `${wins.toFixed(1)}洞`
+                                                })()}
+                                              </span>
                                             </div>
-                                            <div className="flex flex-col">
-                                              <span className="text-sm sm:text-base text-gray-800 font-semibold">{player.name}</span>
-                                              <span className="text-xs sm:text-sm text-gray-500 font-medium">{player.totalStrokes || 0}杆</span>
+                                            <div className="space-y-2">
+                                              {team.players.map((player, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 sm:gap-3">
+                                                  <div className="relative">
+                                                    <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
+                                                         style={{ 
+                                                           backgroundColor: `${color.bg}20`,
+                                                           borderColor: `${color.bg}40`
+                                                         }}>
+                                                      {player.avatarUrl ? (
+                                                        <img 
+                                                          src={player.avatarUrl} 
+                                                          alt={player.name}
+                                                          className="w-full h-full object-cover"
+                                                          style={{
+                                                            objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
+                                                          }}
+                                                          onError={(e) => {
+                                                            e.currentTarget.style.display = 'none'
+                                                            const parent = e.currentTarget.parentElement
+                                                            if (parent) {
+                                                              parent.innerHTML = `<svg class="w-5 h-5" style="color: ${color.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
+                                                            }
+                                                          }}
+                                                        />
+                                                      ) : (
+                                                        <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: color.text }} />
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                  <div className="flex flex-col">
+                                                    <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                    <span className="text-xs text-gray-500">{player.totalStrokes || 0}杆</span>
+                                                  </div>
+                                                </div>
+                                              ))}
                                             </div>
                                           </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    
-                                    {/* 比分显示在中间 - 小尺寸 */}
-                                    <div className="flex flex-col items-center justify-center px-1 sm:px-3 flex-shrink-0">
-                                      <div className="flex items-center gap-1 sm:gap-1.5 bg-gradient-to-r from-red-50 via-white to-blue-50 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-200">
-                                        <span className="text-2xl sm:text-3xl font-bold text-red-600 tracking-tight">
-                                          {groupScoreText.split(' - ')[0]}
-                                        </span>
-                                        <span className="text-gray-400 text-base sm:text-lg font-light">-</span>
-                                        <span className="text-2xl sm:text-3xl font-bold text-blue-600 tracking-tight">
-                                          {groupScoreText.split(' - ')[1]}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    
-                                    <div className="flex-1 relative">
-                                      <div className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
-                                      <div className="pr-3 sm:pr-4 space-y-2 sm:space-y-3">
-                                        {bluePlayers.map((player, idx) => (
-                                          <div key={idx} className="flex items-center gap-2 sm:gap-3 group justify-end">
-                                            <div className="flex flex-col items-end">
-                                              <span className="text-sm sm:text-base text-gray-800 font-semibold">{player.name}</span>
-                                              <span className="text-xs sm:text-sm text-gray-500 font-medium">{player.totalStrokes || 0}杆</span>
-                                            </div>
-                                            <div className="relative">
-                                              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 shadow-sm flex items-center justify-center overflow-hidden">
-                                                {player.avatarUrl ? (
-                                                  <img 
-                                                    src={player.avatarUrl} 
-                                                    alt={player.name}
-                                                    className="w-full h-full object-cover"
-                                                    style={{
-                                                      objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                    }}
-                                                    onError={(e) => {
-                                                      e.currentTarget.style.display = 'none'
-                                                      const parent = e.currentTarget.parentElement
-                                                      if (parent) {
-                                                        parent.innerHTML = '<svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>'
-                                                      }
-                                                    }}
-                                                  />
-                                                ) : (
-                                                  <User className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                  
+                                  {/* 比分显示 */}
+                                  <div className="flex items-center justify-center mb-4">
+                                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
+                                      {sortedGroupTeams.map((team, idx) => {
+                                        const color = teamColorMap.get(team.teamName) || teamColors[idx % teamColors.length]
+                                        const wins = teamWinsCount.get(team.teamName) || 0
+                                        const winsText = wins % 1 === 0 ? wins.toString() : wins.toFixed(1)
+                                        return (
+                                          <React.Fragment key={team.teamName}>
+                                            <span className="text-xl sm:text-2xl font-bold" style={{ color: color.text }}>
+                                              {winsText}
+                                            </span>
+                                            {idx < sortedGroupTeams.length - 1 && (
+                                              <span className="text-gray-400 text-lg font-light mx-1">-</span>
+                                            )}
+                                          </React.Fragment>
+                                        )
+                                      })}
                                     </div>
                                   </div>
                                   
+                                  {/* 每洞结果显示 */}
                                   <div className="bg-gradient-to-b from-gray-50 to-white rounded-xl p-2 sm:p-4 border border-gray-100">
-                                    <div className="flex justify-center items-center gap-0.5 sm:gap-1 mb-2">
-                                      {redBlueResults.map((result, idx) => (
-                                        <div
-                                          key={idx}
-                                          className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 ${
-                                            result === 'red' ? 'bg-red-500 shadow-md shadow-red-200' : 
-                                            result === 'blue' ? 'bg-blue-500 shadow-md shadow-blue-200' :
-                                            'bg-white border-2 border-gray-300 shadow-sm'
-                                          }`}
-                                          title={`洞${idx + 1}: ${result === 'red' ? '红队获胜' : result === 'blue' ? '蓝队获胜' : '平局'}`}
-                                        >
-                                          {result === 'tie' && (
-                                            <div className="w-1 h-1 rounded-full bg-gray-500"></div>
-                                          )}
-                                        </div>
-                                      ))}
+                                    <div className="flex justify-center items-center gap-0.5 sm:gap-1 mb-2 flex-wrap">
+                                      {Array.from({ length: 18 }, (_, holeIdx) => {
+                                        const holeWinners: string[] = []
+                                        sortedGroupTeams.forEach(team => {
+                                          const results = holeResultsByTeam.get(team.teamName) || []
+                                          if (results[holeIdx]) {
+                                            holeWinners.push(team.teamName)
+                                          }
+                                        })
+                                        
+                                        return (
+                                          <div
+                                            key={holeIdx}
+                                            className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full transition-all duration-200 flex items-center justify-center flex-shrink-0 border-2"
+                                            style={{
+                                              backgroundColor: holeWinners.length > 0 
+                                                ? (teamColorMap.get(holeWinners[0])?.dot || '#gray') 
+                                                : 'white',
+                                              borderColor: holeWinners.length > 0 
+                                                ? (teamColorMap.get(holeWinners[0])?.dot || '#gray') 
+                                                : '#gray',
+                                              opacity: holeWinners.length > 0 ? 1 : 0.3
+                                            }}
+                                            title={`洞${holeIdx + 1}: ${holeWinners.length > 0 ? holeWinners.join('、') + '获胜' : '无数据'}`}
+                                          >
+                                            {holeWinners.length === 0 && (
+                                              <div className="w-1 h-1 rounded-full bg-gray-400"></div>
+                                            )}
+                                          </div>
+                                        )
+                                      })}
                                     </div>
                                     
                                     <div className="text-center pt-2 border-t border-gray-200">
-                                      <span className="inline-block px-3 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r from-red-50 to-blue-50 rounded-full text-xs sm:text-sm font-semibold text-gray-700 border border-gray-200">
+                                      <span className="inline-block px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-100 rounded-full text-xs sm:text-sm font-semibold text-gray-700 border border-gray-200">
                                         {summaryText}
                                       </span>
                                     </div>

@@ -128,13 +128,13 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
         </div>
 
         <div className="p-6">
-          <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-2xl p-6 mb-6">
+          <div className="bg-gradient-to-r from-[#F15B98]/10 to-[#F15B98]/5 rounded-2xl p-6 mb-6">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <h3 className="text-2xl font-bold text-gray-900">{project.title}</h3>
               </div>
-              <div className="w-14 h-14 bg-red-500 rounded-xl flex items-center justify-center ml-4 flex-shrink-0">
-                <Heart className="w-7 h-7 text-white" />
+              <div className="flex items-center justify-center ml-4 flex-shrink-0">
+                <Heart className="w-7 h-7 text-golf-400" style={{ fill: 'none' }} />
               </div>
             </div>
           </div>
@@ -152,12 +152,12 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
                 min="1"
                 step="0.01"
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
                 placeholder="请输入投资金额"
               />
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-[#F15B98]/10 border border-[#F15B98]/30 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3">支付方式</h4>
 
               {project.payment_qrcode_url && (
@@ -174,7 +174,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
               {project.emt_email && (
                 <div className="bg-white rounded-lg p-3">
                   <p className="text-sm text-gray-700 mb-1">EMT 转账邮箱：</p>
-                  <p className="font-mono text-green-600 font-semibold">{project.emt_email}</p>
+                  <p className="font-mono text-[#F15B98] font-semibold">{project.emt_email}</p>
                 </div>
               )}
             </div>
@@ -183,7 +183,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 上传支付凭证（可选）
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#F15B98] transition-colors">
                 <input
                   type="file"
                   accept="image/*"
@@ -220,7 +220,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
                 placeholder="如有特殊说明，请在此填写"
               />
             </div>
@@ -236,7 +236,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-[#F15B98] to-[#F15B98]/90 text-white rounded-lg hover:from-[#F15B98]/90 hover:to-[#F15B98]/80 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '提交中...' : '确认投资'}
               </button>

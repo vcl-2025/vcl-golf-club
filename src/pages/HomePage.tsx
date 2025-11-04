@@ -1,22 +1,92 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Trophy, Calendar, MapPin, Users, ArrowRight, LogIn,
   ChevronRight, Clock, Star, ChevronDown,
-  Phone, Mail, Shield, BarChart3, Zap
+  Phone, Mail, Shield, BarChart3, Zap, MessageCircle, Send,
+  Image as ImageIcon, Smile, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
 import TinyMCEViewer from '../components/TinyMCEViewer'
+import { uploadImageToSupabase, validateImageFile } from '../utils/imageUpload'
+import { useAuth } from '../hooks/useAuth'
+
+// 常用emoji列表
+const COMMON_EMOJIS = [
+  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
+  '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙',
+  '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '👏', '🙌', '👐',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+  '💯', '🔥', '⭐', '🌟', '✨', '🎉', '🎊', '🎈', '🎁', '🏆',
+  '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸',
+  '⛳', '🏌️', '🏌️‍♂️', '🏌️‍♀️', '🏌', '🏌‍♂️', '🏌‍♀️', '⛳', '🏌', '🏌‍♂️',
+  '🎯', '🎲', '🎮', '🎰', '🎨', '🎭', '🎪', '🎬', '🎤', '🎧',
+  '🍕', '🍔', '🍟', '🌭', '🍿', '🧂', '🥓', '🥚', '🍳', '🥞',
+  '☕', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃'
+]
+
+// 辅助函数：解析内容中的图片
+const parseContent = (content: string) => {
+  const parts: Array<{ type: 'text' | 'image'; content: string }> = []
+  const imageRegex = /\[IMAGE:(https?:\/\/[^\]]+)\]/g
+  let lastIndex = 0
+  let match
+
+  while ((match = imageRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', content: content.substring(lastIndex, match.index) })
+    }
+    parts.push({ type: 'image', content: match[1] })
+    lastIndex = match.index + match[0].length
+  }
+
+  if (lastIndex < content.length) {
+    parts.push({ type: 'text', content: content.substring(lastIndex) })
+  }
+
+  return parts.length > 0 ? parts : [{ type: 'text', content }]
+}
+
+interface Reply {
+  id: string
+  event_id: string
+  user_id: string
+  content: string
+  created_at: string
+  updated_at: string
+  parent_reply_id?: string | null
+  user_profile?: {
+    full_name: string
+    avatar_url?: string
+  }
+  child_replies?: Reply[]
+}
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [replies, setReplies] = useState<Reply[]>([])
+  const [loadingReplies, setLoadingReplies] = useState(false)
+  const [replyContent, setReplyContent] = useState('')
+  const [submittingReply, setSubmittingReply] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [mainReplyImages, setMainReplyImages] = useState<string[]>([])
+  const [showMainEmojiPicker, setShowMainEmojiPicker] = useState(false)
+  const mainReplyTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const mainEmojiPickerRef = useRef<HTMLDivElement>(null)
+  const [imageViewerOpen, setImageViewerOpen] = useState(false)
+  const [imageViewerImages, setImageViewerImages] = useState<string[]>([])
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   useEffect(() => {
     fetchPublishedArticles()
+    if (user) {
+      fetchUserProfile()
+    }
     
     // 检测视频是否存在，如果存在则显示视频，否则显示图片
     const video = document.getElementById('hero-video') as HTMLVideoElement
@@ -43,7 +113,52 @@ export default function HomePage() {
       // 尝试加载视频
       video.load()
     }
-  }, [])
+  }, [user])
+
+  useEffect(() => {
+    if (selectedEvent) {
+      fetchReplies(selectedEvent.id)
+      // 禁止背景滚动
+      document.body.style.overflow = 'hidden'
+    } else {
+      setReplies([])
+      // 恢复背景滚动
+      document.body.style.overflow = ''
+    }
+    
+    // 清理函数
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [selectedEvent])
+
+  // 点击外部关闭主回复的emoji选择器
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mainEmojiPickerRef.current && !mainEmojiPickerRef.current.contains(event.target as Node)) {
+        setShowMainEmojiPicker(false)
+      }
+    }
+    if (showMainEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showMainEmojiPicker])
+
+  // 当图片查看器打开时，禁止背景滚动
+  useEffect(() => {
+    if (imageViewerOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [imageViewerOpen])
 
   const fetchPublishedArticles = async () => {
     try {
@@ -89,6 +204,171 @@ export default function HomePage() {
       day: '2-digit'
     })
   }
+
+  const fetchUserProfile = async () => {
+    if (!user) return
+    
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle()
+    
+    setUserProfile(data)
+  }
+
+  const fetchReplies = async (eventId: string) => {
+    try {
+      setLoadingReplies(true)
+      
+      const { data, error } = await supabase
+        .from('event_replies')
+        .select(`
+          *,
+          user_profiles!inner (
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      
+      // 处理数据格式，将user_profiles映射为user_profile
+      const allReplies = (data || []).map((reply: any) => ({
+        ...reply,
+        user_profile: reply.user_profiles,
+        child_replies: []
+      }))
+      
+      // 组织成树形结构
+      const rootReplies: Reply[] = []
+      const replyMap = new Map<string, Reply>()
+      
+      // 先创建所有回复的映射
+      allReplies.forEach(reply => {
+        replyMap.set(reply.id, reply)
+      })
+      
+      // 构建树形结构
+      allReplies.forEach(reply => {
+        if (!reply.parent_reply_id) {
+          rootReplies.push(reply)
+        } else {
+          const parent = replyMap.get(reply.parent_reply_id)
+          if (parent) {
+            if (!parent.child_replies) {
+              parent.child_replies = []
+            }
+            parent.child_replies.push(reply)
+          }
+        }
+      })
+      
+      setReplies(rootReplies)
+    } catch (error) {
+      console.error('获取回复失败:', error)
+    } finally {
+      setLoadingReplies(false)
+    }
+  }
+
+  // 递归计算所有回复数量（包括嵌套回复）
+  const countAllReplies = (replies: Reply[]): number => {
+    return replies.reduce((count, reply) => {
+      return count + 1 + (reply.child_replies ? countAllReplies(reply.child_replies) : 0)
+    }, 0)
+  }
+
+  // 递归获取所有用户ID（包括嵌套回复）
+  const getAllUserIds = (replies: Reply[]): Set<string> => {
+    const userIds = new Set<string>()
+    replies.forEach(reply => {
+      if (reply.user_id) {
+        userIds.add(reply.user_id)
+      }
+      if (reply.child_replies) {
+        getAllUserIds(reply.child_replies).forEach(id => userIds.add(id))
+      }
+    })
+    return userIds
+  }
+
+  const handleSubmitReply = async (parentId: string | null, content: string) => {
+    if (!selectedEvent || !user || !content.trim()) return
+    
+    // 检查是否是会员
+    if (!userProfile || userProfile.role === 'guest') {
+      alert('只有会员可以回复')
+      return
+    }
+
+    try {
+      setSubmittingReply(true)
+      
+      const { data, error } = await supabase
+        .from('event_replies')
+        .insert({
+          event_id: selectedEvent.id,
+          user_id: user.id,
+          content: content.trim(),
+          parent_reply_id: parentId || null
+        })
+        .select(`
+          *,
+          user_profiles!inner (
+            full_name,
+            avatar_url
+          )
+        `)
+        .single()
+
+      if (error) throw error
+      
+      // 重新获取所有回复
+      await fetchReplies(selectedEvent.id)
+      
+      // 清空输入框和关闭 modal
+      if (parentId) {
+        // 如果是回复别人的回复，不需要清空主回复框
+      } else {
+        setReplyContent('')
+        setMainReplyImages([])
+      }
+    } catch (error) {
+      console.error('提交回复失败:', error)
+      alert('提交回复失败，请重试')
+    } finally {
+      setSubmittingReply(false)
+    }
+  }
+
+  const formatReplyDate = useCallback((dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    
+    if (days === 0) {
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      if (hours === 0) {
+        const minutes = Math.floor(diff / (1000 * 60))
+        return minutes <= 0 ? '刚刚' : `${minutes}分钟前`
+      }
+      return `${hours}小时前`
+    } else if (days === 1) {
+      return '昨天'
+    } else if (days < 7) {
+      return `${days}天前`
+    } else {
+      return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      })
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-golf-50 via-white to-golf-100">
@@ -499,14 +779,422 @@ export default function HomePage() {
               </div>
 
               {/* 发布时间 */}
-              <div className="pt-6 border-t border-gray-200">
+              <div className="pt-6 border-t border-gray-200 mb-8">
                 <div className="flex items-center text-sm text-gray-500">
                   <Clock className="w-4 h-4 mr-2" />
                   <span>发布于 {formatDate(selectedEvent.article_published_at || '')}</span>
                 </div>
               </div>
+
+              {/* 回复区域 */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <MessageCircle className="w-5 h-5 text-gray-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">回复</h3>
+                  {replies.length > 0 && (
+                    <span className="text-sm text-gray-500">
+                      ({countAllReplies(replies)} 条评论 / {getAllUserIds(replies).size} 人参与)
+                    </span>
+                  )}
+                </div>
+
+                {loadingReplies ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-golf-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-2 text-sm">加载回复中...</p>
+                  </div>
+                ) : replies.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm">暂无回复，快来发表第一条回复吧！</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 mb-6">
+                    {replies.map((reply) => (
+                      <div key={reply.id} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          {/* 用户头像 */}
+                          <div className="flex-shrink-0">
+                            {reply.user_profile?.avatar_url ? (
+                              <img
+                                src={reply.user_profile.avatar_url}
+                                alt={reply.user_profile.full_name}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold text-xs">
+                                {(reply.user_profile?.full_name || '用户').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-semibold text-gray-900 text-sm">
+                                {reply.user_profile?.full_name || '匿名用户'}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {formatReplyDate(reply.created_at)}
+                                {reply.updated_at !== reply.created_at && (
+                                  <span className="ml-1">(已编辑)</span>
+                                )}
+                              </span>
+                            </div>
+
+                            {/* 回复内容 */}
+                            <div className="text-gray-700 text-sm whitespace-pre-wrap break-words mb-2">
+                              {parseContent(reply.content).map((part, index) => (
+                                <React.Fragment key={index}>
+                                  {part.type === 'text' ? (
+                                    <span>{part.content}</span>
+                                  ) : null}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                            
+                            {/* 图片缩略图 */}
+                            {(() => {
+                              const images = parseContent(reply.content).filter(p => p.type === 'image').map(p => p.content)
+                              if (images.length === 0) return null
+                              
+                              return (
+                                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                  {images.map((imageUrl, idx) => (
+                                    <div
+                                      key={idx}
+                                      onClick={() => {
+                                        setImageViewerImages(images)
+                                        setCurrentImageIndex(idx)
+                                        setImageViewerOpen(true)
+                                      }}
+                                      className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                                    >
+                                      <img
+                                        src={imageUrl}
+                                        alt={`图片 ${idx + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            })()}
+
+                            {/* 嵌套回复 */}
+                            {reply.child_replies && reply.child_replies.length > 0 && (
+                              <div className="mt-3 space-y-3 ml-4 pl-4 border-l-2 border-[#F15B98]">
+                                {reply.child_replies.map((childReply) => (
+                                  <div key={childReply.id} className="bg-white rounded-lg p-3">
+                                    <div className="flex items-start gap-2">
+                                      <div className="flex-shrink-0">
+                                        {childReply.user_profile?.avatar_url ? (
+                                          <img
+                                            src={childReply.user_profile.avatar_url}
+                                            alt={childReply.user_profile.full_name}
+                                            className="w-6 h-6 rounded-full object-cover"
+                                          />
+                                        ) : (
+                                          <div className="w-6 h-6 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold text-xs">
+                                            {(childReply.user_profile?.full_name || '用户').charAt(0).toUpperCase()}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="font-semibold text-gray-900 text-xs">
+                                            {childReply.user_profile?.full_name || '匿名用户'}
+                                          </span>
+                                          <span className="text-xs text-gray-500">
+                                            {formatReplyDate(childReply.created_at)}
+                                          </span>
+                                        </div>
+                                        <div className="text-gray-700 text-xs whitespace-pre-wrap break-words">
+                                          {parseContent(childReply.content).map((part, index) => (
+                                            <React.Fragment key={index}>
+                                              {part.type === 'text' ? (
+                                                <span>{part.content}</span>
+                                              ) : null}
+                                            </React.Fragment>
+                                          ))}
+                                        </div>
+                                        {/* 嵌套回复的图片 */}
+                                        {(() => {
+                                          const images = parseContent(childReply.content).filter(p => p.type === 'image').map(p => p.content)
+                                          if (images.length === 0) return null
+                                          
+                                          return (
+                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                              {images.map((imageUrl, idx) => (
+                                                <div
+                                                  key={idx}
+                                                  onClick={() => {
+                                                    setImageViewerImages(images)
+                                                    setCurrentImageIndex(idx)
+                                                    setImageViewerOpen(true)
+                                                  }}
+                                                  className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+                                                >
+                                                  <img
+                                                    src={imageUrl}
+                                                    alt={`图片 ${idx + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                  />
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )
+                                        })()}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 回复输入框（仅会员可见） */}
+                {user && userProfile && userProfile.role !== 'guest' ? (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      {/* 用户头像 - 手机端隐藏 */}
+                      <div className="hidden sm:flex flex-shrink-0">
+                        {userProfile.avatar_url ? (
+                          <img
+                            src={userProfile.avatar_url}
+                            alt={userProfile.full_name}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold">
+                            {(userProfile.full_name || '用户').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* 输入框 */}
+                      <div className="flex-1 relative">
+                        <textarea
+                          ref={mainReplyTextareaRef}
+                          value={replyContent}
+                          onChange={(e) => setReplyContent(e.target.value)}
+                          placeholder="写下你的回复..."
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] resize-none"
+                          rows={3}
+                        />
+                        {/* 工具栏 */}
+                        <div className="flex items-center gap-2 mt-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              try {
+                                validateImageFile(file)
+                                const result = await uploadImageToSupabase(file, 'golf-club-images', 'event-replies')
+                                if (result.success && result.url) {
+                                  setMainReplyImages(prev => [...prev, result.url!])
+                                }
+                              } catch (error: any) {
+                                alert(error.message || '图片上传失败')
+                              }
+                            }}
+                            className="hidden"
+                            id="homepage-reply-image-input"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById('homepage-reply-image-input')?.click()}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                          >
+                            <ImageIcon className="w-3 h-3" />
+                            <span>图片</span>
+                          </button>
+                          
+                          <div className="relative" ref={mainEmojiPickerRef}>
+                            <button
+                              type="button"
+                              onClick={() => setShowMainEmojiPicker(!showMainEmojiPicker)}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                              <Smile className="w-3 h-3" />
+                              <span>表情</span>
+                            </button>
+                            
+                            {showMainEmojiPicker && (
+                              <div className="absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3 w-screen max-w-sm sm:w-80 max-h-64 overflow-y-auto z-[100]"
+                                style={{
+                                  maxHeight: '16rem',
+                                  left: '50%',
+                                  transform: 'translateX(-50%) translateY(0)'
+                                }}
+                              >
+                                <div className="grid grid-cols-8 gap-2">
+                                  {COMMON_EMOJIS.map((emoji, index) => (
+                                    <button
+                                      key={index}
+                                      type="button"
+                                      onClick={() => {
+                                        const textarea = mainReplyTextareaRef.current
+                                        if (textarea) {
+                                          const start = textarea.selectionStart
+                                          const end = textarea.selectionEnd
+                                          const newContent = replyContent.substring(0, start) + emoji + replyContent.substring(end)
+                                          setReplyContent(newContent)
+                                          setTimeout(() => {
+                                            textarea.focus()
+                                            textarea.setSelectionRange(start + emoji.length, start + emoji.length)
+                                          }, 0)
+                                        }
+                                        setShowMainEmojiPicker(false)
+                                      }}
+                                      className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* 已上传的图片预览 */}
+                        {mainReplyImages.length > 0 && (
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            {mainReplyImages.map((url, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={url}
+                                  alt={`上传的图片 ${index + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setMainReplyImages(prev => prev.filter((_, i) => i !== index))}
+                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* 提交按钮 */}
+                        <div className="flex items-center justify-end gap-2 mt-2">
+                          <button
+                            onClick={() => {
+                              // 组合文本和图片，图片放在文字前面
+                              let finalContent = replyContent.trim()
+                              if (mainReplyImages.length > 0) {
+                                const imageTags = mainReplyImages.map(url => `[IMAGE:${url}]`).join('')
+                                finalContent = imageTags + (finalContent ? ' ' + finalContent : '')
+                              }
+                              handleSubmitReply(null, finalContent)
+                              setReplyContent('')
+                              setMainReplyImages([])
+                            }}
+                            disabled={(!replyContent.trim() && mainReplyImages.length === 0) || submittingReply}
+                            className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {submittingReply ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                <span>提交中...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4 mr-2" />
+                                <span>发表回复</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-4 text-center">
+                    <p className="text-gray-500 text-sm">
+                      {user ? '只有会员可以回复' : '请登录后回复'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 图片查看器 Modal */}
+      {imageViewerOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[90]"
+          onClick={() => setImageViewerOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
+        >
+          <button
+            onClick={() => setImageViewerOpen(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+          >
+            <X className="w-8 h-8" />
+          </button>
+          
+          {currentImageIndex > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setCurrentImageIndex(prev => prev - 1)
+              }}
+              className="absolute left-4 text-white hover:text-gray-300 z-10 bg-black/50 rounded-full p-2"
+            >
+              <ChevronRight className="w-6 h-6 rotate-180" />
+            </button>
+          )}
+          
+          {currentImageIndex < imageViewerImages.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setCurrentImageIndex(prev => prev + 1)
+              }}
+              className="absolute right-4 text-white hover:text-gray-300 z-10 bg-black/50 rounded-full p-2"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+          
+          <div 
+            className="max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={imageViewerImages[currentImageIndex]}
+              alt={`图片 ${currentImageIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+          
+          {/* 图片指示器 */}
+          {imageViewerImages.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-black/50 rounded-full px-4 py-2">
+              <span className="text-white text-sm">
+                {currentImageIndex + 1} / {imageViewerImages.length}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

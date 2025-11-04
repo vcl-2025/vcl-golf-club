@@ -152,10 +152,10 @@ export default function ExpenseList() {
   const getExpenseTypeColor = (type: string, transactionType: string | null) => {
     // 收入类型颜色
     const incomeColors: { [key: string]: string } = {
-      'membership_sponsorship': 'bg-green-100 text-green-800',
-      'collection': 'bg-blue-100 text-blue-800',
-      'investment_finance': 'bg-indigo-100 text-indigo-800',
-      'other_income': 'bg-gray-100 text-gray-800'
+      'membership_sponsorship': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'collection': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'investment_finance': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'other_income': 'bg-[#F15B98]/20 text-[#F15B98]'
     }
     
     // 支出类型颜色
@@ -167,7 +167,7 @@ export default function ExpenseList() {
     }
     
     if (transactionType === 'income') {
-      return incomeColors[type] || 'bg-green-100 text-green-800'
+      return incomeColors[type] || 'bg-[#F15B98]/20 text-[#F15B98]'
     }
     return expenseColors[type] || 'bg-red-100 text-red-800'
   }
@@ -210,7 +210,7 @@ export default function ExpenseList() {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#F15B98] border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -218,37 +218,19 @@ export default function ExpenseList() {
   return (
     <div className="space-y-6">
       {/* 统计卡片 */}
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-3 sm:p-6 text-white">
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
-          <div>
-            <h2 className="text-lg sm:text-2xl font-bold mb-0.5 sm:mb-2">费用公示</h2>
-            <p className="text-xs sm:text-base text-green-100">俱乐部财务透明公开</p>
-          </div>
-          <div className="w-10 h-10 sm:w-16 sm:h-16 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-            <Receipt className="w-5 h-5 sm:w-8 sm:h-8" />
-          </div>
-        </div>
+      <div className="bg-gradient-to-br from-[#F15B98]/10 to-[#F15B98]/5 rounded-2xl p-3 sm:p-4 border border-[#F15B98]/20">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
-          <div className="bg-white/10 rounded-lg p-2 sm:p-4">
-            <div className="flex items-center text-green-100 mb-0.5 sm:mb-1">
-              <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-              <span className="text-xs sm:text-sm">总收入</span>
-            </div>
-            <div className="text-base sm:text-2xl font-bold">{formatAmount(totalStats.income)}</div>
+          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">总收入</div>
+            <div className="text-lg sm:text-xl font-bold text-[#F15B98]">{formatAmount(totalStats.income)}</div>
           </div>
-          <div className="bg-white/10 rounded-lg p-2 sm:p-4">
-            <div className="flex items-center text-green-100 mb-0.5 sm:mb-1">
-              <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-              <span className="text-xs sm:text-sm">总支出</span>
-            </div>
-            <div className="text-base sm:text-2xl font-bold">{formatAmount(totalStats.expense)}</div>
+          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">总支出</div>
+            <div className="text-lg sm:text-xl font-bold text-red-600">{formatAmount(totalStats.expense)}</div>
           </div>
-          <div className="bg-white/10 rounded-lg p-2 sm:p-4">
-            <div className="flex items-center text-green-100 mb-0.5 sm:mb-1">
-              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-              <span className="text-xs sm:text-sm">净额</span>
-            </div>
-            <div className={`text-base sm:text-2xl font-bold ${totalStats.net >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">净额</div>
+            <div className={`text-lg sm:text-xl font-bold ${totalStats.net >= 0 ? 'text-[#F15B98]' : 'text-red-600'}`}>
               {formatAmount(totalStats.net)}
             </div>
           </div>
@@ -279,7 +261,7 @@ export default function ExpenseList() {
                   placeholder="搜索费用名称或备注..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98]"
                   autoFocus
                 />
                 <button
@@ -305,7 +287,7 @@ export default function ExpenseList() {
               placeholder="搜索费用名称或备注..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98]"
             />
           </div>
         </div>
@@ -330,8 +312,8 @@ export default function ExpenseList() {
                 {/* 月份标题和统计 */}
                 <div className={`rounded-xl border shadow-lg p-4 cursor-pointer transition-all duration-200 ${
                   isExpanded 
-                    ? 'bg-gradient-to-r from-green-100 to-emerald-100 border-green-300 hover:from-green-200 hover:to-emerald-200' 
-                    : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 hover:from-green-100 hover:to-emerald-100 hover:border-green-300'
+                    ? 'bg-gradient-to-r from-slate-100 to-gray-100 border-slate-300 hover:from-slate-200 hover:to-gray-200' 
+                    : 'bg-gradient-to-r from-slate-50 to-gray-50 border-slate-200 hover:from-slate-100 hover:to-gray-100 hover:border-slate-300'
                 }`}
                   onClick={() => {
                     const newCollapsed = new Set(collapsedMonths)
@@ -348,9 +330,9 @@ export default function ExpenseList() {
                     <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-green-600" />
+                          <TrendingUp className="w-4 h-4 text-[#F15B98]" />
                           <span className="text-gray-600">收入:</span>
-                          <span className="font-semibold text-green-600">{formatAmount(stats.income)}</span>
+                          <span className="font-semibold text-[#F15B98]">{formatAmount(stats.income)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <TrendingDown className="w-4 h-4 text-red-600" />
@@ -360,7 +342,7 @@ export default function ExpenseList() {
                         <div className="flex items-center gap-2">
                           <DollarSign className="w-4 h-4 text-gray-600" />
                           <span className="text-gray-600">净额:</span>
-                          <span className={`font-semibold ${stats.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <span className={`font-semibold ${stats.net >= 0 ? 'text-[#F15B98]' : 'text-red-600'}`}>
                             {formatAmount(stats.net)}
                           </span>
                         </div>
@@ -394,7 +376,7 @@ export default function ExpenseList() {
                                 {getExpenseTypeText(expense.expense_type)}
                               </span>
                               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                isIncome ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                isIncome ? 'bg-[#F15B98]/20 text-[#F15B98]' : 'bg-red-100 text-red-800'
                               }`}>
                                 {isIncome ? '收入' : '支出'}
                               </span>
@@ -405,7 +387,7 @@ export default function ExpenseList() {
                             )}
                           </div>
                           <div className="text-right ml-4 flex-shrink-0">
-                            <div className={`text-2xl font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                            <div className={`text-2xl font-bold ${isIncome ? 'text-[#F15B98]' : 'text-red-600'}`}>
                               {isIncome ? '+' : '-'}{formatAmount(parseFloat(expense.amount.toString()))}
                             </div>
                           </div>
@@ -421,7 +403,7 @@ export default function ExpenseList() {
                               href={expense.receipt_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center text-sm text-green-600 hover:text-green-700 font-medium"
+                              className="flex items-center text-sm text-[#F15B98] hover:text-[#F15B98]/80 font-medium"
                             >
                               <Receipt className="w-4 h-4 mr-1" />
                               查看凭证
