@@ -500,7 +500,24 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         {/* Right Side - Login Form */}
         <div className="flex-1 flex items-start justify-center px-4 py-2 sm:py-4 lg:items-center lg:px-12 lg:py-8">
           <div className="w-full max-w-sm sm:max-w-md">
-            <div className="bg-gradient-to-br from-white/90 via-rose-50/85 to-orange-50/85 rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-rose-200/40">
+            <div 
+              className="rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-rose-200/40 relative overflow-hidden"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0)'
+              }}
+            >
+              {/* 线花图案作为伪元素，可以单独控制透明度 */}
+              <div 
+                className="absolute inset-0 rounded-2xl sm:rounded-3xl opacity-90"
+                style={{
+                  backgroundImage: 'url(/flower-pattern.png)',
+                  backgroundRepeat: 'repeat',
+                  backgroundSize: '400px 500px',
+                  backgroundPosition: 'center',
+                  pointerEvents: 'none'
+                }}
+              ></div>
+              <div className="relative z-10">
               <div className="text-center mb-6 sm:mb-8">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border-2 border-[#F15B98] shadow-lg">
                   <img 
@@ -860,6 +877,7 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                     // </p>
                   )
                 )}
+              </div>
               </div>
             </div>
           </div>
