@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Calendar, MapPin, Users, Clock, DollarSign, ChevronRight, CheckCircle, AlertCircle, FileText } from 'lucide-react'
+import { Calendar, MapPin, Users, Clock, DollarSign, ChevronRight, CheckCircle, AlertCircle, FileText, User } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getEventStatus, getEventStatusText, getEventStatusStyles, canRegister } from '../utils/eventStatus'
 import { Event, EventStats } from '../types'
@@ -14,6 +14,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
   const [events, setEvents] = useState<Event[]>([])
   const [eventStats, setEventStats] = useState<Record<string, EventStats>>({})
   const [userRegistrations, setUserRegistrations] = useState<Record<string, any>>({})
+  const [participantAvatars, setParticipantAvatars] = useState<Record<string, Array<{ id: string, avatarUrl?: string, full_name?: string }>>>({})
   const [loading, setLoading] = useState(true)
   const [statsLoading, setStatsLoading] = useState(false)
   // 移除分页，显示所有活动
@@ -104,6 +105,57 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
         })
         setUserRegistrations(regMap)
       }
+
+      // 3. 异步获取每个活动的前5个报名人头像（懒加载，不阻塞主列表显示）
+      const fetchAvatars = async () => {
+        const avatarsMap: Record<string, Array<{ id: string, avatarUrl?: string, full_name?: string }>> = {}
+        
+        // 并行获取所有活动的头像
+        const avatarPromises = displayableEvents.map(async (event) => {
+          try {
+            const { data: registrations } = await supabase
+              .from('event_registrations')
+              .select('user_id')
+              .eq('event_id', event.id)
+              .eq('approval_status', 'approved')
+              .limit(5)
+              .order('registration_time', { ascending: true })
+
+            if (registrations && registrations.length > 0) {
+              const userIds = registrations.map(r => r.user_id)
+              const { data: profiles } = await supabase
+                .from('user_profiles')
+                .select('id, avatar_url, full_name')
+                .in('id', userIds)
+
+              if (profiles) {
+                return {
+                  eventId: event.id,
+                  avatars: profiles.map(p => ({
+                    id: p.id,
+                    avatarUrl: p.avatar_url || undefined,
+                    full_name: p.full_name || undefined
+                  }))
+                }
+              }
+            }
+            return { eventId: event.id, avatars: [] }
+          } catch (error) {
+            console.error(`获取活动 ${event.id} 报名人头像失败:`, error)
+            return { eventId: event.id, avatars: [] }
+          }
+        })
+
+        const results = await Promise.all(avatarPromises)
+        results.forEach(({ eventId, avatars }) => {
+          avatarsMap[eventId] = avatars
+        })
+        
+        setParticipantAvatars(avatarsMap)
+      }
+      
+      // 异步加载头像，不阻塞主列表
+      fetchAvatars()
     } catch (error) {
       console.error('获取活动列表失败:', error)
     } finally {
@@ -239,7 +291,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
       />
 
       {/* 活动列表 */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-4 lg:grid lg:grid-cols-4 lg:gap-6 lg:space-y-0">
         {currentEvents.map((event) => {
           const stats = eventStats[event.id]
           const registrationOpen = isRegistrationOpen(event.registration_deadline)
@@ -248,117 +300,190 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
           return (
             <div
               key={event.id}
-              className="bg-white/75 rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden"
+              className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer overflow-hidden flex flex-col lg:flex-col"
               onClick={() => onEventSelect(event)}
+              style={{ 
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+              }}
             >
               {/* 活动图片 */}
-              <div className="aspect-[16/9] bg-gradient-to-br from-[#F15B98]/20 to-[#F15B98]/30 overflow-hidden">
-                <img
-                  src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
-                  alt={event.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <div className="p-6">
-                {/* 活动标题 */}
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  {event.title}
-                </h3>
-
-                {/* 活动信息 */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="w-4 h-4 mr-2 text-golf-500" />
-                    {formatEventDateTime(event).date}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Clock className="w-4 h-4 mr-2 text-golf-500" />
-                    {formatEventDateTime(event).time}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 mr-2 text-golf-500" />
-                    {event.location}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <DollarSign className="w-4 h-4 mr-2 text-golf-500" />
-                    ¥{event.fee.toFixed(2)}
-                  </div>
+              <div className="w-[calc(100%-0.5rem)] flex-shrink-0 relative aspect-[16/9] mt-1 mx-auto rounded-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#F15B98]/20 to-[#F15B98]/30">
+                  <img
+                    src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
+                    alt={event.title}
+                    className="w-full h-full object-cover rounded-2xl"
+                  />
                 </div>
-
-                {/* 报名状态 */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="w-4 h-4 mr-2 text-golf-500" />
-                    {stats ? `${stats.total_registrations}/${event.max_participants}` : '加载中...'}
-                  </div>
-                  <div className="text-sm">
-                    {!registrationOpen ? (
-                      <span className="text-red-600 font-medium">报名已截止</span>
-                    ) : eventFull ? (
-                      <span className="text-orange-600 font-medium">名额已满</span>
-                    ) : (
-                      <span className="text-[#F15B98] font-medium">
-                        {statsLoading ? (
-                          <span className="flex items-center">
-                            <div className="w-3 h-3 border-2 border-[#F15B98] border-t-transparent rounded-full animate-spin mr-2"></div>
-                            加载中...
-                          </span>
-                        ) : (
-                          `还有 ${stats?.available_spots || 0} 个名额`
-                        )}
-                      </span>
-                    )}
-                  </div>
+                {/* 渐变遮罩 - 底部渐变，让文字更清晰 */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent rounded-2xl"></div>
+                
+                {/* 活动标题 - 放在图片左下角 */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-white line-clamp-2">
+                    {event.title}
+                  </h3>
                 </div>
-
-
-                {/* 报名状态指示器 */}
-                {user && (
-                  <div className="flex items-center justify-center text-sm mb-3">
-                    {(() => {
-                      const registration = getUserRegistrationStatus(event.id)
-                      if (registration) {
-                        if (registration.approval_status === 'approved') {
-                          return (
-                            <div className="flex items-center text-[#F15B98]">
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              已报名
-                            </div>
-                          )
-                        } else if (registration.approval_status === 'pending') {
-                          return (
-                            <div className="flex items-center text-yellow-600">
-                              <AlertCircle className="w-4 h-4 mr-1" />
-                              已申请待审批
-                            </div>
-                          )
-                        } else if (registration.approval_status === 'rejected') {
-                          return (
-                            <div className="flex items-center text-red-600">
-                              <AlertCircle className="w-4 h-4 mr-1" />
-                              已拒绝
-                            </div>
-                          )
-                        } else {
-                          return (
-                            <div className="flex items-center text-orange-600">
-                              <AlertCircle className="w-4 h-4 mr-1" />
-                              待支付
-                            </div>
-                          )
-                        }
-                      }
-                      return null
-                    })()}
+                
+                {/* 18洞标签 */}
+                {event.event_type === '比赛' && (
+                  <div className="absolute top-3 left-3 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                    18 Holes
                   </div>
                 )}
+                {/* 参与人数统计 */}
+                <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+                  <span className="text-xs text-white font-medium text-center">
+                    {stats ? `${stats.total_registrations}/${event.max_participants}` : '0/50'}
+                  </span>
+                </div>
+              </div>
 
-                {/* 查看详情按钮 */}
-                <button className="w-full flex items-center justify-center bg-[#F15B98] hover:bg-[#F15B98]/80 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                  查看详情
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </button>
+              {/* 文字内容 */}
+              <div className="flex-1 p-4 sm:p-6 flex flex-col justify-between">
+                <div>
+
+                  {/* 活动信息 */}
+                  <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
+                    {/* 日期和时间 - 紧接在一起 */}
+                    <div className="flex items-center text-base sm:text-lg text-gray-600">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-50 flex items-center justify-center mr-2 flex-shrink-0">
+                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                      </div>
+                      <span className="truncate">{formatEventDateTime(event).date}</span>
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-50 flex items-center justify-center ml-4 mr-2 flex-shrink-0">
+                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                      </div>
+                      <span>{formatTime(event.start_time)}</span>
+                    </div>
+                    <div className="flex items-center text-base sm:text-lg text-gray-600">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-50 flex items-center justify-center mr-2 flex-shrink-0">
+                        <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                      </div>
+                      <span className="break-words">{event.location}</span>
+                    </div>
+                    {/* 价格和人数头像在同一行 */}
+                    <div className="flex items-center justify-between text-base sm:text-lg text-gray-600">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-50 flex items-center justify-center mr-2 flex-shrink-0">
+                          <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                        </div>
+                        <span>{event.fee.toFixed(2)}</span>
+                      </div>
+                      {/* 报名人头像 */}
+                      <div className="flex items-center -space-x-4">
+                    {(participantAvatars[event.id] || []).slice(0, 5).map((participant, idx) => (
+                      <div
+                        key={participant.id || idx}
+                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-gray-200 overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0 shadow-sm"
+                      >
+                        {participant.avatarUrl ? (
+                          <img
+                            src={participant.avatarUrl}
+                            alt={participant.full_name || 'Participant'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+                        )}
+                      </div>
+                    ))}
+                        {/* 显示"+更多"提示 */}
+                        {stats && stats.total_registrations > 5 && (
+                          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-gray-200 bg-gray-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <span className="text-xs sm:text-sm text-gray-600 font-medium">
+                              +{stats.total_registrations - 5}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* 分隔线 */}
+                <div className="border-t border-gray-100 my-3 sm:my-4"></div>
+
+                {/* 底部操作区域 */}
+                <div className="flex items-center justify-end pt-2 sm:pt-3">
+                  {/* 按钮 */}
+                  {(() => {
+                    const registration = getUserRegistrationStatus(event.id)
+                    const isRegistered = registration && registration.approval_status === 'approved'
+                    
+                    if (isRegistered) {
+                      // 已报名
+                      return (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEventSelect(event)
+                          }}
+                          className="px-4 py-1.5 bg-gray-100 text-green-500 rounded-full text-sm font-bold cursor-default flex items-center gap-1.5"
+                          disabled
+                        >
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          已报名
+                        </button>
+                      )
+                    } else {
+                      // 未报名，显示剩余名额
+                      if (!registrationOpen) {
+                        return (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEventSelect(event)
+                            }}
+                            className="px-4 py-1.5 bg-gray-300 text-gray-500 rounded-full text-sm font-bold cursor-default"
+                            disabled
+                          >
+                            报名已截止
+                          </button>
+                        )
+                      } else if (eventFull) {
+                        return (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEventSelect(event)
+                            }}
+                            className="px-4 py-1.5 bg-gray-400 text-white rounded-full text-sm font-medium cursor-default"
+                            disabled
+                          >
+                            名额已满
+                          </button>
+                        )
+                      } else {
+                        return (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEventSelect(event)
+                            }}
+                            className="px-4 py-1.5 bg-[#F15B98] text-white rounded-full text-sm font-medium hover:bg-[#F15B98]/80 transition-colors"
+                          >
+                            {statsLoading ? (
+                              <span className="flex items-center">
+                                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                加载中...
+                              </span>
+                            ) : (
+                              `还有 ${stats?.available_spots || 0} 个名额`
+                            )}
+                          </button>
+                        )
+                      }
+                    }
+                  })()}
+                </div>
               </div>
             </div>
           )

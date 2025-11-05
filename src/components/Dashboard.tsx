@@ -1056,13 +1056,23 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
                 <div 
                   onClick={() => setCurrentView('information')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ 
+                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                    touchAction: 'manipulation',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
                       <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Bell className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                        <Bell className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
                       </div>
                       <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                         信息中心
@@ -1085,13 +1095,23 @@ export default function Dashboard() {
 
                 <div 
                   onClick={() => setCurrentView('events')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ 
+                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                    touchAction: 'manipulation',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
                       <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Calendar className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#07bc5d', fillOpacity: 1 }} strokeWidth={2} />
+                        <Calendar className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
                       </div>
                       <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                         活动报名
@@ -1114,13 +1134,23 @@ export default function Dashboard() {
 
                 <div
                   onClick={() => setCurrentView('reviews')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ 
+                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                    touchAction: 'manipulation',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
                       <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                        <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
                       </div>
                       <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                         精彩回顾
@@ -1143,13 +1173,23 @@ export default function Dashboard() {
 
                 <div
                   onClick={() => setCurrentView('scores')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ 
+                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                    touchAction: 'manipulation',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
                       <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Trophy className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                        <Trophy className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
                       </div>
                       <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                         成绩查询
@@ -1172,13 +1212,23 @@ export default function Dashboard() {
 
                 <div
                   onClick={() => setCurrentView('investments')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ 
+                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                    touchAction: 'manipulation',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
                       <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Heart className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                        <Heart className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
                       </div>
                       <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                         捐赠与赞助
@@ -1201,13 +1251,23 @@ export default function Dashboard() {
 
                 <div
                   onClick={() => setCurrentView('expenses')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ 
+                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                    touchAction: 'manipulation',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
                       <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Receipt className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                        <Receipt className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
                       </div>
                       <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                         费用公示
@@ -1230,13 +1290,23 @@ export default function Dashboard() {
 
                 <div
                   onClick={() => setCurrentView('members')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 shadow-md hover:shadow-lg active:scale-[0.98] active:shadow-sm transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ backgroundColor: 'rgba(249, 246, 244, 0.4)', touchAction: 'manipulation' }}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  style={{ 
+                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                    touchAction: 'manipulation',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                  }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
                       <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#92c648', fill: '#08bf60', fillOpacity: 1 }} strokeWidth={2} />
+                        <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
                       </div>
                       <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                         会员照片
