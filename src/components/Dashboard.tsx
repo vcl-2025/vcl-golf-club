@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -84,6 +84,7 @@ export default function Dashboard() {
   const [passwordChangeMessage, setPasswordChangeMessage] = useState('')
   const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin'>('dashboard')
   const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
+  const [showMoreActions, setShowMoreActions] = useState(false) // 控制显示更多快捷操作
 
   // 监听用户菜单状态变化
   useEffect(() => {
@@ -632,9 +633,14 @@ export default function Dashboard() {
           )}
           
           {/* Drawer */}
-          <div className={`lg:hidden fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white shadow-xl z-[101] transform transition-transform duration-300 ease-out ${
-            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}>
+          <div 
+            className={`lg:hidden fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white shadow-xl z-[101] transform ${
+              mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+            style={{
+              transition: 'transform 0.3s cubic-bezier(0, 0, 0.2, 1)'
+            }}
+          >
             <div className="flex flex-col h-full overflow-y-auto">
               {/* Drawer Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-200">
@@ -1051,9 +1057,30 @@ export default function Dashboard() {
             `}</style>
 
             {/* Quick Actions */}
-            <div className="mb-4 sm:mb-6 lg:mb-8">
-              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6">快捷操作</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+            <div 
+              className="mb-4 sm:mb-6 lg:mb-8"
+              style={{
+                transition: 'margin-bottom 0.5s cubic-bezier(0.4, 0, 1, 1)'
+              }}
+            >
+              <div className="flex items-center justify-between mb-3 sm:mb-4 lg:mb-6">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">快捷操作</h3>
+                <button
+                  onClick={() => setShowMoreActions(!showMoreActions)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                >
+                  <span>{showMoreActions ? '收起' : '更多'}</span>
+                  <ChevronDown 
+                    className={`w-4 h-4 transition-transform duration-300 ${showMoreActions ? 'rotate-180' : ''}`}
+                  />
+                </button>
+              </div>
+              <div 
+                className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6"
+                style={{
+                  transition: 'grid-template-rows 0.5s cubic-bezier(0.4, 0, 1, 1)'
+                }}
+              >
                 <div 
                   onClick={() => setCurrentView('information')}
                   className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
@@ -1211,18 +1238,35 @@ export default function Dashboard() {
                 </div>
 
                 <div
-                  onClick={() => setCurrentView('investments')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  onClick={() => showMoreActions && setCurrentView('investments')}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group relative overflow-hidden border border-gray-200/30 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                     touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                    maxHeight: showMoreActions ? '500px' : '0px',
+                    opacity: showMoreActions ? 1 : 0,
+                    marginBottom: showMoreActions ? '0' : '0',
+                    marginTop: showMoreActions ? '0' : '0',
+                    paddingTop: showMoreActions ? undefined : '0',
+                    paddingBottom: showMoreActions ? undefined : '0',
+                    overflow: 'hidden',
+                    pointerEvents: showMoreActions ? 'auto' : 'none',
+                    cursor: showMoreActions ? 'pointer' : 'default',
+                    transform: showMoreActions ? 'scale(1)' : 'scale(0.95)',
+                    transition: showMoreActions 
+                      ? 'max-height 0.5s cubic-bezier(0, 0, 0.2, 1), opacity 0.5s cubic-bezier(0, 0, 0.2, 1), transform 0.5s cubic-bezier(0, 0, 0.2, 1), padding 0.5s cubic-bezier(0, 0, 0.2, 1), margin 0.5s cubic-bezier(0, 0, 0.2, 1)'
+                      : 'max-height 0.5s cubic-bezier(0.4, 0, 1, 1), opacity 0.4s cubic-bezier(0.4, 0, 1, 1), transform 0.5s cubic-bezier(0.4, 0, 1, 1), padding 0.5s cubic-bezier(0.4, 0, 1, 1), margin 0.5s cubic-bezier(0.4, 0, 1, 1)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    if (showMoreActions) {
+                      e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    if (showMoreActions) {
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    }
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1250,18 +1294,35 @@ export default function Dashboard() {
                 </div>
 
                 <div
-                  onClick={() => setCurrentView('expenses')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  onClick={() => showMoreActions && setCurrentView('expenses')}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group relative overflow-hidden border border-gray-200/30 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                     touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                    maxHeight: showMoreActions ? '500px' : '0px',
+                    opacity: showMoreActions ? 1 : 0,
+                    marginBottom: showMoreActions ? '0' : '0',
+                    marginTop: showMoreActions ? '0' : '0',
+                    paddingTop: showMoreActions ? undefined : '0',
+                    paddingBottom: showMoreActions ? undefined : '0',
+                    overflow: 'hidden',
+                    pointerEvents: showMoreActions ? 'auto' : 'none',
+                    cursor: showMoreActions ? 'pointer' : 'default',
+                    transform: showMoreActions ? 'scale(1)' : 'scale(0.95)',
+                    transition: showMoreActions 
+                      ? 'max-height 0.5s cubic-bezier(0, 0, 0.2, 1), opacity 0.5s cubic-bezier(0, 0, 0.2, 1), transform 0.5s cubic-bezier(0, 0, 0.2, 1), padding 0.5s cubic-bezier(0, 0, 0.2, 1), margin 0.5s cubic-bezier(0, 0, 0.2, 1)'
+                      : 'max-height 0.5s cubic-bezier(0.4, 0, 1, 1), opacity 0.4s cubic-bezier(0.4, 0, 1, 1), transform 0.5s cubic-bezier(0.4, 0, 1, 1), padding 0.5s cubic-bezier(0.4, 0, 1, 1), margin 0.5s cubic-bezier(0.4, 0, 1, 1)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    if (showMoreActions) {
+                      e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    if (showMoreActions) {
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    }
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1289,18 +1350,35 @@ export default function Dashboard() {
                 </div>
 
                 <div
-                  onClick={() => setCurrentView('members')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  onClick={() => showMoreActions && setCurrentView('members')}
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group relative overflow-hidden border border-gray-200/30 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                     touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                    maxHeight: showMoreActions ? '500px' : '0px',
+                    opacity: showMoreActions ? 1 : 0,
+                    marginBottom: showMoreActions ? '0' : '0',
+                    marginTop: showMoreActions ? '0' : '0',
+                    paddingTop: showMoreActions ? undefined : '0',
+                    paddingBottom: showMoreActions ? undefined : '0',
+                    overflow: 'hidden',
+                    pointerEvents: showMoreActions ? 'auto' : 'none',
+                    cursor: showMoreActions ? 'pointer' : 'default',
+                    transform: showMoreActions ? 'scale(1)' : 'scale(0.95)',
+                    transition: showMoreActions 
+                      ? 'max-height 0.5s cubic-bezier(0, 0, 0.2, 1), opacity 0.5s cubic-bezier(0, 0, 0.2, 1), transform 0.5s cubic-bezier(0, 0, 0.2, 1), padding 0.5s cubic-bezier(0, 0, 0.2, 1), margin 0.5s cubic-bezier(0, 0, 0.2, 1)'
+                      : 'max-height 0.5s cubic-bezier(0.4, 0, 1, 1), opacity 0.4s cubic-bezier(0.4, 0, 1, 1), transform 0.5s cubic-bezier(0.4, 0, 1, 1), padding 0.5s cubic-bezier(0.4, 0, 1, 1), margin 0.5s cubic-bezier(0.4, 0, 1, 1)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    if (showMoreActions) {
+                      e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    if (showMoreActions) {
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    }
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1330,7 +1408,12 @@ export default function Dashboard() {
             </div>
 
             {/* Main Content Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+            <div 
+              className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8"
+              style={{
+                transition: 'transform 0s cubic-bezier(0.4, 0, 1, 1), margin-top 0s cubic-bezier(0.4, 0, 1, 1)'
+              }}
+            >
               {/* 即将举行的活动 */}
               <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">

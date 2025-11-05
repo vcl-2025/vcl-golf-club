@@ -374,7 +374,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                         <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-green-50 flex items-center justify-center mr-2 flex-shrink-0">
                           <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                         </div>
-                        <span>{event.fee.toFixed(2)}</span>
+                        <span className="text-lg sm:text-xl font-bold">{event.fee.toFixed(2)}</span>
                       </div>
                       {/* 报名人头像 */}
                       <div className="flex items-center -space-x-4">

@@ -75,7 +75,7 @@ select {
 
 @layer components {
   .btn-primary {
-    @apply bg-[#F15B98] hover:bg-[#F15B98]/80 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply bg-golf-600 hover:bg-golf-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
   }
   
   .btn-secondary {
