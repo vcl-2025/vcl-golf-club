@@ -13,3 +13,4 @@ ADD COLUMN IF NOT EXISTS team_colors jsonb DEFAULT '{}'::jsonb;
 COMMENT ON COLUMN events.team_name_mapping IS '队伍名称映射：Excel中的原始名称 -> 系统显示名称';
 COMMENT ON COLUMN events.team_colors IS '队伍颜色配置：Excel中的原始名称 -> 颜色代码';
 
+

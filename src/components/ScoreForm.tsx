@@ -1104,14 +1104,96 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         }
       })
 
+      // 智能颜色匹配函数：根据队伍名称自动匹配颜色
+      const getSmartColor = (teamName: string, presetColors: string[], teamIndex: number): string => {
+        // 先移除所有特殊字符和空格，转小写，用于匹配
+        const normalizedName = teamName.toLowerCase().replace(/[^\w\u4e00-\u9fa5]/g, '')
+        // 保留原始名称用于包含检查（不区分大小写）
+        const lowerName = teamName.toLowerCase()
+        
+        // 颜色关键词映射（中文和英文）
+        const colorKeywords: Record<string, string> = {
+          // 红色 - 支持中文、英文、以及被分隔的情况（如 R*E*D）
+          '红': '#EF4444', 
+          'red': '#EF4444',
+          // 绿色
+          '绿': '#92c648', 
+          'green': '#92c648',
+          // 蓝色
+          '蓝': '#3B82F6', 
+          'blue': '#3B82F6',
+          // 橙色
+          '橙': '#F59E0B', 
+          'orange': '#F59E0B',
+          // 紫色
+          '紫': '#8B5CF6', 
+          'purple': '#8B5CF6',
+          // 粉色
+          '粉': '#F15B98', 
+          'pink': '#F15B98',
+          // 青色
+          '青': '#10B981', 
+          'cyan': '#10B981',
+          // 靛蓝
+          '靛': '#6366F1', 
+          'indigo': '#6366F1',
+          // 黄色
+          '黄': '#FCD34D', 
+          'yellow': '#FCD34D',
+        }
+        
+        // 首先检查完整关键词匹配（移除了特殊字符后的名称）
+        for (const [keyword, color] of Object.entries(colorKeywords)) {
+          if (normalizedName.includes(keyword.toLowerCase())) {
+            return color
+          }
+        }
+        
+        // 对于英文关键词，检查是否包含所有字母（即使被分隔，如 R*E*D）
+        const englishKeywords: Record<string, string> = {
+          'red': '#EF4444',
+          'green': '#92c648',
+          'blue': '#3B82F6',
+          'orange': '#F59E0B',
+          'purple': '#8B5CF6',
+          'pink': '#F15B98',
+          'cyan': '#10B981',
+          'indigo': '#6366F1',
+          'yellow': '#FCD34D',
+        }
+        
+        for (const [keyword, color] of Object.entries(englishKeywords)) {
+          // 检查是否包含该关键词的所有字母（顺序匹配）
+          const keywordLetters = keyword.split('')
+          let lastIndex = -1
+          let allFound = true
+          
+          for (const letter of keywordLetters) {
+            const index = lowerName.indexOf(letter, lastIndex + 1)
+            if (index === -1) {
+              allFound = false
+              break
+            }
+            lastIndex = index
+          }
+          
+          if (allFound) {
+            return color
+          }
+        }
+        
+        // 如果没有匹配到，返回默认颜色（按索引循环）
+        return presetColors[teamIndex % presetColors.length]
+      }
+
       // 初始化团队名称映射（Excel名称 -> 系统显示名称，默认为Excel名称）
       const initialTeamNameMapping: Record<string, string> = {}
-      const presetColors = ['#F15B98', '#92c648', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#10B981', '#6366F1']
+      const presetColors = ['#F15B98', '#92c648', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#10B981', '#6366F1', '#FCD34D']
       const initialTeamColors: Record<string, string> = {}
       
       Array.from(uniqueTeams).forEach((teamName, index) => {
         initialTeamNameMapping[teamName] = teamName // 默认使用Excel名称
-        initialTeamColors[teamName] = presetColors[index % presetColors.length] // 默认颜色
+        initialTeamColors[teamName] = getSmartColor(teamName, presetColors, index) // 智能匹配颜色
       })
 
       // 尝试从数据库加载已保存的配置
@@ -1228,7 +1310,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
               player_name: player.name.trim(),
               event_id: selectedEvent.id,
               total_strokes: player.totalStrokes,
-              net_strokes: player.netStrokes ? Math.round(player.netStrokes) : null,
+              net_strokes: player.netStrokes !== null && player.netStrokes !== undefined ? player.netStrokes : null,
               handicap: handicap,
               holes_played: 18,
               hole_scores: player.actualStrokes.length === 18 ? player.actualStrokes : null,
@@ -1322,7 +1404,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
             user_id: userId,
             event_id: selectedEvent.id,
             total_strokes: player.totalStrokes,
-            net_strokes: player.netStrokes ? Math.round(player.netStrokes) : null,
+            net_strokes: player.netStrokes !== null && player.netStrokes !== undefined ? player.netStrokes : null,
             handicap: handicap,
             holes_played: 18,
             hole_scores: player.actualStrokes.length === 18 ? player.actualStrokes : null, // 存储18洞实际杆数数组
@@ -1522,7 +1604,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         teamStats = calculateTeamStats(dbPlayers)
       }
 
-      // 保存 scoring_mode、par、team_name_mapping 和 team_colors 到 events 表
+      // 保存 scoring_mode、event_type、par、team_name_mapping 和 team_colors 到 events 表
       const updateEventData: any = {}
       
       // 保存 PAR 值（如果有18洞的PAR值）
@@ -1530,11 +1612,16 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         updateEventData.par = previewData.parValues
       }
       
-      // 保存 scoring_mode（如果是团体赛）
+      // 保存 event_type 和 scoring_mode（根据导入模式）
       if (importMode === 'team_ryder') {
+        updateEventData.event_type = '团体赛'
         updateEventData.scoring_mode = 'ryder_cup'
       } else if (importMode === 'team_strokes') {
+        updateEventData.event_type = '团体赛'
         updateEventData.scoring_mode = 'total_strokes'
+      } else if (importMode === 'individual') {
+        updateEventData.event_type = '个人赛'
+        // 个人赛不需要 scoring_mode
       }
       
       // 保存 team_name_mapping 和 team_colors（如果有团队数据）
@@ -1865,7 +1952,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                   <h4 className="text-sm font-medium text-gray-700 mb-3">队伍配置</h4>
                   <div className="space-y-3">
                     {Object.entries(teamNameMapping).map(([excelName, displayName], idx) => {
-                      const presetColors = ['#F15B98', '#92c648', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#10B981', '#6366F1']
+                      const presetColors = ['#F15B98', '#92c648', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#10B981', '#6366F1', '#FCD34D']
                       const currentColor = teamColors[excelName] || presetColors[idx % presetColors.length]
                       
                       return (
@@ -1907,7 +1994,8 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                                      color === '#8B5CF6' ? '紫色' :
                                      color === '#EF4444' ? '红色' :
                                      color === '#10B981' ? '青色' :
-                                     color === '#6366F1' ? '靛蓝' : color}
+                                     color === '#6366F1' ? '靛蓝' :
+                                     color === '#FCD34D' ? '黄色' : color}
                                   </option>
                                 ))}
                               </select>
@@ -2623,7 +2711,8 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
               </div>
               <button
                 onClick={handleFinish}
-                className="btn-primary"
+                disabled={importStep !== 'select' || isImporting}
+                className={`btn-primary ${importStep !== 'select' || isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 完成录入
               </button>

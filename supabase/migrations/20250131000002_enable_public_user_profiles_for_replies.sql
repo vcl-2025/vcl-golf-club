@@ -17,3 +17,4 @@ CREATE POLICY "Public can view basic profile info for replies"
 -- 用于在公开的活动回顾页面显示回复的用户名和头像
 -- 只影响 SELECT 操作，不影响其他操作（INSERT/UPDATE/DELETE）
 
+

@@ -21,3 +21,4 @@ UPDATE events
 SET scoring_mode = 'ryder_cup' 
 WHERE event_type = '团体赛' AND scoring_mode IS NULL;
 
+
