@@ -85,7 +85,11 @@ export default function UserScoreQuery() {
             start_time,
             end_time,
             location,
-            event_type
+            event_type,
+            scoring_mode,
+            par,
+            team_name_mapping,
+            team_colors
           ),
           user_profiles (
             id,
@@ -110,7 +114,11 @@ export default function UserScoreQuery() {
             start_time,
             end_time,
             location,
-            event_type
+            event_type,
+            scoring_mode,
+            par,
+            team_name_mapping,
+            team_colors
           )
         `)
         .order('created_at', { ascending: false })
@@ -367,10 +375,89 @@ export default function UserScoreQuery() {
             const isExpanded = expandedEvents.has(group.event.id)
             const userScore = group.scores.find(s => s.user_id === user?.id)
             
+            // 计算团队得分（莱德杯模式）
+            const calculateTeamScore = (teamName: string) => {
+              const teamScores = group.scores.filter(s => s.team_name === teamName && s.hole_scores && Array.isArray(s.hole_scores) && s.hole_scores.length === 18)
+              if (teamScores.length === 0) return 0
+              
+              // 按分组组织数据并计算得分
+              const groups = new Map<number, Map<string, Array<{ holeScores: number[] }>>>()
+              teamScores.forEach(score => {
+                const groupNum = score.group_number || 0
+                const tName = score.team_name || ''
+                if (!groups.has(groupNum)) {
+                  groups.set(groupNum, new Map())
+                }
+                const groupTeams = groups.get(groupNum)!
+                if (!groupTeams.has(tName)) {
+                  groupTeams.set(tName, [])
+                }
+                groupTeams.get(tName)!.push({
+                  holeScores: score.hole_scores || []
+                })
+              })
+              
+              // 计算所有组的团队得分
+              let totalTeamScore = 0
+              groups.forEach((teamsMap, groupNum) => {
+                const teamEntries = Array.from(teamsMap.entries())
+                if (teamEntries.length < 2) return
+                
+                const teamWins = new Map<string, number>()
+                teamEntries.forEach(([tName]) => {
+                  teamWins.set(tName, 0)
+                })
+                
+                for (let hole = 0; hole < 18; hole++) {
+                  const holeBestScores: Array<{ teamName: string; bestScore: number }> = []
+                  teamEntries.forEach(([tName, players]) => {
+                    const scores = players.map(p => {
+                      const score = p.holeScores?.[hole]
+                      return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
+                    }).filter(s => s !== Infinity)
+                    const bestScore = scores.length > 0 ? Math.min(...scores) : Infinity
+                    if (bestScore !== Infinity) {
+                      holeBestScores.push({ teamName: tName, bestScore })
+                    }
+                  })
+                  
+                  if (holeBestScores.length === 0) continue
+                  const minBestScore = Math.min(...holeBestScores.map(h => h.bestScore))
+                  const winners = holeBestScores.filter(h => h.bestScore === minBestScore).map(w => w.teamName)
+                  const pointsPerTeam = 1 / winners.length
+                  winners.forEach(winner => {
+                    const currentWins = teamWins.get(winner) || 0
+                    teamWins.set(winner, currentWins + pointsPerTeam)
+                  })
+                }
+                
+                const userTeamWins = teamWins.get(teamName) || 0
+                totalTeamScore += userTeamWins
+              })
+              
+              return totalTeamScore
+            }
+            
+            // 计算用户成绩显示（团体赛莱德杯模式显示团队得分，其他显示个人总杆数）
+            const getUserScoreDisplay = () => {
+              if (!userScore) return null
+              
+              // 如果是团体赛且是莱德杯模式，计算团队得分
+              if (group.event.event_type === '团体赛' && group.event.scoring_mode === 'ryder_cup' && userScore.team_name && userScore.hole_scores) {
+                const teamScore = calculateTeamScore(userScore.team_name)
+                return { value: `${teamScore.toFixed(1)}`, isTeam: true }
+              }
+              
+              // 其他情况显示个人总杆数
+              return { value: `${userScore.total_strokes}杆`, isTeam: false }
+            }
+            
+            const scoreDisplay = getUserScoreDisplay()
+            
             return (
               <div
                 key={group.event.id}
-                className="bg-gray-50 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-gray-200 mx-1 sm:mx-0"
+                className="bg-[#fffbf9]/80 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-gray-200 mx-1 sm:mx-0"
               >
                 {/* 活动卡片头部 */}
                 <div
@@ -405,10 +492,17 @@ export default function UserScoreQuery() {
                         <div className="block sm:hidden">
                           <div className="flex items-center justify-between text-sm text-gray-600">
                             <div className="flex items-center space-x-3">
-                              {userScore && (
+                              {scoreDisplay && (
                                 <div className="flex items-center">
-                                  <span className="font-medium text-[#F15B98]">{userScore.total_strokes}杆</span>
-                                  {userScore.rank && (
+                                  <span className="font-medium text-[#F15B98]">
+                                    {scoreDisplay.isTeam ? (
+                                      // 移动端也计算团队得分（简化版，只显示团队名称）
+                                      scoreDisplay.value
+                                    ) : (
+                                      scoreDisplay.value
+                                    )}
+                                  </span>
+                                  {userScore && userScore.rank && (
                                     <div className="flex items-center ml-2">
                                       {getRankIcon(userScore.rank)}
                                       <span className={`ml-1 px-2 py-1 rounded text-xs font-medium ${getRankBadgeStyle(userScore.rank)}`}>
@@ -430,13 +524,13 @@ export default function UserScoreQuery() {
                                 <span className="text-gray-500">参赛人数:</span>
                                 <span className="ml-2 font-medium">{group.scores.length}人</span>
                               </div>
-                              {userScore && (
+                              {scoreDisplay && (
                                 <>
                                   <div className="flex items-center">
                                     <span className="text-gray-500">我的成绩:</span>
-                                    <span className="ml-2 font-medium">{userScore.total_strokes}杆</span>
+                                    <span className="ml-2 font-medium">{scoreDisplay.value}</span>
                                   </div>
-                                  {userScore.rank && (
+                                  {userScore && userScore.rank && (
                                     <div className="flex items-center">
                                       <span className="text-gray-500">我的排名:</span>
                                       <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${getRankBadgeStyle(userScore.rank)}`}>
@@ -468,11 +562,12 @@ export default function UserScoreQuery() {
                   </div>
                 </div>
 
-                {/* 折叠内容 - 所有参赛者成绩排名或团体赛结果 */}
+                {/* 折叠内容 - 团体赛显示详细结果，个人赛显示分组信息 */}
                 {isExpanded && (
                   <div className="border-t border-gray-100 px-0 sm:px-6 pb-4 bg-white rounded-b-2xl">
-                    {/* 如果是团体赛，显示团体赛结果 */}
-                    {group.event.event_type === '团体赛' && (() => {
+                    {group.event.event_type === '团体赛' ? (
+                      /* 团体赛结果 */
+                      (() => {
                       // 过滤出有分组和团队信息的成绩
                       const teamScores = group.scores.filter(s => s.group_number && s.team_name && s.hole_scores && Array.isArray(s.hole_scores) && s.hole_scores.length === 18)
                       
@@ -688,15 +783,58 @@ export default function UserScoreQuery() {
                         { bg: '#EF4444', text: '#EF4444', dot: '#EF4444' }, // 红色
                       ]
                       
-                      // 为每个团队分配颜色
+                      // 为每个团队分配颜色（使用保存的配置或默认颜色）
                       const teamColorMap = new Map<string, typeof teamColors[0]>()
-                      sortedTeamNames.forEach((teamName, index) => {
-                        teamColorMap.set(teamName, teamColors[index % teamColors.length])
+                      const eventTeamColors = group.event?.team_colors || {}
+                      const eventTeamMapping = group.event?.team_name_mapping || {}
+                      
+                      // 创建反向映射（从显示名称到原始名称）
+                      const reverseMapping = new Map<string, string>()
+                      Object.entries(eventTeamMapping).forEach(([original, display]) => {
+                        reverseMapping.set(display, original)
                       })
+                      
+                      sortedTeamNames.forEach((teamName, index) => {
+                        // teamName是显示名称（数据库中的team_name已经是映射后的名称）
+                        // team_colors的key是Excel原始名称，所以需要用team_name_mapping反向查找原始名称
+                        let color = teamColors[0] // 默认颜色
+                        const originalName = reverseMapping.get(teamName) || teamName
+                        // 用原始名称去team_colors查找颜色
+                        const savedColor = eventTeamColors[originalName]
+                        
+                        if (savedColor) {
+                          // 如果找到保存的颜色，转换为对应的颜色对象
+                          const colorIndex = teamColors.findIndex(c => 
+                            c.bg.toLowerCase() === savedColor.toLowerCase() || 
+                            c.dot.toLowerCase() === savedColor.toLowerCase()
+                          )
+                          if (colorIndex >= 0) {
+                            color = teamColors[colorIndex]
+                          } else {
+                            // 如果保存的颜色不在预设列表中，创建自定义颜色对象
+                            color = {
+                              bg: savedColor,
+                              dot: savedColor,
+                              text: '#FFFFFF'
+                            }
+                          }
+                        } else {
+                          // 使用默认颜色分配
+                          color = teamColors[index % teamColors.length]
+                        }
+                        // teamColorMap的key是显示名称（teamName），value是颜色对象
+                        teamColorMap.set(teamName, color)
+                      })
+                      
+                      // 根据比赛模式确定标题
+                      const scoringMode = group.event?.scoring_mode || 'ryder_cup'
+                      const titleText = scoringMode === 'ryder_cup' 
+                        ? '团体赛（莱德杯模式）' 
+                        : '团体赛（总杆数模式）'
                       
                       return (
                         <div className="space-y-4 sm:space-y-6 mt-4">
-                          <h4 className="text-base sm:text-lg font-semibold text-gray-900 mx-1 sm:mx-0">团体赛结果</h4>
+                          <h4 className="text-base sm:text-lg font-semibold text-gray-900 mx-1 sm:mx-0">{titleText}</h4>
                           
                           {/* 总比分 - 显示所有团队 */}
                           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mx-1 sm:mx-0 flex-wrap">
@@ -834,89 +972,222 @@ export default function UserScoreQuery() {
                                     </div>
                                   </div>
                                   
-                                  {/* 显示所有团队 */}
-                                  <div className="space-y-4 mb-4 sm:mb-6">
-                                    {groupTeamColors.map(({ team, color }, teamIndex) => {
-                                      const teamHoleResults = holeResultsByTeam.get(team.teamName) || []
-                                      return (
-                                        <div key={team.teamName} className="relative">
-                                          <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
-                                          <div className="pl-3 sm:pl-4">
-                                            <div className="flex items-center justify-between mb-2">
-                                              <div className="flex items-center gap-2">
+                                  {/* 左右分列布局 - 仅显示两个团队 */}
+                                  {sortedGroupTeams.length === 2 ? (
+                                    <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
+                                      {/* 左侧团队 */}
+                                      {(() => {
+                                        const team = sortedGroupTeams[0]
+                                        const color = teamColorMap.get(team.teamName) || teamColors[0]
+                                        const teamHoleResults = holeResultsByTeam.get(team.teamName) || []
+                                        const wins = teamWinsCount.get(team.teamName) || 0
+                                        return (
+                                          <div className="flex-1 relative">
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
+                                            <div className="pl-3 sm:pl-4">
+                                              <div className="flex items-center gap-2 mb-2">
                                                 <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
                                                 <span className="font-semibold text-gray-900">{team.teamName}</span>
                                               </div>
-                                              <span className="text-lg font-bold" style={{ color: color.text }}>
-                                                {(() => {
-                                                  const wins = teamWinsCount.get(team.teamName) || 0
-                                                  return wins % 1 === 0 ? `${wins}洞` : `${wins.toFixed(1)}洞`
-                                                })()}
-                                              </span>
-                                            </div>
-                                            <div className="space-y-2">
-                                              {team.players.map((player, idx) => (
-                                                <div key={idx} className="flex items-center gap-2 sm:gap-3">
-                                                  <div className="relative">
-                                                    <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
-                                                         style={{ 
-                                                           backgroundColor: `${color.bg}20`,
-                                                           borderColor: `${color.bg}40`
-                                                         }}>
-                                                      {player.avatarUrl ? (
-                                                        <img 
-                                                          src={player.avatarUrl} 
-                                                          alt={player.name}
-                                                          className="w-full h-full object-cover"
-                                                          style={{
-                                                            objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                          }}
-                                                          onError={(e) => {
-                                                            e.currentTarget.style.display = 'none'
-                                                            const parent = e.currentTarget.parentElement
-                                                            if (parent) {
-                                                              parent.innerHTML = `<svg class="w-5 h-5" style="color: ${color.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
-                                                            }
-                                                          }}
-                                                        />
-                                                      ) : (
-                                                        <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: color.text }} />
-                                                      )}
+                                              <div className="space-y-2">
+                                                {team.players.map((player, idx) => (
+                                                  <div key={idx} className="flex items-center gap-2 sm:gap-3">
+                                                    <div className="relative">
+                                                      <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
+                                                           style={{ 
+                                                             backgroundColor: `${color.bg}20`,
+                                                             borderColor: `${color.bg}40`
+                                                           }}>
+                                                        {player.avatarUrl ? (
+                                                          <img 
+                                                            src={player.avatarUrl} 
+                                                            alt={player.name}
+                                                            className="w-full h-full object-cover"
+                                                            style={{
+                                                              objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
+                                                            }}
+                                                            onError={(e) => {
+                                                              e.currentTarget.style.display = 'none'
+                                                              const parent = e.currentTarget.parentElement
+                                                              if (parent) {
+                                                                parent.innerHTML = `<svg class="w-5 h-5" style="color: ${color.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
+                                                              }
+                                                            }}
+                                                          />
+                                                        ) : (
+                                                          <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: color.text }} />
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                      <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                      <span className="text-xs text-gray-500">{player.totalStrokes || 0}杆</span>
                                                     </div>
                                                   </div>
-                                                  <div className="flex flex-col">
-                                                    <span className="text-sm text-gray-800 font-medium">{player.name}</span>
-                                                    <span className="text-xs text-gray-500">{player.totalStrokes || 0}杆</span>
-                                                  </div>
-                                                </div>
-                                              ))}
+                                                ))}
+                                              </div>
                                             </div>
                                           </div>
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                  
-                                  {/* 比分显示 */}
-                                  <div className="flex items-center justify-center mb-4">
-                                    <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 py-2 border border-gray-200">
-                                      {sortedGroupTeams.map((team, idx) => {
-                                        const color = teamColorMap.get(team.teamName) || teamColors[idx % teamColors.length]
-                                        const wins = teamWinsCount.get(team.teamName) || 0
-                                        const winsText = wins % 1 === 0 ? wins.toString() : wins.toFixed(1)
+                                        )
+                                      })()}
+                                      
+                                      {/* 中间比分（仅莱德杯模式显示） */}
+                                      {(() => {
+                                        // 根据 scoring_mode 决定是否显示比分
+                                        const scoringMode = group.event?.scoring_mode || 'ryder_cup' // 默认为莱德杯模式
+                                        
+                                        if (scoringMode !== 'ryder_cup') {
+                                          // 总杆模式：不显示中间比分
+                                          return null
+                                        }
+                                        
+                                        const team1 = sortedGroupTeams[0]
+                                        const team2 = sortedGroupTeams[1]
+                                        const wins1 = teamWinsCount.get(team1.teamName) || 0
+                                        const wins2 = teamWinsCount.get(team2.teamName) || 0
+                                        const formatScore = (s: number) => {
+                                          if (s % 1 === 0) return s.toString()
+                                          return s.toFixed(1)
+                                        }
+                                        const color1 = teamColorMap.get(team1.teamName) || teamColors[0]
+                                        const color2 = teamColorMap.get(team2.teamName) || teamColors[1]
+                                        
+                                        // 莱德杯模式：显示比分
                                         return (
-                                          <React.Fragment key={team.teamName}>
-                                            <span className="text-xl sm:text-2xl font-bold" style={{ color: color.text }}>
-                                              {winsText}
-                                            </span>
-                                            {idx < sortedGroupTeams.length - 1 && (
-                                              <span className="text-gray-400 text-lg font-light mx-1">-</span>
-                                            )}
-                                          </React.Fragment>
+                                          <div className="flex items-center justify-center px-2 sm:px-3">
+                                            <div className="bg-gray-100 rounded-lg px-3 sm:px-4 py-2 border border-gray-200">
+                                              <span className="text-lg sm:text-xl font-bold" style={{ color: color1.text }}>
+                                                {formatScore(wins1)}
+                                              </span>
+                                              <span className="text-gray-400 text-base sm:text-lg font-light mx-1 sm:mx-2">-</span>
+                                              <span className="text-lg sm:text-xl font-bold" style={{ color: color2.text }}>
+                                                {formatScore(wins2)}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
+                                      
+                                      {/* 右侧团队 */}
+                                      {(() => {
+                                        const team = sortedGroupTeams[1]
+                                        const color = teamColorMap.get(team.teamName) || teamColors[1]
+                                        const teamHoleResults = holeResultsByTeam.get(team.teamName) || []
+                                        const wins = teamWinsCount.get(team.teamName) || 0
+                                        return (
+                                          <div className="flex-1 relative">
+                                            <div className="pr-3 sm:pr-4">
+                                              <div className="flex items-center justify-end gap-2 mb-2">
+                                                <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
+                                                <span className="font-semibold text-gray-900">{team.teamName}</span>
+                                              </div>
+                                              <div className="space-y-2">
+                                                {team.players.map((player, idx) => (
+                                                  <div key={idx} className="flex items-center gap-2 sm:gap-3 justify-end">
+                                                    <div className="flex flex-col items-end">
+                                                      <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                      <span className="text-xs text-gray-500">{player.totalStrokes || 0}杆</span>
+                                                    </div>
+                                                    <div className="relative">
+                                                      <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
+                                                           style={{ 
+                                                             backgroundColor: `${color.bg}20`,
+                                                             borderColor: `${color.bg}40`
+                                                           }}>
+                                                        {player.avatarUrl ? (
+                                                          <img 
+                                                            src={player.avatarUrl} 
+                                                            alt={player.name}
+                                                            className="w-full h-full object-cover"
+                                                            style={{
+                                                              objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
+                                                            }}
+                                                            onError={(e) => {
+                                                              e.currentTarget.style.display = 'none'
+                                                              const parent = e.currentTarget.parentElement
+                                                              if (parent) {
+                                                                parent.innerHTML = `<svg class="w-5 h-5" style="color: ${color.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
+                                                              }
+                                                            }}
+                                                          />
+                                                        ) : (
+                                                          <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: color.text }} />
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                            <div className="absolute right-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
+                                          </div>
+                                        )
+                                      })()}
+                                    </div>
+                                  ) : (
+                                    // 如果超过两个团队，使用原来的上下布局
+                                    <div className="space-y-4 mb-4 sm:mb-6">
+                                      {groupTeamColors.map(({ team, color }, teamIndex) => {
+                                        const teamHoleResults = holeResultsByTeam.get(team.teamName) || []
+                                        return (
+                                          <div key={team.teamName} className="relative">
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
+                                            <div className="pl-3 sm:pl-4">
+                                              <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
+                                                  <span className="font-semibold text-gray-900">{team.teamName}</span>
+                                                </div>
+                                                <span className="text-lg font-bold" style={{ color: color.text }}>
+                                                  {(() => {
+                                                    const wins = teamWinsCount.get(team.teamName) || 0
+                                                    return wins % 1 === 0 ? `${wins}洞` : `${wins.toFixed(1)}洞`
+                                                  })()}
+                                                </span>
+                                              </div>
+                                              <div className="space-y-2">
+                                                {team.players.map((player, idx) => (
+                                                  <div key={idx} className="flex items-center gap-2 sm:gap-3">
+                                                    <div className="relative">
+                                                      <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
+                                                           style={{ 
+                                                             backgroundColor: `${color.bg}20`,
+                                                             borderColor: `${color.bg}40`
+                                                           }}>
+                                                        {player.avatarUrl ? (
+                                                          <img 
+                                                            src={player.avatarUrl} 
+                                                            alt={player.name}
+                                                            className="w-full h-full object-cover"
+                                                            style={{
+                                                              objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
+                                                            }}
+                                                            onError={(e) => {
+                                                              e.currentTarget.style.display = 'none'
+                                                              const parent = e.currentTarget.parentElement
+                                                              if (parent) {
+                                                                parent.innerHTML = `<svg class="w-5 h-5" style="color: ${color.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
+                                                              }
+                                                            }}
+                                                          />
+                                                        ) : (
+                                                          <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: color.text }} />
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                      <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                      <span className="text-xs text-gray-500">{player.totalStrokes || 0}杆</span>
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          </div>
                                         )
                                       })}
                                     </div>
-                                  </div>
+                                  )}
                                   
                                   {/* 每洞结果显示 */}
                                   <div className="bg-gradient-to-b from-gray-50 to-white rounded-xl p-2 sm:p-4 border border-gray-100">
@@ -965,54 +1236,257 @@ export default function UserScoreQuery() {
                           </div>
                         </div>
                       )
-                    })()}
-                    
-                    {/* 如果不是团体赛或没有团体赛数据，显示普通排名 */}
-                    {group.event.event_type !== '团体赛' && (
-                      <div className="space-y-3 mt-4">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-3">成绩排名</h4>
-                        <div className="space-y-2">
-                          {group.scores.map((score, index) => {
-                            const isCurrentUser = score.user_id === user?.id
-                            return (
-                              <div 
-                                key={score.id}
-                                className={`flex items-center justify-between p-2 sm:p-4 rounded-xl transition-all ${
-                                  isCurrentUser 
-                                    ? 'bg-golf-50 border-2 border-golf-200 shadow-lg' 
-                                    : score.rank && score.rank <= 3
-                                    ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-200 shadow-md'
-                                    : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
-                                }`}
-                              >
-                                <div className="flex items-center space-x-4">
-                                  <div className="flex items-center space-x-3">
-                                    {getRankIcon(score.rank)}
-                                    <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${getRankBadgeStyle(score.rank)}`}>
-                                      {score.rank ? `#${score.rank}` : `#${index + 1}`}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <div className={`font-medium ${isCurrentUser ? 'text-golf-800' : 'text-gray-900'}`}>
-                                      {score.user_profiles?.full_name || '未知'}
-                                      {isCurrentUser && (
-                                        <span className="ml-2 text-xs text-golf-600 font-semibold">(我)</span>
-                                      )}
+                    })()
+                    ) : (
+                      /* 个人赛 - 显示按分组组织的成绩信息 */
+                      (() => {
+                        // 按分组组织个人赛成绩
+                        const groupedScores = new Map<number, typeof group.scores>()
+                        
+                        group.scores.forEach(score => {
+                          const groupNum = score.group_number || 0
+                          if (!groupedScores.has(groupNum)) {
+                            groupedScores.set(groupNum, [])
+                          }
+                          groupedScores.get(groupNum)!.push(score)
+                        })
+                        
+                        const sortedGroups = Array.from(groupedScores.entries()).sort((a, b) => a[0] - b[0])
+                        
+                        if (sortedGroups.length === 0) {
+                          return (
+                            <div className="space-y-3 mt-4">
+                              <p className="text-sm text-gray-500 text-center py-4">暂无分组信息</p>
+                            </div>
+                          )
+                        }
+                        
+                        // 先按总杆数从小到大排序所有成绩（用于排名列表）
+                        const allScoresSorted = group.scores.sort((a, b) => {
+                          if (a.total_strokes !== b.total_strokes) {
+                            return a.total_strokes - b.total_strokes
+                          }
+                          return (a.rank || 999) - (b.rank || 999)
+                        })
+                        
+                        return (
+                          <div className="space-y-4 mt-4">
+                            {/* 排名列表 */}
+                            <div className="bg-white rounded-lg border border-gray-200 p-4">
+                              <h4 className="text-lg font-semibold text-gray-900 mb-3">成绩排名</h4>
+                              <div className="space-y-2">
+                                {allScoresSorted.map((score, index) => {
+                                  const isCurrentUser = score.user_id === user?.id
+                                  const playerName = score.is_guest 
+                                    ? (score.player_name || '未知访客')
+                                    : (score.user_profiles?.full_name || '未知')
+                                  const playerType = score.is_guest ? '非会员' : '会员'
+                                  
+                                  return (
+                                    <div
+                                      key={score.id}
+                                      className={`flex items-center justify-between p-2 sm:p-3 rounded-lg ${
+                                        isCurrentUser
+                                          ? 'bg-[#F15B98]/10 border border-[#F15B98]/30'
+                                          : 'bg-gray-50 border border-gray-100'
+                                      }`}
+                                    >
+                                      <div className="flex items-center space-x-3 flex-1">
+                                        {/* 排名图标（前三名显示金银铜） */}
+                                        {index < 3 ? (
+                                          <div className="flex-shrink-0">
+                                            {getRankIcon(index + 1)}
+                                          </div>
+                                        ) : (
+                                          <span className="text-xs sm:text-sm text-gray-500 min-w-[2rem]">
+                                            {index + 1}.
+                                          </span>
+                                        )}
+                                        <div className="flex-1">
+                                          <div className={`text-sm sm:text-base font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
+                                            {playerName}
+                                            {isCurrentUser && (
+                                              <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
+                                            )}
+                                            <span className="ml-2 text-xs text-gray-500">({playerType})</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right ml-4">
+                                        <div className="text-lg sm:text-xl font-bold text-gray-900">{score.total_strokes}</div>
+                                        <div className="text-xs sm:text-sm text-gray-500">杆</div>
+                                      </div>
                                     </div>
-                                    <div className="text-sm text-gray-600">
-                                      总杆数: {score.total_strokes} | 净杆数: {score.net_strokes || '-'} | 差点: {score.handicap}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-lg font-bold text-gray-900">{score.total_strokes}</div>
-                                  <div className="text-xs text-gray-500">杆</div>
-                                </div>
+                                  )
+                                })}
                               </div>
-                            )
-                          })}
-                        </div>
-                      </div>
+                            </div>
+                            
+                            {/* 小组卡片 */}
+                            {sortedGroups.map(([groupNum, scores]) => {
+                              // 按总杆数从小到大排序
+                              const sortedScores = scores.sort((a, b) => {
+                                if (a.total_strokes !== b.total_strokes) {
+                                  return a.total_strokes - b.total_strokes
+                                }
+                                return (a.rank || 999) - (b.rank || 999)
+                              })
+                              
+                              // 为每个玩家分配小组内排名（1, 2, 3...）
+                              const scoresWithGroupRank = sortedScores.map((score, index) => ({
+                                ...score,
+                                groupRank: index + 1
+                              }))
+                              
+                              // 分成左右两列
+                              const midIndex = Math.ceil(scoresWithGroupRank.length / 2)
+                              const leftPlayers = scoresWithGroupRank.slice(0, midIndex)
+                              const rightPlayers = scoresWithGroupRank.slice(midIndex)
+                              
+                              return (
+                                <div key={groupNum} className="bg-white rounded-2xl p-2 sm:p-6 border border-gray-100 shadow-lg">
+                                  <div className="mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
+                                    <h4 className="text-base sm:text-lg font-semibold text-gray-900">
+                                      第{groupNum}组 ({scores.length}人)
+                                    </h4>
+                                  </div>
+                                  
+                                  {/* 左右分列布局 */}
+                                  <div className="flex items-start gap-3 sm:gap-4">
+                                    {/* 左侧玩家 */}
+                                    <div className="flex-1 flex flex-col items-start relative">
+                                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#F15B98] rounded-l-full"></div>
+                                      <div className="pl-4 sm:pl-5 space-y-3 w-full">
+                                        {leftPlayers.map((score) => {
+                                          const isCurrentUser = score.user_id === user?.id
+                                          const playerName = score.is_guest 
+                                            ? (score.player_name || '未知访客')
+                                            : (score.user_profiles?.full_name || '未知')
+                                          const avatarUrl = score.is_guest ? null : (score.user_profiles?.avatar_url || null)
+                                          const avatarPositionX = score.user_profiles?.avatar_position_x || 50
+                                          const avatarPositionY = score.user_profiles?.avatar_position_y || 50
+                                          const groupRank = (score as any).groupRank || null
+                                          
+                                          return (
+                                            <div key={score.id} className="flex items-center gap-2 sm:gap-3 w-full">
+                                              <div className="relative">
+                                                <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0" 
+                                                     style={{ 
+                                                       backgroundColor: '#F15B9820',
+                                                       borderColor: '#F15B9840'
+                                                     }}>
+                                                  {avatarUrl ? (
+                                                    <img 
+                                                      src={avatarUrl} 
+                                                      alt={playerName}
+                                                      className="w-full h-full object-cover"
+                                                      style={{
+                                                        objectPosition: `${avatarPositionX}% ${avatarPositionY}%`
+                                                      }}
+                                                      onError={(e) => {
+                                                        e.currentTarget.style.display = 'none'
+                                                        const parent = e.currentTarget.parentElement
+                                                        if (parent) {
+                                                          parent.innerHTML = `<svg class="w-4 h-4 sm:w-5 sm:h-5" style="color: #F15B98" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
+                                                        }
+                                                      }}
+                                                    />
+                                                  ) : (
+                                                    <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#F15B98' }} />
+                                                  )}
+                                                </div>
+                                              </div>
+                                              <div className="flex flex-col flex-1 min-w-0">
+                                                <div className={`text-sm sm:text-base font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
+                                                  {playerName}
+                                                  {isCurrentUser && (
+                                                    <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
+                                                  )}
+                                                  {score.is_guest && (
+                                                    <span className="ml-2 text-xs text-gray-500">(访客)</span>
+                                                  )}
+                                                </div>
+                                                <div className="text-xs sm:text-sm text-gray-600 mt-0.5">
+                                                  {score.total_strokes}杆
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* 中间不显示比分 */}
+                                    
+                                    {/* 右侧玩家 */}
+                                    <div className="flex-1 flex flex-col items-end relative">
+                                      <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#10B981] rounded-r-full"></div>
+                                      <div className="pr-4 sm:pr-5 space-y-3 w-full text-right">
+                                        {rightPlayers.map((score) => {
+                                          const isCurrentUser = score.user_id === user?.id
+                                          const playerName = score.is_guest 
+                                            ? (score.player_name || '未知访客')
+                                            : (score.user_profiles?.full_name || '未知')
+                                          const avatarUrl = score.is_guest ? null : (score.user_profiles?.avatar_url || null)
+                                          const avatarPositionX = score.user_profiles?.avatar_position_x || 50
+                                          const avatarPositionY = score.user_profiles?.avatar_position_y || 50
+                                          const groupRank = (score as any).groupRank || null
+                                          
+                                          return (
+                                            <div key={score.id} className="flex flex-row-reverse items-center gap-2 sm:gap-3 w-full">
+                                              <div className="relative">
+                                                <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0" 
+                                                     style={{ 
+                                                       backgroundColor: '#10B98120',
+                                                       borderColor: '#10B98140'
+                                                     }}>
+                                                  {avatarUrl ? (
+                                                    <img 
+                                                      src={avatarUrl} 
+                                                      alt={playerName}
+                                                      className="w-full h-full object-cover"
+                                                      style={{
+                                                        objectPosition: `${avatarPositionX}% ${avatarPositionY}%`
+                                                      }}
+                                                      onError={(e) => {
+                                                        e.currentTarget.style.display = 'none'
+                                                        const parent = e.currentTarget.parentElement
+                                                        if (parent) {
+                                                          parent.innerHTML = `<svg class="w-4 h-4 sm:w-5 sm:h-5" style="color: #10B981" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
+                                                        }
+                                                      }}
+                                                    />
+                                                  ) : (
+                                                    <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#10B981' }} />
+                                                  )}
+                                                </div>
+                                              </div>
+                                              <div className="flex flex-col flex-1 text-right min-w-0">
+                                                <div className={`text-sm sm:text-base font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
+                                                  {playerName}
+                                                  {isCurrentUser && (
+                                                    <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
+                                                  )}
+                                                  {score.is_guest && (
+                                                    <span className="ml-2 text-xs text-gray-500">(访客)</span>
+                                                  )}
+                                                </div>
+                                                <div className="text-xs sm:text-sm text-gray-600 mt-0.5">
+                                                  {score.total_strokes}杆
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()
                     )}
                   </div>
                 )}

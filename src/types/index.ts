@@ -59,6 +59,12 @@ export interface Event {
   article_excerpt?: string
   article_featured_image_url?: string
   is_public?: boolean // 是否对所有人公开（true=所有人可见，false=仅会员可见）
+  // 比赛计算方式
+  scoring_mode?: 'ryder_cup' | 'total_strokes' // 莱德杯模式或总杆模式
+  par?: number[] // 标准杆数数组，包含18洞的PAR值
+  // 队伍配置
+  team_name_mapping?: Record<string, string> // 队伍名称映射：Excel中的原始名称 -> 系统显示名称
+  team_colors?: Record<string, string> // 队伍颜色配置：Excel中的原始名称 -> 颜色代码
 }
 
 export interface EventRegistration {

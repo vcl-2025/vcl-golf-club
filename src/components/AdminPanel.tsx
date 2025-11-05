@@ -80,6 +80,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   const [events, setEvents] = useState<Event[]>([])
   const [posters, setPosters] = useState<Poster[]>([])
   const [scores, setScores] = useState<any[]>([])
+  const [guestScores, setGuestScores] = useState<any[]>([])
   const [eventRegistrations, setEventRegistrations] = useState<any[]>([])
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
@@ -375,6 +376,19 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
         setScores(scoresWithProfiles)
       }
+
+      // 获取所有访客成绩
+      const { data: guestScoresData, error: guestScoresError } = await supabase
+        .from('guest_scores')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (guestScoresError) {
+        console.error('获取访客成绩数据失败:', guestScoresError)
+        setGuestScores([])
+      } else {
+        setGuestScores(guestScoresData || [])
+      }
     } catch (error) {
       console.error('获取管理数据失败:', error)
     } finally {
@@ -454,6 +468,53 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       } catch (error) {
         console.error('删除成绩失败:', error)
         showError('删除失败，请重试')
+      }
+    })
+  }
+
+  // 删除整个活动的所有成绩（包括scores和guest_scores）
+  const handleDeleteAllScoresForEvent = async (eventId: string) => {
+    const event = events.find(e => e.id === eventId)
+    const eventTitle = event?.title || '该活动'
+    
+    confirmDelete(`确定要删除"${eventTitle}"的所有成绩记录吗？\n这将删除会员成绩和访客成绩，删除后可以重新导入。`, async () => {
+      try {
+        setLoading(true)
+        
+        // 删除会员成绩
+        const { error: scoresError } = await supabase
+          .from('scores')
+          .delete()
+          .eq('event_id', eventId)
+
+        if (scoresError) {
+          console.error('删除会员成绩失败:', scoresError)
+          throw scoresError
+        }
+
+        // 删除访客成绩
+        const { error: guestScoresError } = await supabase
+          .from('guest_scores')
+          .delete()
+          .eq('event_id', eventId)
+
+        if (guestScoresError) {
+          console.error('删除访客成绩失败:', guestScoresError)
+          throw guestScoresError
+        }
+
+        // 更新本地状态
+        setScores(scores.filter(s => s.event_id !== eventId))
+        
+        // 刷新数据
+        await fetchAdminData()
+        
+        showSuccess('所有成绩记录已删除，可以重新导入')
+      } catch (error) {
+        console.error('删除成绩失败:', error)
+        showError('删除失败，请重试')
+      } finally {
+        setLoading(false)
       }
     })
   }
@@ -1083,8 +1144,11 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             <div className="space-y-2">
               {filteredEvents.map((event) => {
                 const eventScores = scores.filter(s => s.event_id === event.id)
+                const eventGuestScores = guestScores.filter(s => s.event_id === event.id)
+                // 统计所有成绩（会员+访客）
+                const totalScoresCount = eventScores.length + eventGuestScores.length
                 const participantsCount = eventScores.length
-                const hasScores = participantsCount > 0
+                const hasScores = totalScoresCount > 0
                 const isExpanded = expandedEvents.has(event.id)
                 
                 // 计算该活动的总报名人数
@@ -1136,6 +1200,11 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                             <div className="flex items-center text-sm text-gray-600 mt-1">
                               <Users className="w-4 h-4 mr-2" />
                               已录入成绩: {participantsCount}/{totalRegistrations}
+                              {eventGuestScores.length > 0 && (
+                                <span className="ml-2 text-xs text-gray-500">
+                                  (访客: {eventGuestScores.length})
+                                </span>
+                              )}
                               {totalRegistrations > 0 && (
                                 <div className="ml-3 flex items-center space-x-2">
                                   <div className="w-16 bg-gray-200 rounded-full h-1.5">
@@ -1152,22 +1221,31 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                         </div>
                         <div className="flex items-center space-x-2">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            participantsCount === 0 
+                            totalScoresCount === 0 
                               ? 'bg-gray-100 text-gray-800' 
-                              : participantsCount === totalRegistrations 
+                              : participantsCount === totalRegistrations && totalRegistrations > 0
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {participantsCount === 0 
+                            {totalScoresCount === 0 
                               ? '尚未录入' 
-                              : participantsCount === totalRegistrations 
+                              : participantsCount === totalRegistrations && totalRegistrations > 0
                               ? '录入完成' 
                               : '部分录入'
                             }
                           </span>
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
-                          </div>
+                          {totalScoresCount > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation() // 阻止触发卡片展开/折叠
+                                handleDeleteAllScoresForEvent(event.id)
+                              }}
+                              className="flex items-center justify-center p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                              title="删除该活动的所有成绩记录（包括会员和访客），可重新导入"
+                            >
+                              <Trash2 className="w-4 h-4 sm:w-4 sm:h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1176,9 +1254,16 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                         {isExpanded && (
                           <div className="border-t border-gray-100 px-4 sm:px-6 pb-4 bg-white rounded-b-2xl">
                             <div className="space-y-3 mt-4">
-                              {eventScores.length > 0 ? (
-                                eventScores
-                                  .sort((a, b) => {
+                              {totalScoresCount > 0 ? (
+                                (() => {
+                                  // 合并会员和访客成绩，统一格式
+                                  const allScores = [
+                                    ...eventScores.map(score => ({ ...score, isGuest: false })),
+                                    ...eventGuestScores.map(score => ({ ...score, isGuest: true }))
+                                  ]
+                                  
+                                  // 统一排序
+                                  const sortedScores = allScores.sort((a, b) => {
                                     // 按排名排序，有排名的在前，没有排名的在后
                                     if (a.rank && b.rank) {
                                       return a.rank - b.rank
@@ -1188,14 +1273,24 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                                     // 如果都没有排名，按总杆数排序（杆数少的在前）
                                     return a.total_strokes - b.total_strokes
                                   })
-                                  .map((score, index) => (
+                                  
+                                  return sortedScores.map((score, index) => (
                                     <div key={score.id || index} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
                                       <div className="flex-1">
-                                        <div className="font-medium text-gray-900">
-                                          {score.user_profiles?.full_name || '未知'}
+                                        <div className="font-medium text-gray-900 flex items-center gap-2">
+                                          {score.isGuest ? (
+                                            score.player_name || '未知访客'
+                                          ) : (
+                                            score.user_profiles?.full_name || '未知'
+                                          )}
+                                          {score.isGuest && (
+                                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                              访客
+                                            </span>
+                                          )}
                                         </div>
                                         <div className="text-sm text-gray-600">
-                                          总杆数: {score.total_strokes} | 净杆数: {score.net_strokes || '-'} | 差点: {score.handicap}
+                                          总杆数: {score.total_strokes} | 净杆数: {score.net_strokes || '-'} | 差点: {score.handicap || '-'}
                                         </div>
                                       </div>
                                       <div className="flex items-center space-x-4">
@@ -1223,6 +1318,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                                       </div>
                                     </div>
                                   ))
+                                })()
                               ) : (
                                 <div className="text-center py-8 text-gray-500">
                                   <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -1241,7 +1337,17 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                             </div>
 
                             {/* 操作按钮 */}
-                            <div className="flex items-center justify-end mt-4 pt-4 border-t border-gray-100">
+                            <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
+                              {totalScoresCount > 0 && (
+                                <button
+                                  onClick={() => handleDeleteAllScoresForEvent(event.id)}
+                                  className="flex items-center text-sm text-red-600 hover:text-red-700"
+                                  title="删除该活动的所有成绩记录（包括会员和访客），可重新导入"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  删除所有成绩
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   setSelectedEvent(event)

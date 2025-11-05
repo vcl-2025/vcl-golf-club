@@ -14,14 +14,17 @@ interface ScoreFormProps {
 
 interface EventParticipant {
   id: string
-  user_id: string
-  user_profiles: {
+  user_id?: string  // 访客可能没有 user_id
+  user_profiles?: {
     full_name: string
     email: string
   }
   registration_number: string
   total_strokes?: number
   rank?: number
+  isGuest?: boolean  // 是否为访客
+  player_name?: string  // 访客姓名
+  guest_score_id?: string  // 访客成绩记录ID
 }
 
 interface ScoreData {
@@ -53,10 +56,31 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     rank: '',
     notes: ''
   })
+  const [playerName, setPlayerName] = useState('')  // 访客姓名
 
   // 批量导入相关状态
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [importStep, setImportStep] = useState<'select' | 'preview' | 'mode' | 'importing'>('select')
+  const [previewData, setPreviewData] = useState<{
+    players: Array<{
+      name: string
+      holeScores: number[]
+      holeScoresOriginal: string[] // 保存原始字符串格式（可能包含+/-号）
+      actualStrokes: number[]
+      totalStrokes: number
+      netStrokes: number | null
+      groupNumber: number | null
+      teamName: string | null
+    }>
+    headers: string[]
+    parValues: number[]
+  } | null>(null)
+  const [importMode, setImportMode] = useState<'individual' | 'team_ryder' | 'team_strokes'>('individual')
+  // 队伍名称映射：Excel中的名称 -> 系统显示的名称
+  const [teamNameMapping, setTeamNameMapping] = useState<Record<string, string>>({})
+  // 队伍颜色配置：Excel中的队伍名称 -> 颜色
+  const [teamColors, setTeamColors] = useState<Record<string, string>>({})
   const [importResult, setImportResult] = useState<{
     success: number
     failed: number
@@ -67,8 +91,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       details: Array<{
         group: number
         winner: string | 'tie'
-        teams: Array<{ teamName: string; wins: number; playerCount: number }>
+        teams: Array<{ teamName: string; wins?: number; totalStrokes?: number; playerCount: number }>
       }>
+      importMode?: 'individual' | 'team_ryder' | 'team_strokes'
     }
   } | null>(null)
 
@@ -89,10 +114,22 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
   // 如果有预选的成绩记录，自动选择对应的用户
   useEffect(() => {
-    if (preselectedScore && participants.length > 0) {
-      const targetParticipant = participants.find(p => p.user_id === preselectedScore.user_id)
-      if (targetParticipant) {
-        handleParticipantSelect(targetParticipant)
+    if (preselectedScore) {
+      // 如果是访客成绩（有 player_name 但没有 user_id）
+      if (preselectedScore.player_name && !preselectedScore.user_id) {
+        // 确保已获取到访客列表
+        if (participants.length > 0) {
+          const targetParticipant = participants.find(p => p.isGuest && p.guest_score_id === preselectedScore.id)
+          if (targetParticipant) {
+            handleParticipantSelect(targetParticipant)
+          }
+        }
+      } else if (preselectedScore.user_id && participants.length > 0) {
+        // 会员成绩
+        const targetParticipant = participants.find(p => p.user_id === preselectedScore.user_id)
+        if (targetParticipant) {
+          handleParticipantSelect(targetParticipant)
+        }
       }
     }
   }, [preselectedScore, participants])
@@ -141,7 +178,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
   const fetchParticipants = async (eventId: string) => {
     try {
-      // 先获取报名记录
+      const allParticipants: EventParticipant[] = []
+      
+      // 1. 获取会员报名记录
       const { data: registrations, error: regError } = await supabase
         .from('event_registrations')
         .select('id, user_id')
@@ -150,52 +189,72 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
       if (regError) throw regError
 
-      if (!registrations || registrations.length === 0) {
-        setParticipants([])
-        setError('') // 清除错误状态
-        return
-      }
+      if (registrations && registrations.length > 0) {
+        // 获取用户信息
+        const userIds = registrations.map(r => r.user_id)
+        const { data: profiles, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, email')
+          .in('id', userIds)
 
-      // 获取用户信息
-      const userIds = registrations.map(r => r.user_id)
-      const { data: profiles, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('id, full_name')
-        .in('id', userIds)
+        if (profileError) throw profileError
 
-      if (profileError) throw profileError
+        // 获取会员成绩数据
+        const { data: scores, error: scoresError } = await supabase
+          .from('scores')
+          .select('user_id, total_strokes, rank')
+          .eq('event_id', eventId)
 
-      // 获取成绩数据
-      const { data: scores, error: scoresError } = await supabase
-        .from('scores')
-        .select('user_id, total_strokes, rank')
-        .eq('event_id', eventId)
+        if (scoresError) console.error('获取成绩数据失败:', scoresError)
+        
+        // 创建成绩映射
+        const scoreMap = new Map()
+        if (scores) {
+          scores.forEach((score: any) => {
+            scoreMap.set(score.user_id, score)
+          })
+        }
 
-      if (scoresError) console.error('获取成绩数据失败:', scoresError)
-      
-      // 创建成绩映射
-      const scoreMap = new Map()
-      if (scores) {
-        scores.forEach((score: any) => {
-          scoreMap.set(score.user_id, score)
+        // 添加会员参与者
+        registrations.forEach((reg, index) => {
+          const profile = profiles?.find(p => p.id === reg.user_id)
+          const score = scoreMap.get(reg.user_id)
+          allParticipants.push({
+            id: reg.id,
+            user_id: reg.user_id,
+            registration_number: `M${String(allParticipants.length + 1).padStart(3, '0')}`,
+            user_profiles: profile || { full_name: 'Unknown', email: '' },
+            total_strokes: score?.total_strokes,
+            rank: score?.rank,
+            isGuest: false
+          })
         })
       }
 
-      // 合并数据
-      const participants = registrations.map((reg, index) => {
-        const profile = profiles?.find(p => p.id === reg.user_id)
-        const score = scoreMap.get(reg.user_id)
-        return {
-          id: reg.id,
-          user_id: reg.user_id,
-          registration_number: `M${String(index + 1).padStart(3, '0')}`, // 使用序号作为编号
-          user_profiles: profile || { full_name: 'Unknown' },
-          total_strokes: score?.total_strokes,
-          rank: score?.rank
-        }
-      })
+      // 2. 获取访客成绩
+      const { data: guestScores, error: guestScoresError } = await supabase
+        .from('guest_scores')
+        .select('id, player_name, total_strokes, rank')
+        .eq('event_id', eventId)
 
-      setParticipants(participants)
+      if (guestScoresError) {
+        console.error('获取访客成绩失败:', guestScoresError)
+      } else if (guestScores && guestScores.length > 0) {
+        // 添加访客参与者
+        guestScores.forEach((score) => {
+          allParticipants.push({
+            id: `guest_${score.id}`,
+            registration_number: `G${String(allParticipants.length + 1).padStart(3, '0')}`,
+            player_name: score.player_name,
+            total_strokes: score.total_strokes,
+            rank: score.rank,
+            isGuest: true,
+            guest_score_id: score.id
+          })
+        })
+      }
+
+      setParticipants(allParticipants)
       setError('') // 清除错误状态
     } catch (error) {
       console.error('获取报名人员失败:', error)
@@ -205,14 +264,36 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
   const checkExistingScores = async (eventId: string) => {
     try {
-      const { data, error } = await supabase
+      // 检查会员成绩
+      const { data: scores, error: scoresError } = await supabase
         .from('scores')
         .select('user_id')
         .eq('event_id', eventId)
 
-      if (error) throw error
+      if (scoresError) throw scoresError
 
-      const saved = new Set((data || []).map(s => s.user_id))
+      // 检查访客成绩
+      const { data: guestScores, error: guestScoresError } = await supabase
+        .from('guest_scores')
+        .select('id')
+        .eq('event_id', eventId)
+
+      if (guestScoresError) console.error('检查访客成绩失败:', guestScoresError)
+
+      const saved = new Set<string>()
+      // 添加会员成绩ID
+      if (scores) {
+        scores.forEach((s: any) => {
+          if (s.user_id) saved.add(s.user_id)
+        })
+      }
+      // 添加访客成绩ID
+      if (guestScores) {
+        guestScores.forEach((s: any) => {
+          saved.add(`guest_${s.id}`)
+        })
+      }
+      
       setSavedParticipants(saved)
     } catch (error) {
       console.error('检查已保存成绩失败:', error)
@@ -233,19 +314,43 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       }
     }, 100)
     
+    // 设置访客姓名（如果是访客）
+    if (participant.isGuest) {
+      setPlayerName(participant.player_name || '')
+    } else {
+      setPlayerName('')
+    }
+    
     // 检查是否已录入过成绩
-    if (savedParticipants.has(participant.user_id)) {
+    const participantKey = participant.isGuest 
+      ? `guest_${participant.guest_score_id}` 
+      : participant.user_id
+    
+    if (participantKey && savedParticipants.has(participantKey)) {
       try {
-        // 获取已保存的成绩数据
-        const { data: existingScore, error } = await supabase
-          .from('scores')
-          .select('*')
-          .eq('user_id', participant.user_id)
-          .eq('event_id', selectedEvent?.id || '')
-          .single()
+        let existingScore: any = null
+        if (participant.isGuest && participant.guest_score_id) {
+          // 获取访客成绩
+          const { data, error } = await supabase
+            .from('guest_scores')
+            .select('*')
+            .eq('id', participant.guest_score_id)
+            .single()
+          if (error) throw error
+          existingScore = data
+        } else if (participant.user_id) {
+          // 获取会员成绩
+          const { data, error } = await supabase
+            .from('scores')
+            .select('*')
+            .eq('user_id', participant.user_id)
+            .eq('event_id', selectedEvent?.id || '')
+            .single()
+          if (error) throw error
+          existingScore = data
+        }
 
-        if (error) {
-          console.error('获取已保存成绩失败:', error)
+        if (!existingScore) {
           // 如果获取失败，显示空白表单
           setScoreData({
             total_strokes: '',
@@ -279,22 +384,22 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
             group_number: existingScore.group_number || null,
             team_name: existingScore.team_name || null
           })
-        }
-      } catch (error) {
-        console.error('获取已保存成绩失败:', error)
-        setScoreData({
-          total_strokes: '',
-          net_strokes: '',
-          handicap: '0',
-          rank: '',
-          notes: '',
-          hole_scores: undefined,
-          group_number: null,
-          team_name: null
-        })
       }
-    } else {
-      // 新用户，显示空白表单（初始化18洞成绩为0）
+    } catch (err) {
+      console.error('获取已保存成绩失败:', err)
+      setScoreData({
+        total_strokes: '',
+        net_strokes: '',
+        handicap: '0',
+        rank: '',
+        notes: '',
+        hole_scores: undefined,
+        group_number: null,
+        team_name: null
+      })
+    }
+  } else {
+    // 新用户，显示空白表单（初始化18洞成绩为0）
       setScoreData({
         total_strokes: '',
         net_strokes: '',
@@ -320,63 +425,118 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         throw new Error('请填写总杆数')
       }
 
-      const insertData = {
-        user_id: selectedParticipant.user_id,
-        event_id: selectedEvent.id,
-        total_strokes: parseInt(scoreData.total_strokes),
-        net_strokes: scoreData.net_strokes ? parseInt(scoreData.net_strokes) : null,
-        handicap: parseInt(scoreData.handicap),
-        rank: scoreData.rank ? parseInt(scoreData.rank) : null,
-        notes: scoreData.notes || null,
-        hole_scores: scoreData.hole_scores && scoreData.hole_scores.length === 18 
-          ? scoreData.hole_scores.filter(s => s > 0).length > 0 ? scoreData.hole_scores : null 
-          : null,
-        group_number: scoreData.group_number || null,
-        team_name: scoreData.team_name || null
+      // 如果是访客，验证姓名
+      if (selectedParticipant.isGuest && !playerName.trim()) {
+        throw new Error('请填写访客姓名')
       }
 
-      // 添加调试信息
-      // console.log('🏌️ 准备保存成绩数据:', {
-      //   user_id: selectedParticipant.user_id,
-      //   event_id: selectedEvent.id,
-      //   total_strokes: insertData.total_strokes,
-      //   net_strokes: insertData.net_strokes,
-      //   handicap: insertData.handicap,
-      //   rank: insertData.rank,
-      //   notes: insertData.notes
-      // })
+      if (selectedParticipant.isGuest) {
+        // 保存访客成绩
+        const insertData = {
+          event_id: selectedEvent.id,
+          player_name: playerName.trim(),
+          total_strokes: parseInt(scoreData.total_strokes),
+          net_strokes: scoreData.net_strokes ? parseInt(scoreData.net_strokes) : null,
+          handicap: parseInt(scoreData.handicap),
+          rank: scoreData.rank ? parseInt(scoreData.rank) : null,
+          notes: scoreData.notes || null,
+          hole_scores: scoreData.hole_scores && scoreData.hole_scores.length === 18 
+            ? scoreData.hole_scores.filter(s => s > 0).length > 0 ? scoreData.hole_scores : null 
+            : null,
+          group_number: scoreData.group_number || null,
+          team_name: scoreData.team_name || null
+        }
 
-      // 检查是否已存在记录
-      const { data: existingScore } = await supabase
-        .from('scores')
-        .select('id')
-        .eq('user_id', selectedParticipant.user_id)
-        .eq('event_id', selectedEvent.id)
-        .single()
+        const participantKey = `guest_${selectedParticipant.guest_score_id || selectedParticipant.id}`
+        
+        // 检查是否已存在记录
+        let existingScore: any = null
+        if (selectedParticipant.guest_score_id) {
+          const { data } = await supabase
+            .from('guest_scores')
+            .select('id')
+            .eq('id', selectedParticipant.guest_score_id)
+            .single()
+          existingScore = data
+        }
 
-      let error
-      if (existingScore) {
-        // 更新已存在的记录
-        const { error: updateError } = await supabase
-          .from('scores')
-          .update(insertData)
-          .eq('id', existingScore.id)
-        error = updateError
+        let error
+        if (existingScore) {
+          // 更新已存在的记录
+          const { error: updateError } = await supabase
+            .from('guest_scores')
+            .update(insertData)
+            .eq('id', existingScore.id)
+          error = updateError
+        } else {
+          // 插入新记录
+          const { data: insertData_result, error: insertError } = await supabase
+            .from('guest_scores')
+            .insert([insertData])
+            .select()
+            .single()
+          error = insertError
+          
+          // 更新 participant 的 guest_score_id
+          if (!error && insertData_result) {
+            selectedParticipant.guest_score_id = insertData_result.id
+          }
+        }
+
+        if (error) {
+          console.error('❌ 数据库操作失败:', error)
+          throw error
+        }
+
+        setSavedParticipants(new Set([...savedParticipants, participantKey]))
       } else {
-        // 插入新记录
-        const { error: insertError } = await supabase
+        // 保存会员成绩
+        const insertData = {
+          user_id: selectedParticipant.user_id,
+          event_id: selectedEvent.id,
+          total_strokes: parseInt(scoreData.total_strokes),
+          net_strokes: scoreData.net_strokes ? parseInt(scoreData.net_strokes) : null,
+          handicap: parseInt(scoreData.handicap),
+          rank: scoreData.rank ? parseInt(scoreData.rank) : null,
+          notes: scoreData.notes || null,
+          hole_scores: scoreData.hole_scores && scoreData.hole_scores.length === 18 
+            ? scoreData.hole_scores.filter(s => s > 0).length > 0 ? scoreData.hole_scores : null 
+            : null,
+          group_number: scoreData.group_number || null,
+          team_name: scoreData.team_name || null
+        }
+
+        // 检查是否已存在记录
+        const { data: existingScore } = await supabase
           .from('scores')
-          .insert([insertData])
-        error = insertError
-      }
+          .select('id')
+          .eq('user_id', selectedParticipant.user_id!)
+          .eq('event_id', selectedEvent.id)
+          .single()
 
-      if (error) {
-        console.error('❌ 数据库操作失败:', error)
-        throw error
-      }
+        let error
+        if (existingScore) {
+          // 更新已存在的记录
+          const { error: updateError } = await supabase
+            .from('scores')
+            .update(insertData)
+            .eq('id', existingScore.id)
+          error = updateError
+        } else {
+          // 插入新记录
+          const { error: insertError } = await supabase
+            .from('scores')
+            .insert([insertData])
+          error = insertError
+        }
 
-      // console.log('✅ 成绩保存成功')
-      setSavedParticipants(new Set([...savedParticipants, selectedParticipant.user_id]))
+        if (error) {
+          console.error('❌ 数据库操作失败:', error)
+          throw error
+        }
+
+        setSavedParticipants(new Set([...savedParticipants, selectedParticipant.user_id!]))
+      }
 
       // 立即更新左侧列表中的成绩信息
       setParticipants(prevParticipants => 
@@ -577,8 +737,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       return
     }
 
-    setIsImporting(true)
+    setImportStep('preview')
     setImportResult(null)
+    setIsImporting(true)
 
     try {
       let lines: string[] = []
@@ -777,6 +938,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       const players: Array<{
         name: string
         holeScores: number[] // 相对PAR的差值
+        holeScoresOriginal: string[] // 保存原始字符串格式（可能包含+/-号）
         actualStrokes: number[] // 实际杆数
         totalStrokes: number
         netStrokes: number | null
@@ -797,30 +959,39 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         const name = cols[0]?.trim()
         if (!name || name === 'HOLE' || name === 'PAR') continue
 
+        // 先解析组号，如果组是0或null，跳过
+        const groupNumberStr = cols[colIndexGroup]?.trim() || ''
+        let groupNumber: number | null = null
+        if (groupNumberStr && groupNumberStr !== '.') {
+          const parsed = parseInt(groupNumberStr)
+          groupNumber = isNaN(parsed) ? null : parsed
+        }
+        
+        // 过滤：组是0或null的跳过
+        if (groupNumber === 0 || groupNumber === null) {
+          continue
+        }
+
         // 解析每洞成绩
         console.log(`[解析] 球员 ${name} 的完整列数据 (共${cols.length}列):`, cols)
         
-        console.log(`[解析] ${name} - 关键列索引和值:`, {
-          姓名索引0: cols[0],
-          总差索引: colIndexTotalDifference,
-          总差值: cols[colIndexTotalDifference],
-          总杆索引: colIndexTotalStrokes,
-          总杆值: cols[colIndexTotalStrokes],
-          净杆索引: colIndexNetStrokes,
-          净杆值: cols[colIndexNetStrokes],
-          分组索引: colIndexGroup,
-          分组值: cols[colIndexGroup],
-          团体索引: colIndexTeam,
-          团体值: cols[colIndexTeam]
-        })
-        
         const holeScores: number[] = []
+        const holeScoresOriginal: string[] = [] // 保存原始字符串
         const actualStrokes: number[] = []
         
         // HOLE 1-9 (从colIndexHoleStart开始，共9列)
         for (let h = 0; h < 9; h++) {
           const colIdx = colIndexHoleStart + h
-          const scoreStr = cols[colIdx]?.trim() || '0'
+          const scoreStr = cols[colIdx]?.trim() || ''
+          holeScoresOriginal.push(scoreStr) // 保存原始字符串
+          
+          // 如果为空，跳过（后续会检查数据完整性）
+          if (scoreStr === '' || scoreStr === '-') {
+            holeScores.push(0)
+            actualStrokes.push(0)
+            continue
+          }
+          
           let diff = 0
           if (scoreStr.startsWith('+')) {
             diff = parseInt(scoreStr.substring(1)) || 0
@@ -852,7 +1023,16 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         
         for (let h = 0; h < 9; h++) {
           const colIdx = hole10Start + h
-          const scoreStr = cols[colIdx]?.trim() || '0'
+          const scoreStr = cols[colIdx]?.trim() || ''
+          holeScoresOriginal.push(scoreStr) // 保存原始字符串
+          
+          // 如果为空，跳过（后续会检查数据完整性）
+          if (scoreStr === '' || scoreStr === '-') {
+            holeScores.push(0)
+            actualStrokes.push(0)
+            continue
+          }
+          
           let diff = 0
           if (scoreStr.startsWith('+')) {
             diff = parseInt(scoreStr.substring(1)) || 0
@@ -866,6 +1046,18 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
             actualStrokes.push(parValues[9 + h] + diff)
           }
         }
+        
+        // 检查数据完整性：必须18洞都有数据
+        const hasCompleteScores = holeScoresOriginal.length === 18 && 
+          holeScoresOriginal.every(score => {
+            const trimmed = score.trim()
+            return trimmed !== '' && trimmed !== '-' && trimmed !== '+' && !isNaN(parseInt(trimmed))
+          })
+        
+        if (!hasCompleteScores) {
+          console.warn(`[解析] ${name}: 数据不全，跳过`)
+          continue
+        }
 
         console.log(`[解析] ${name} - holeScores长度:`, holeScores.length, holeScores)
         console.log(`[解析] ${name} - actualStrokes长度:`, actualStrokes.length, actualStrokes)
@@ -875,8 +1067,6 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         const totalStrokes = parseInt(cols[colIndexTotalStrokes]?.trim() || '0') || 0 // 总杆
         const netStrokesStr = cols[colIndexNetStrokes]?.trim() || '' // 净杆
         const netStrokes = netStrokesStr && netStrokesStr !== '.' && netStrokesStr !== '' ? parseFloat(netStrokesStr) : null
-        const groupNumberStr = cols[colIndexGroup]?.trim() || ''
-        const groupNumber = groupNumberStr && groupNumberStr !== '.' ? parseInt(groupNumberStr) || null : null // 分组
         const teamName = cols[colIndexTeam]?.trim() || null // 团体对抗
 
         console.log(`[解析] ${name} - 解析结果:`, {
@@ -888,17 +1078,17 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         })
 
         // 存储实际杆数数组（用于数据库hole_scores字段）
-        // 如果每洞成绩是相对PAR的差值，需要计算实际杆数
         const holeStrokesForDB = actualStrokes.length === 18 ? actualStrokes : null
 
         players.push({
           name,
           holeScores, // 相对PAR的差值（用于团队对抗统计）
+          holeScoresOriginal, // 原始字符串格式
           actualStrokes: holeStrokesForDB || [], // 实际杆数（用于数据库存储）
           totalStrokes, // 总杆数
           netStrokes, // 净杆数
           groupNumber, // 分组号
-          teamName // 团队名称（需要转换为red/blue）
+          teamName // 团队名称
         })
       }
 
@@ -906,39 +1096,93 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         throw new Error('未能解析出任何球员数据')
       }
 
-      // 匹配用户并保存到数据库
+      // 初始化团队名称映射和颜色配置
+      const uniqueTeams = new Set<string>()
+      players.forEach(player => {
+        if (player.teamName && player.teamName.trim()) {
+          uniqueTeams.add(player.teamName.trim())
+        }
+      })
+
+      // 初始化团队名称映射（Excel名称 -> 系统显示名称，默认为Excel名称）
+      const initialTeamNameMapping: Record<string, string> = {}
+      const presetColors = ['#F15B98', '#92c648', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#10B981', '#6366F1']
+      const initialTeamColors: Record<string, string> = {}
+      
+      Array.from(uniqueTeams).forEach((teamName, index) => {
+        initialTeamNameMapping[teamName] = teamName // 默认使用Excel名称
+        initialTeamColors[teamName] = presetColors[index % presetColors.length] // 默认颜色
+      })
+
+      // 尝试从数据库加载已保存的配置
+      if (selectedEvent?.id) {
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('team_name_mapping, team_colors')
+          .eq('id', selectedEvent.id)
+          .single()
+        
+        if (eventData?.team_name_mapping) {
+          Object.assign(initialTeamNameMapping, eventData.team_name_mapping)
+        }
+        if (eventData?.team_colors) {
+          Object.assign(initialTeamColors, eventData.team_colors)
+        }
+      }
+
+      setTeamNameMapping(initialTeamNameMapping)
+      setTeamColors(initialTeamColors)
+
+      // 解析表头（用于预览表格）
+      const headers: string[] = []
+      if (dataStartIndex > 1) {
+        const headerLine = lines[dataStartIndex - 2]
+        if (headerLine) {
+          const headerCols = parseCSVLine(headerLine)
+          headers.push(...headerCols)
+        }
+      }
+
+      // 设置预览数据
+      setPreviewData({
+        players,
+        headers,
+        parValues
+      })
+
+      setIsImporting(false)
+    } catch (err: any) {
+      console.error('解析文件失败:', err)
+      showError(`解析文件失败: ${err.message || '未知错误'}`)
+      setIsImporting(false)
+      setImportStep('select')
+      // 清空文件输入
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  // 执行实际导入
+  const handleImport = async () => {
+    if (!selectedEvent || !previewData) return
+
+    setImportStep('importing')
+    setIsImporting(true)
+
+    try {
       const success: string[] = []
       const failed: string[] = []
       const errors: string[] = []
       let guestSuccessCount = 0  // 统计访客成绩成功数量
 
       // 检查当前用户权限
-      const { data: currentUserData, error: currentUserError } = await supabase.auth.getUser()
-      console.log(`[导入] 当前登录用户:`, { 
-        userId: currentUserData?.user?.id, 
-        email: currentUserData?.user?.email,
-        error: currentUserError 
-      })
+      const { data: currentUserData } = await supabase.auth.getUser()
       
-      if (currentUserData?.user) {
-        const { data: currentProfile } = await supabase
-          .from('user_profiles')
-          .select('id, full_name, role')
-          .eq('id', currentUserData.user.id)
-          .single()
-        console.log(`[导入] 当前用户资料:`, currentProfile)
-      }
-
       // 批量获取所有用户姓名
-      const { data: allUsers, error: allUsersError } = await supabase
+      const { data: allUsers } = await supabase
         .from('user_profiles')
         .select('id, full_name')
-      
-      console.log(`[导入] 获取所有用户:`, { 
-        count: allUsers?.length, 
-        error: allUsersError,
-        sampleUsers: allUsers?.slice(0, 5).map(u => ({ name: u.full_name, id: u.id }))
-      })
       
       const userMap = new Map<string, string>()
       if (allUsers) {
@@ -948,11 +1192,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
           }
         })
       }
-      
-      console.log(`[导入] 用户映射表大小:`, userMap.size)
 
       // 保存每个球员的成绩
-      for (const player of players) {
+      for (const player of previewData.players) {
         try {
           console.log(`[导入] 开始处理球员: ${player.name}`)
           console.log(`[导入] 球员数据:`, {
@@ -1274,15 +1516,55 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         holeScoresLength: p.holeScores.length
       })))
 
-      // 使用数据库中的数据计算团队对抗统计
-      const teamStats = calculateTeamStats(dbPlayers)
+      // 使用数据库中的数据计算团队对抗统计（如果是团体赛）
+      let teamStats = undefined
+      if (importMode === 'team_ryder' || importMode === 'team_strokes') {
+        teamStats = calculateTeamStats(dbPlayers)
+      }
+
+      // 保存 scoring_mode、par、team_name_mapping 和 team_colors 到 events 表
+      const updateEventData: any = {}
+      
+      // 保存 PAR 值（如果有18洞的PAR值）
+      if (previewData.parValues && previewData.parValues.length === 18) {
+        updateEventData.par = previewData.parValues
+      }
+      
+      // 保存 scoring_mode（如果是团体赛）
+      if (importMode === 'team_ryder') {
+        updateEventData.scoring_mode = 'ryder_cup'
+      } else if (importMode === 'team_strokes') {
+        updateEventData.scoring_mode = 'total_strokes'
+      }
+      
+      // 保存 team_name_mapping 和 team_colors（如果有团队数据）
+      if (Object.keys(teamNameMapping).length > 0) {
+        updateEventData.team_name_mapping = teamNameMapping
+      }
+      if (Object.keys(teamColors).length > 0) {
+        updateEventData.team_colors = teamColors
+      }
+      
+      if (Object.keys(updateEventData).length > 0) {
+        const { error: updateEventError } = await supabase
+          .from('events')
+          .update(updateEventData)
+          .eq('id', selectedEvent.id)
+        
+        if (updateEventError) {
+          console.error('保存活动配置失败:', updateEventError)
+        }
+      }
 
       setImportResult({
         success: success.length,
         failed: failed.length,
         errors,
         guestSuccess: guestSuccessCount > 0 ? guestSuccessCount : undefined,
-        teamStats
+        teamStats: teamStats ? {
+          ...teamStats,
+          importMode
+        } : undefined
       })
 
       if (success.length > 0) {
@@ -1311,10 +1593,14 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       })
     } finally {
       setIsImporting(false)
-      // 清空文件输入
+      setImportStep('select')
+      // 清空文件输入和预览数据
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+      setPreviewData(null)
+      setTeamNameMapping({})
+      setTeamColors({})
     }
   }
 
@@ -1528,13 +1814,13 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={!selectedEvent || isImporting}
+              disabled={!selectedEvent || isImporting || importStep !== 'select'}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isImporting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                  导入中...
+                  {importStep === 'importing' ? '导入中...' : '解析中...'}
                 </>
               ) : (
                 <>
@@ -1553,7 +1839,270 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {!selectedEvent ? (
+          {importStep === 'preview' && previewData ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">数据预览</h3>
+                <button
+                  onClick={() => {
+                    setImportStep('select')
+                    setPreviewData(null)
+                    setTeamNameMapping({})
+                    setTeamColors({})
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = ''
+                    }
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  重新选择文件
+                </button>
+              </div>
+              
+              {/* 队伍配置 */}
+              {Object.keys(teamNameMapping).length > 0 && (
+                <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 space-y-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">队伍配置</h4>
+                  <div className="space-y-3">
+                    {Object.entries(teamNameMapping).map(([excelName, displayName], idx) => {
+                      const presetColors = ['#F15B98', '#92c648', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#10B981', '#6366F1']
+                      const currentColor = teamColors[excelName] || presetColors[idx % presetColors.length]
+                      
+                      return (
+                        <div key={excelName} className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-sm text-gray-600 w-32 truncate">{excelName}:</span>
+                            <input
+                              type="text"
+                              value={displayName}
+                              onChange={(e) => {
+                                setTeamNameMapping({
+                                  ...teamNameMapping,
+                                  [excelName]: e.target.value
+                                })
+                              }}
+                              className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98]"
+                              placeholder="系统显示名称"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">颜色:</span>
+                            <div className="relative">
+                              <select
+                                value={currentColor}
+                                onChange={(e) => {
+                                  setTeamColors({
+                                    ...teamColors,
+                                    [excelName]: e.target.value
+                                  })
+                                }}
+                                className="appearance-none pl-8 pr-8 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] cursor-pointer bg-white"
+                              >
+                                {presetColors.map((color) => (
+                                  <option key={color} value={color}>
+                                    {color === '#F15B98' ? '粉色' :
+                                     color === '#92c648' ? '绿色' :
+                                     color === '#3B82F6' ? '蓝色' :
+                                     color === '#F59E0B' ? '橙色' :
+                                     color === '#8B5CF6' ? '紫色' :
+                                     color === '#EF4444' ? '红色' :
+                                     color === '#10B981' ? '青色' :
+                                     color === '#6366F1' ? '靛蓝' : color}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                                <div 
+                                  className="w-5 h-5 rounded border border-gray-300"
+                                  style={{ backgroundColor: currentColor }}
+                                />
+                              </div>
+                              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {/* 数据预览表格 */}
+              <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto max-h-[60vh] overflow-y-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">姓名</th>
+                      {previewData.headers.slice(1, 10).map((header, idx) => (
+                        <th key={idx} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {header || `洞${idx + 1}`}
+                        </th>
+                      ))}
+                      <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">前9</th>
+                      {previewData.headers.slice(11, 20).map((header, idx) => (
+                        <th key={idx} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {header || `洞${idx + 10}`}
+                        </th>
+                      ))}
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">总杆</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">净杆</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">分组</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">团体</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {previewData.players.map((player, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{player.name}</td>
+                        {player.holeScoresOriginal.slice(0, 9).map((originalScore, hIdx) => (
+                          <td key={hIdx} className="px-2 py-2 text-center text-sm text-gray-700">
+                            {originalScore}
+                          </td>
+                        ))}
+                        <td className="px-2 py-2 text-center text-sm text-gray-500">-</td>
+                        {player.holeScoresOriginal.slice(9, 18).map((originalScore, hIdx) => (
+                          <td key={hIdx} className="px-2 py-2 text-center text-sm text-gray-700">
+                            {originalScore}
+                          </td>
+                        ))}
+                        <td className="px-4 py-2 text-center text-sm text-gray-700">{player.totalStrokes}</td>
+                        <td className="px-4 py-2 text-center text-sm text-gray-700">{player.netStrokes ?? '-'}</td>
+                        <td className="px-4 py-2 text-center text-sm text-gray-700">
+                          {player.groupNumber ?? '-'}
+                        </td>
+                        <td className="px-4 py-2 text-center text-sm text-gray-700">
+                          {player.teamName ? (
+                            <span 
+                              className="inline-block px-2 py-1 rounded text-xs font-medium text-white"
+                              style={{ backgroundColor: teamColors[player.teamName] || '#6B7280' }}
+                            >
+                              {teamNameMapping[player.teamName] || player.teamName}
+                            </span>
+                          ) : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setImportStep('mode')}
+                  className="px-6 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/90 transition-colors"
+                >
+                  下一步：选择导入模式
+                </button>
+              </div>
+            </div>
+          ) : importStep === 'mode' && previewData ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">选择导入模式</h3>
+                <button
+                  onClick={() => setImportStep('preview')}
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  返回预览
+                </button>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 space-y-4">
+                <div 
+                  onClick={() => setImportMode('individual')}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    importMode === 'individual' 
+                      ? 'border-[#F15B98] bg-[#F15B98]/10' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={importMode === 'individual'}
+                      onChange={() => setImportMode('individual')}
+                      className="mr-3"
+                    />
+                    <div>
+                      <div className="font-semibold text-gray-900">个人赛（总杆数/分模式）</div>
+                      <div className="text-sm text-gray-600 mt-1">按个人总杆数或分数进行排名</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div 
+                  onClick={() => setImportMode('team_ryder')}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    importMode === 'team_ryder' 
+                      ? 'border-[#F15B98] bg-[#F15B98]/10' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={importMode === 'team_ryder'}
+                      onChange={() => setImportMode('team_ryder')}
+                      className="mr-3"
+                    />
+                    <div>
+                      <div className="font-semibold text-gray-900">团体赛（莱德杯模式）</div>
+                      <div className="text-sm text-gray-600 mt-1">按洞比较，每洞获胜的团队得1分（或平局时平分）</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div 
+                  onClick={() => setImportMode('team_strokes')}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    importMode === 'team_strokes' 
+                      ? 'border-[#F15B98] bg-[#F15B98]/10' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={importMode === 'team_strokes'}
+                      onChange={() => setImportMode('team_strokes')}
+                      className="mr-3"
+                    />
+                    <div>
+                      <div className="font-semibold text-gray-900">团体赛（总杆数/分模式）</div>
+                      <div className="text-sm text-gray-600 mt-1">按团队总杆数或总分进行排名</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setImportStep('preview')}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  返回
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={isImporting}
+                  className="px-6 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {isImporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      导入中...
+                    </>
+                  ) : (
+                    '开始导入'
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : !selectedEvent ? (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">选择比赛活动</h3>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1639,7 +2188,12 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                       className={`border rounded-lg p-3 cursor-pointer transition-all ${
                         selectedParticipant?.id === participant.id
                           ? 'border-golf-600 bg-golf-100 shadow-md'
-                          : savedParticipants.has(participant.user_id)
+                          : (() => {
+                              const key = participant.isGuest 
+                                ? `guest_${participant.guest_score_id || participant.id}` 
+                                : participant.user_id
+                              return savedParticipants.has(key || '')
+                            })()
                           ? 'border-green-300 bg-green-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
@@ -1649,15 +2203,27 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                           <div className={`font-medium ${
                             selectedParticipant?.id === participant.id
                               ? 'text-golf-800'
-                              : savedParticipants.has(participant.user_id) 
+                              : (() => {
+                                  const key = participant.isGuest 
+                                    ? `guest_${participant.guest_score_id || participant.id}` 
+                                    : participant.user_id
+                                  return savedParticipants.has(key || '')
+                                })()
                               ? 'text-green-800' 
                               : 'text-gray-900'
                           }`}>
-                            {participant.user_profiles?.full_name || '未知'}
+                            {participant.isGuest 
+                              ? `${participant.player_name || '未知'} ${participant.isGuest ? '(访客)' : ''}`
+                              : participant.user_profiles?.full_name || '未知'}
                             {selectedParticipant?.id === participant.id && (
                               <span className="ml-2 text-xs text-golf-600 font-semibold">● 当前选择</span>
                             )}
-                            {savedParticipants.has(participant.user_id) && selectedParticipant?.id !== participant.id && (
+                            {(() => {
+                              const key = participant.isGuest 
+                                ? `guest_${participant.guest_score_id || participant.id}` 
+                                : participant.user_id
+                              return savedParticipants.has(key || '') && selectedParticipant?.id !== participant.id
+                            })() && (
                               <span className="ml-2 text-xs text-green-600">✓ 已录入</span>
                             )}
                           </div>
@@ -1671,7 +2237,12 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                             </div>
                           )}
                         </div>
-                        {savedParticipants.has(participant.user_id) && (
+                        {(() => {
+                          const key = participant.isGuest 
+                            ? `guest_${participant.guest_score_id || participant.id}` 
+                            : participant.user_id
+                          return savedParticipants.has(key || '')
+                        })() && (
                           <CheckCircle className="w-5 h-5 text-green-500" />
                         )}
                       </div>
