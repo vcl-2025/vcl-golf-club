@@ -34,7 +34,51 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
 
   useEffect(() => {
     incrementViewCount()
+    markAsRead()
   }, [item.id])
+
+  const markAsRead = async () => {
+    if (!user || !supabase) return
+    
+    // 只对"通知"和"公告"分类标记为已读
+    if (item.category !== '通知' && item.category !== '公告') {
+      return
+    }
+    
+    try {
+      // 先获取当前记录的 read_by_users 字段
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('information_items')
+        .select('read_by_users')
+        .eq('id', item.id)
+        .single()
+      
+      if (fetchError) {
+        console.error('获取信息失败:', fetchError)
+        return
+      }
+      
+      // 获取已读用户列表（UUID数组）
+      const readUsers = currentItem?.read_by_users || []
+      const readUsersArray = Array.isArray(readUsers) ? readUsers : []
+      
+      // 如果当前用户不在已读列表中，添加进去
+      if (!readUsersArray.includes(user.id)) {
+        const updatedReadUsers = [...readUsersArray, user.id]
+        
+        const { error: updateError } = await supabase
+          .from('information_items')
+          .update({ read_by_users: updatedReadUsers })
+          .eq('id', item.id)
+        
+        if (updateError) {
+          console.error('标记已读失败:', updateError)
+        }
+      }
+    } catch (error) {
+      console.error('标记已读失败:', error)
+    }
+  }
 
   const incrementViewCount = async () => {
     try {

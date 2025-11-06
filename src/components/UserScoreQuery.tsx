@@ -1118,18 +1118,21 @@ export default function UserScoreQuery() {
                                           return (
                                             <div className="flex items-center justify-center px-2 sm:px-3">
                                               <div 
-                                                className="flex items-center gap-2 sm:gap-3 rounded-xl px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-200 shadow-lg bg-gray-50"
+                                                className="flex items-center gap-2 sm:gap-3 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-200 shadow-lg"
+                                                style={{
+                                                  background: `linear-gradient(to right, ${color1.bg} 0%, ${color1.bg} 40%, rgba(255,255,255,0.3) 50%, ${color2.bg} 60%, ${color2.bg} 100%)`
+                                                }}
                                               >
                                                 <span 
                                                   className="font-bold text-xl sm:text-2xl"
-                                                  style={{ color: color1.bg }}
+                                                  style={{ color: '#FFFFFF' }}
                                                 >
                                                   {score1 === 0.5 ? '0.5' : score1.toString()}
                                                 </span>
-                                                <span className="text-gray-600 text-lg sm:text-xl font-medium">-</span>
+                                                <span className="text-white text-lg sm:text-xl font-medium opacity-90">-</span>
                                                 <span 
                                                   className="font-bold text-xl sm:text-2xl"
-                                                  style={{ color: color2.bg }}
+                                                  style={{ color: '#FFFFFF' }}
                                                 >
                                                   {score2 === 0.5 ? '0.5' : score2.toString()}
                                                 </span>
@@ -1256,7 +1259,7 @@ export default function UserScoreQuery() {
                                         return (
                                           <div className="w-full mt-4 sm:mt-6">
                                             {/* 18洞视觉指示器 */}
-                                            <div className="flex gap-1.5 sm:gap-2 justify-center mb-3 sm:mb-4 flex-wrap">
+                                            <div className="flex gap-0.5 sm:gap-1 justify-center mb-3 sm:mb-4 flex-wrap">
                                               {Array.from({ length: 18 }, (_, hole) => {
                                                 const team1Won = team1Results[hole] || false
                                                 const team2Won = team2Results[hole] || false
@@ -1265,7 +1268,7 @@ export default function UserScoreQuery() {
                                                 return (
                                                   <div
                                                     key={hole}
-                                                    className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                                                    className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full flex items-center justify-center flex-shrink-0"
                                                     style={{
                                                       backgroundColor: isTie ? 'transparent' : (team1Won ? color1.bg : (team2Won ? color2.bg : 'transparent')),
                                                       borderWidth: isTie ? '2px' : '0px',
@@ -1275,7 +1278,7 @@ export default function UserScoreQuery() {
                                                   >
                                                     {isTie && (
                                                       <div 
-                                                        className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full"
+                                                        className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full"
                                                         style={{ backgroundColor: '#6B7280' }}
                                                       />
                                                     )}

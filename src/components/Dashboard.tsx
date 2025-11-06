@@ -94,6 +94,7 @@ export default function Dashboard() {
   const { user, signOut } = useAuth()
   const [userProfile, setUserProfile] = useState<any>(null)
   const [memberCount, setMemberCount] = useState<number>(0)
+  const [unreadInformationCount, setUnreadInformationCount] = useState<number>(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false)
@@ -255,9 +256,59 @@ export default function Dashboard() {
       fetchUserProfile()
       fetchMemberCount()
       fetchDashboardData()
+      fetchUnreadInformationCount()
     }
     
   }, [user])
+
+  // 当从信息中心返回dashboard时，重新获取未读数量
+  useEffect(() => {
+    if (user && currentView === 'dashboard') {
+      fetchUnreadInformationCount()
+    }
+  }, [currentView, user])
+
+  const fetchUnreadInformationCount = async () => {
+    if (!user || !supabase) return
+    
+    try {
+      // 只获取"通知"和"公告"分类的已发布信息
+      const { data: items, error: itemsError } = await supabase
+        .from('information_items')
+        .select('id, read_by_users, expires_at, category')
+        .eq('status', 'published')
+        .in('category', ['通知', '公告'])
+      
+      if (itemsError) {
+        console.error('获取信息列表失败:', itemsError)
+        setUnreadInformationCount(0)
+        return
+      }
+      
+      if (!items || items.length === 0) {
+        setUnreadInformationCount(0)
+        return
+      }
+      
+      // 过滤过期信息
+      const now = new Date().toISOString()
+      const validItems = items.filter(item => {
+        return !item.expires_at || item.expires_at > now
+      })
+      
+      // 检查每条信息的 read_by_users 数组字段中是否包含当前用户ID
+      const unreadCount = validItems.filter(item => {
+        if (!item.read_by_users || !Array.isArray(item.read_by_users)) return true // 如果没有 read_by_users 字段或为空数组，视为未读
+        
+        return !item.read_by_users.includes(user.id)
+      }).length
+      
+      setUnreadInformationCount(unreadCount)
+    } catch (error) {
+      console.error('获取未读信息数量失败:', error)
+      setUnreadInformationCount(0)
+    }
+  }
 
   // 点击外部关闭下拉菜单
   useEffect(() => {
@@ -690,6 +741,18 @@ export default function Dashboard() {
     await signOut()
   }
 
+  const getRoleText = (role: string | null | undefined) => {
+    if (!role) return '会员'
+    switch (role) {
+      case 'admin':
+        return '管理员'
+      case 'member':
+        return '会员'
+      default:
+        return role
+    }
+  }
+
   const getMembershipTypeText = (type: string) => {
     switch (type) {
       case 'premium': return '高级会员'
@@ -698,15 +761,39 @@ export default function Dashboard() {
     }
   }
 
+  // 获取中国阴历日期（简化版）
+  const getLunarDate = (date: Date) => {
+    // 使用简化的阴历转换算法
+    // 这是一个基础实现，如果需要更准确可以使用专门的阴历库
+    const lunarMonths = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊']
+    const lunarDays = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+      '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+      '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十']
+    
+    // 这里使用一个简化的映射，实际应该使用完整的阴历转换算法
+    // 为了演示，我们使用一个简单的计算
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    
+    // 简化的阴历计算（仅作示例，实际应使用完整的阴历转换表）
+    // 这里使用一个近似值，实际项目中应使用专业的阴历转换库
+    const lunarMonthIndex = (month - 1) % 12
+    const lunarDayIndex = (day - 1) % 30
+    
+    return `${lunarMonths[lunarMonthIndex]}月${lunarDays[lunarDayIndex]}`
+  }
+
   const getCurrentDate = () => {
     const now = new Date()
     return {
       year: now.getFullYear(),
-      season: `${now.getMonth() + 1}月${now.getDate()}日`
+      season: `${now.getMonth() + 1}月${now.getDate()}日`,
+      lunarDate: getLunarDate(now)
     }
   }
 
-  const { year, season } = getCurrentDate()
+  const { year, season, lunarDate } = getCurrentDate()
 
   // 日期卡片在日期和头像之间切换（每5秒）
   useEffect(() => {
@@ -744,7 +831,7 @@ export default function Dashboard() {
         }
       `}</style>
       {/* Header */}
-      <header className="shadow-sm border-b sticky top-0 z-50" style={{ backgroundColor: '#619f56', borderColor: 'rgba(255,255,255,0.2)' }}>
+      <header className="shadow-sm border-b sticky top-0 z-50" style={{ backgroundColor: '#68A85A', borderColor: 'rgba(255,255,255,0.2)' }}>
         <div className="max-w-[1280px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
           <div className="flex justify-between items-center">
             {/* Logo and Brand */}
@@ -761,9 +848,11 @@ export default function Dashboard() {
                   draggable="false"
                 />
               </div>
-              <div className="ml-2 sm:ml-3">
-                <h1 className="text-base sm:text-xl lg:text-lg xl:text-xl font-extrabold text-white">溫哥華華人女子高爾夫俱樂部</h1>
-                <p className="text-xs font-bold text-white">Vancouver Chinese Ladies' Golf Club</p>
+              <div className="ml-2 sm:ml-3 pt-1">
+                <h1 className="text-sm sm:text-lg lg:text-lg xl:text-xl font-extrabold text-white">溫哥華華人女子高爾夫俱樂部</h1>
+                <p className="text-xs font-bold text-white">
+                  <span style={{ color: '#FF7DB3', fontSize: '0.875rem', fontWeight: '900' }}>V</span>ancouver <span style={{ color: '#FF7DB3', fontSize: '0.875rem', fontWeight: '900' }}>C</span>hinese <span style={{ color: '#FF7DB3', fontSize: '0.875rem', fontWeight: '900' }}>L</span>adies' Golf Club
+                </p>
               </div>
             </div>
 
@@ -1079,8 +1168,21 @@ export default function Dashboard() {
                       : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  <Bell className="w-5 h-5" style={{ color: currentView === 'information' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
+                  <Bell 
+                    className="w-5 h-5" 
+                    style={{ 
+                      color: currentView === 'information' ? '#FFFFFF' : '#1F2937',
+                      animation: unreadInformationCount > 0 ? 'bell-shake 0.5s ease-in-out 0s, bell-shake 0.5s ease-in-out 2s infinite' : 'none',
+                      transformOrigin: 'top center'
+                    }} 
+                    strokeWidth={2} 
+                  />
                   <span>信息中心</span>
+                  {unreadInformationCount > 0 && (
+                    <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-4.5 px-1 flex items-center justify-center">
+                      {unreadInformationCount > 99 ? '99+' : unreadInformationCount}
+                    </span>
+                  )}
                 </button>
                 <button 
                   onClick={() => {
@@ -1259,40 +1361,148 @@ export default function Dashboard() {
           <>
             {/* Welcome Banner - 高尔夫主题设计 */}
             <div 
-              className="relative rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden transition-all duration-300 welcome-card group"
-              style={{ 
-                background: 'linear-gradient(145deg, #F36C92, #F26B99)',
-                boxShadow: 'inset 0 0 8px rgba(255,255,255,0.4), 0 6px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.1)'
+              className="relative rounded-[20px] p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden transition-all duration-300 welcome-card group"
+              style={{
+                background: 'linear-gradient(to bottom, #E0487A, #F15B98)',
+                boxShadow: 'inset 0 0 8px rgba(255,255,255,0.4), 0 6px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.1)',
+                minHeight: '140px'
               }}
             >
+              {/* 粉色波浪背景层 - 参考示例实现 */}
+              <svg 
+                className="absolute bottom-0 left-0 right-0"
+                style={{ 
+                  width: '100%',
+                  height: '60%',
+                  minHeight: '80px',
+                  maxHeight: '120px',
+                  zIndex: 0
+                }}
+                xmlns="http://www.w3.org/2000/svg"
+                xmlnsXlink="http://www.w3.org/1999/xlink"
+                viewBox="0 24 150 28"
+                preserveAspectRatio="none"
+                shapeRendering="auto"
+              >
+                <defs>
+                  <path 
+                    id="gentle-wave-pink" 
+                    d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v44h-352z" 
+                  />
+                </defs>
+                <g className="parallax">
+                  <use 
+                    xlinkHref="#gentle-wave-pink" 
+                    x="48" 
+                    y="0" 
+                    fill="rgba(255,125,179,0.4)" 
+                  />
+                  <use 
+                    xlinkHref="#gentle-wave-pink" 
+                    x="48" 
+                    y="3" 
+                    fill="rgba(255,91,152,0.3)" 
+                  />
+                  <use 
+                    xlinkHref="#gentle-wave-pink" 
+                    x="48" 
+                    y="5" 
+                    fill="rgba(255,125,179,0.2)" 
+                  />
+                  <use 
+                    xlinkHref="#gentle-wave-pink" 
+                    x="48" 
+                    y="7" 
+                    fill="rgba(224,72,122,0.15)" 
+                  />
+                </g>
+              </svg>
+              
+              {/* 添加波浪动画CSS */}
+              <style>{`
+                .parallax > use {
+                  animation: move-forever 40s cubic-bezier(.55, .5, .45, .5) infinite;
+                }
+                .parallax > use:nth-child(1) {
+                  animation-delay: -2s;
+                  animation-duration: 14s;
+                }
+                .parallax > use:nth-child(2) {
+                  animation-delay: -3s;
+                  animation-duration: 20s;
+                }
+                .parallax > use:nth-child(3) {
+                  animation-delay: -4s;
+                  animation-duration: 26s;
+                }
+                .parallax > use:nth-child(4) {
+                  animation-delay: -5s;
+                  animation-duration: 40s;
+                }
+                @keyframes move-forever {
+                  0% { transform: translate3d(-90px, 0, 0); }
+                  100% { transform: translate3d(85px, 0, 0); }
+                }
+                @media (max-width: 768px) {
+                  .waves {
+                    height: 40px;
+                    min-height: 40px;
+                  }
+                }
+              `}</style>
+              
+              {/* 顶部光泽漂移层 - 增加立体感 */}
+              <div 
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ 
+                  zIndex: 2,
+                  background: 'radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.15) 0%, transparent 60%)',
+                  mixBlendMode: 'soft-light',
+                  opacity: 0.6
+                }}
+              ></div>
+              
+              {/* 艺术感装饰花纹背景 */}
+              <svg 
+                className="absolute inset-0 w-full h-full"
+                style={{ opacity: 0.2, zIndex: 1 }}
+                preserveAspectRatio="none"
+                viewBox="0 0 1000 200"
+              >
+                <defs>
+                  {/* 渐变定义 */}
+                  <linearGradient id="lineGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.6)" stopOpacity="0.6" />
+                    <stop offset="50%" stopColor="rgba(255,255,255,0.4)" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="rgba(255,255,255,0.3)" stopOpacity="0.3" />
+                  </linearGradient>
+                  <linearGradient id="lineGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.4)" stopOpacity="0.4" />
+                    <stop offset="50%" stopColor="rgba(255,255,255,0.5)" stopOpacity="0.5" />
+                    <stop offset="100%" stopColor="rgba(255,255,255,0.35)" stopOpacity="0.35" />
+                  </linearGradient>
+                </defs>
+                
+              </svg>
+              
               {/* 主要内容 */}
-              <div className="relative z-10">
-                <div className="flex items-center mb-4 sm:mb-5">
-                  <h2 
-                    className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-extrabold mr-2 sm:mr-4 transition-all duration-300 group-hover:brightness-110"
-                    style={{ 
-                      letterSpacing: '0.02em',
-                      color: '#FFFFFF',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)'
-                    }}
-                  >
-                    欢迎回来，{userProfile?.full_name || '用户'}！
-                  </h2>
-                  <span 
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg border"
-                    style={{
-                      background: '#FFFFFF',
-                      borderColor: '#FFFFFF',
-                      color: '#FAD4D8',
-                      textShadow: 'none',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                    }}
-                  >
-                    {getMembershipTypeText(userProfile?.membership_type || 'standard')}
-                  </span>
+              <div className="relative z-10" style={{ position: 'relative', zIndex: 10 }}>
+                <div className="mb-3 sm:mb-4">
+                  <div className="mb-2">
+                    <h2 
+                      className="text-2xl sm:text-3xl lg:text-3xl xl:text-4xl font-extrabold transition-all duration-300 group-hover:brightness-110"
+                      style={{ 
+                        letterSpacing: '0.02em',
+                        color: '#FFFFFF',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      欢迎回来，{userProfile?.full_name || '用户'}
+                    </h2>
+                  </div>
                 </div>
                 <p 
-                  className="text-sm sm:text-base lg:text-lg mb-4 sm:mb-5 transition-all duration-300 group-hover:brightness-105"
+                  className="text-sm sm:text-base lg:text-lg transition-all duration-300 group-hover:brightness-105"
                   style={{ 
                     letterSpacing: '0.3px',
                     lineHeight: '1.6',
@@ -1302,16 +1512,6 @@ export default function Dashboard() {
                 >
                   祝您今天有美好的高尔夫体验
                 </p>
-                <div className="text-xs flex items-center space-x-4" style={{ color: '#FFFFFF' }}>
-                  <span className="flex items-center">
-                    <div className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: '#FFFFFF' }}></div>
-                    会员数量：{memberCount}
-                  </span>
-                  <span className="flex items-center">
-                    <div className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: '#FFFFFF' }}></div>
-                    加入日期：{new Date().toLocaleDateString('zh-CN')}
-                  </span>
-                </div>
               </div>
               
               {/* 日期显示区域 - 右上角 */}
@@ -1321,19 +1521,30 @@ export default function Dashboard() {
                   top: '12px',
                   right: '12px',
                   padding: 0,
-                  borderRadius: '12px',
-                  background: 'linear-gradient(145deg, rgba(255, 160, 200, 0.4), rgba(255, 111, 168, 0.35))',
-                  boxShadow: '0 4px 10px rgba(255, 120, 180, 0.3), 0 0 0 1px rgba(255,255,255,0.2)',
-                  border: '1px solid rgba(255,255,255,0.25)',
+                  borderRadius: '16px',
+                  background: 'linear-gradient(145deg, rgba(255, 180, 220, 0.5), rgba(255, 130, 180, 0.45))',
+                  boxShadow: '0 6px 16px rgba(255, 120, 180, 0.35), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.3)',
                   zIndex: 20,
-                  minWidth: '90px',
-                  minHeight: '90px',
+                  width: '100px',
+                  height: '100px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(10px)'
                 }}
                 className="date-card-new group/date"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)'
+                  e.currentTarget.style.boxShadow = '0 10px 28px rgba(255, 120, 180, 0.5), 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255,255,255,0.4), inset 0 1px 0 rgba(255,255,255,0.3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 120, 180, 0.35), 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255,255,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
+                }}
               >
                 {/* 日期内容 */}
                 <div 
@@ -1349,14 +1560,44 @@ export default function Dashboard() {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    padding: '12px 16px',
+                    padding: '14px 16px',
                     pointerEvents: showDateAvatar ? 'none' : 'auto'
                   }}
                 >
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>{year}</div>
-                  <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.9)', marginBottom: '6px' }}>{season}</div>
-                  <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.4)', margin: '4px 0' }}></div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.95)', fontWeight: '500' }}>GOLF DAY</div>
+                  <div style={{ fontSize: '18px', fontWeight: '800', color: '#FFFFFF', marginBottom: '4px', letterSpacing: '0.5px' }}>{year}</div>
+                  <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.95)', marginBottom: '6px', fontWeight: '600' }}>{season}</div>
+                  
+                  {/* 装饰性过渡元素 */}
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    width: '100%', 
+                    margin: '5px 0',
+                    gap: '4px'
+                  }}>
+                    <div style={{ 
+                      flex: 1, 
+                      height: '1px', 
+                      background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent)',
+                      borderRadius: '1px'
+                    }}></div>
+                    <div style={{
+                      width: '3px',
+                      height: '3px',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                      boxShadow: '0 0 3px rgba(255, 255, 255, 0.3)'
+                    }}></div>
+                    <div style={{ 
+                      flex: 1, 
+                      height: '1px', 
+                      background: 'linear-gradient(to left, transparent, rgba(255, 255, 255, 0.4), transparent)',
+                      borderRadius: '1px'
+                    }}></div>
+                  </div>
+                  
+                  <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 1)', fontWeight: '700', letterSpacing: '0.5px', marginTop: '1px' }}>{lunarDate}</div>
                 </div>
 
                 {/* 头像内容 */}
@@ -1372,8 +1613,8 @@ export default function Dashboard() {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    padding: '3px',
-                    borderRadius: '12px',
+                    padding: '4px',
+                    borderRadius: '14px',
                     overflow: 'hidden',
                     pointerEvents: showDateAvatar ? 'auto' : 'none'
                   }}
@@ -1386,7 +1627,7 @@ export default function Dashboard() {
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover',
-                        borderRadius: '8px',
+                        borderRadius: '14px',
                         objectPosition: `${userProfile.avatar_position_x || 50}% ${userProfile.avatar_position_y || 50}%`
                       }}
                     />
@@ -1398,7 +1639,7 @@ export default function Dashboard() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      borderRadius: '8px'
+                      borderRadius: '14px'
                     }}>
                       <User className="w-8 h-8" style={{ color: 'rgba(255, 255, 255, 0.8)' }} />
                     </div>
@@ -1423,6 +1664,36 @@ export default function Dashboard() {
                 }
               }
               
+              @keyframes pulse-subtle {
+                0%, 100% {
+                  opacity: 1;
+                }
+                50% {
+                  opacity: 0.95;
+                }
+              }
+              
+              @keyframes bell-shake {
+                0%, 100% {
+                  transform: rotate(0deg);
+                }
+                10%, 30%, 50%, 70%, 90% {
+                  transform: rotate(-8deg);
+                }
+                20%, 40%, 60%, 80% {
+                  transform: rotate(8deg);
+                }
+              }
+              
+              .animate-pulse-subtle {
+                animation: pulse-subtle 3s ease-in-out infinite;
+              }
+              
+              .bell-shake-animation {
+                animation: bell-shake 0.5s ease-in-out;
+                transform-origin: top center;
+              }
+              
               .date-shimmer {
                 animation: shimmer 1.5s infinite;
               }
@@ -1441,29 +1712,53 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 <div 
                   onClick={() => setCurrentView('information')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  className={`rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none ${
+                    unreadInformationCount > 0 ? 'animate-pulse-subtle' : ''
+                  }`}
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                     touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    boxShadow: '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    e.currentTarget.style.boxShadow = '0 3px 10px rgba(140, 191, 127, 0.4), 0 1px 3px rgba(0, 0, 0, 0.1)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                   }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
-                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Bell className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
+                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4 relative">
+                        <Bell 
+                          className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4 ${unreadInformationCount > 0 ? 'bell-shake-animation' : ''}`}
+                          style={{ 
+                            color: '#4B5563', 
+                            fill: '#92c648',
+                            animation: unreadInformationCount > 0 ? 'bell-shake 0.5s ease-in-out 0s, bell-shake 0.5s ease-in-out 2s infinite' : 'none',
+                            transformOrigin: 'top center'
+                          }} 
+                          strokeWidth={2} 
+                        />
+                        {unreadInformationCount > 0 && (
+                          <span 
+                            className="absolute top-0 left-0 ml-3 sm:ml-4 -mt-1 -ml-1 sm:-mt-1.5 sm:-ml-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center min-w-[20px] h-5 sm:h-6 px-1.5 sm:px-2 shadow-lg z-10"
+                            style={{ fontSize: '10px', lineHeight: '1' }}
+                          >
+                            {unreadInformationCount > 99 ? '99+' : unreadInformationCount}
+                          </span>
+                        )}
                       </div>
                       <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
                         信息中心
                         <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </h4>
-                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看公告通知和重要信息</p>
+                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">
+                        {unreadInformationCount > 0 
+                          ? `查看公告通知和 ${unreadInformationCount} 条新信息`
+                          : '查看公告通知和重要信息'
+                        }
+                      </p>
                     </div>
                     <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
                       <img 
@@ -1480,17 +1775,17 @@ export default function Dashboard() {
 
                 <div 
                   onClick={() => setCurrentView('events')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                     touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    boxShadow: '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    e.currentTarget.style.boxShadow = '0 3px 10px rgba(140, 191, 127, 0.4), 0 1px 3px rgba(0, 0, 0, 0.1)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1519,17 +1814,17 @@ export default function Dashboard() {
 
                 <div
                   onClick={() => setCurrentView('reviews')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                     touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    boxShadow: '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    e.currentTarget.style.boxShadow = '0 3px 10px rgba(140, 191, 127, 0.4), 0 1px 3px rgba(0, 0, 0, 0.1)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1558,17 +1853,17 @@ export default function Dashboard() {
 
                 <div
                   onClick={() => setCurrentView('scores')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                     touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    boxShadow: '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    e.currentTarget.style.boxShadow = '0 3px 10px rgba(140, 191, 127, 0.4), 0 1px 3px rgba(0, 0, 0, 0.1)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1609,23 +1904,23 @@ export default function Dashboard() {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 py-2 sm:py-3">
                     <div
                       onClick={() => showMoreActions && setCurrentView('investments')}
-                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                       style={{ 
                         backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                         touchAction: 'manipulation',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                        boxShadow: '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)',
                         opacity: showMoreActions ? 1 : 0,
                         pointerEvents: showMoreActions ? 'auto' : 'none',
                         transition: 'opacity 0.5s cubic-bezier(0, 0, 0.2, 1)'
                       }}
                       onMouseEnter={(e) => {
                         if (showMoreActions) {
-                          e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                          e.currentTarget.style.boxShadow = '0 3px 10px rgba(140, 191, 127, 0.4), 0 1px 3px rgba(0, 0, 0, 0.1)'
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (showMoreActions) {
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                         }
                       }}
                     >
@@ -1655,23 +1950,23 @@ export default function Dashboard() {
 
                     <div
                       onClick={() => showMoreActions && setCurrentView('expenses')}
-                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                       style={{ 
                         backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                         touchAction: 'manipulation',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                        boxShadow: '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)',
                         opacity: showMoreActions ? 1 : 0,
                         pointerEvents: showMoreActions ? 'auto' : 'none',
                         transition: 'opacity 0.5s cubic-bezier(0, 0, 0.2, 1)'
                       }}
                       onMouseEnter={(e) => {
                         if (showMoreActions) {
-                          e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                          e.currentTarget.style.boxShadow = '0 3px 10px rgba(140, 191, 127, 0.4), 0 1px 3px rgba(0, 0, 0, 0.1)'
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (showMoreActions) {
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                         }
                       }}
                     >
@@ -1701,23 +1996,23 @@ export default function Dashboard() {
 
                     <div
                       onClick={() => showMoreActions && setCurrentView('members')}
-                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-visible border border-gray-200/30 select-none"
+                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-visible border border-[#8CBF7F] border-2 select-none"
                       style={{ 
                         backgroundColor: 'rgba(249, 246, 244, 0.4)', 
                         touchAction: 'manipulation',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                        boxShadow: '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)',
                         opacity: showMoreActions ? 1 : 0,
                         pointerEvents: showMoreActions ? 'auto' : 'none',
                         transition: 'opacity 0.5s cubic-bezier(0, 0, 0.2, 1)'
                       }}
                       onMouseEnter={(e) => {
                         if (showMoreActions) {
-                          e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                          e.currentTarget.style.boxShadow = '0 3px 10px rgba(140, 191, 127, 0.4), 0 1px 3px rgba(0, 0, 0, 0.1)'
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (showMoreActions) {
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                          e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
                         }
                       }}
                     >

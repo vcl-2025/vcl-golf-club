@@ -67,7 +67,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
       // 使用更明确的查询条件
       let query = supabase
         .from('information_items')
-        .select('*')
+        .select('*, read_by_users')
         .eq('status', 'published')
         .order('is_pinned', { ascending: false })
         .order('display_order', { ascending: true })
@@ -111,19 +111,17 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
         }
       }
 
-      // 获取用户阅读记录
+      // 获取用户阅读记录 - 使用 read_by_users 数组字段
       if (user) {
-        const readItems = await supabase
-          .from('information_item_reads')
-          .select('item_id')
-          .eq('user_id', user.id)
-
-        const readIds = new Set((readItems.data || []).map(r => r.item_id))
-        
-        const itemsWithReadStatus = (data || []).map(item => ({
-          ...item,
-          is_read: readIds.has(item.id)
-        }))
+        const itemsWithReadStatus = (data || []).map(item => {
+          // 检查 read_by_users 数组字段中是否包含当前用户ID
+          if (!item.read_by_users || !Array.isArray(item.read_by_users)) {
+            return { ...item, is_read: false } // 如果没有 read_by_users 字段或为空数组，视为未读
+          }
+          
+          const isRead = item.read_by_users.includes(user.id)
+          return { ...item, is_read: isRead }
+        })
         
         setItems(itemsWithReadStatus)
       } else {
@@ -162,20 +160,51 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
   }
 
   const markAsRead = async (itemId: string) => {
-    if (!user) return
+    if (!user || !supabase) return
+
+    // 找到对应的信息项，检查分类
+    const currentItemFull = items.find(item => item.id === itemId)
+    if (!currentItemFull) return
+    
+    // 只对"通知"和"公告"分类标记为已读
+    if (currentItemFull.category !== '通知' && currentItemFull.category !== '公告') {
+      return
+    }
 
     try {
-      // 记录阅读记录
-      await supabase
-        .from('information_item_reads')
-        .upsert({
-          item_id: itemId,
-          user_id: user.id
-        })
+      // 先获取当前记录的 read_by_users 字段
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('information_items')
+        .select('read_by_users')
+        .eq('id', itemId)
+        .single()
+      
+      if (fetchError) {
+        console.error('获取信息失败:', fetchError)
+        return
+      }
+      
+      // 获取已读用户列表（UUID数组）
+      const readUsers = currentItem?.read_by_users || []
+      const readUsersArray = Array.isArray(readUsers) ? readUsers : []
+      
+      // 如果当前用户不在已读列表中，添加进去
+      if (!readUsersArray.includes(user.id)) {
+        const updatedReadUsers = [...readUsersArray, user.id]
+        
+        const { error: updateError } = await supabase
+          .from('information_items')
+          .update({ read_by_users: updatedReadUsers })
+          .eq('id', itemId)
+        
+        if (updateError) {
+          console.error('标记已读失败:', updateError)
+          return
+        }
+      }
 
       // 增加浏览次数
-      const currentItem = items.find(item => item.id === itemId)
-      if (currentItem) {
+      if (currentItemFull) {
         try {
           // 先尝试使用 RPC 函数
           await supabase.rpc('increment_information_item_views', {
@@ -185,7 +214,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
           // 如果 RPC 不存在，直接更新
           await supabase
             .from('information_items')
-            .update({ view_count: (currentItem.view_count || 0) + 1 })
+            .update({ view_count: (currentItemFull.view_count || 0) + 1 })
             .eq('id', itemId)
         }
       }
@@ -366,7 +395,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
               key={item.id}
               onClick={() => handleItemClick(item)}
               className={`${categoryBg} rounded-2xl shadow-sm p-4 sm:p-6 ${hoverBg} cursor-pointer transition-colors ${
-                !item.is_read ? 'ring-2 ring-[#F15B98]' : ''
+                !item.is_read && (item.category === '通知' || item.category === '公告') ? 'ring-2 ring-[#F15B98]' : ''
               }`}
             >
               <div className="flex items-start justify-between">
