@@ -120,10 +120,16 @@ export default function Dashboard() {
   useEffect(() => {
     if (viewParam && ['dashboard', 'events', 'posters', 'scores', 'investments', 'expenses', 'reviews', 'information', 'members', 'admin'].includes(viewParam)) {
       setCurrentView(viewParam as any)
-      // 清除URL参数，避免重复
-      setSearchParams({}, { replace: true })
+      // 只清除 view 参数，保留其他参数（如 reviewId）
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('view')
+      if (newParams.toString()) {
+        setSearchParams(newParams, { replace: true })
+      } else {
+        setSearchParams({}, { replace: true })
+      }
     }
-  }, [viewParam, setSearchParams])
+  }, [viewParam, searchParams, setSearchParams])
   
   const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
   const [showMoreActions, setShowMoreActions] = useState(false) // 控制显示更多快捷操作，默认收缩

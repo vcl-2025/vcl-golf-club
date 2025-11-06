@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import MemberLogin from './components/MemberLogin'
 import Dashboard from './components/Dashboard'
@@ -10,6 +10,13 @@ import EventDetailPage from './pages/EventDetailPage'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
 import { initMobileViewport } from './utils/viewport'
+
+// 包装组件：在重定向时保留 URL 参数
+function NavigateWithParams({ to, replace }: { to: string; replace?: boolean }) {
+  const location = useLocation()
+  const search = location.search
+  return <Navigate to={`${to}${search}`} replace={replace} />
+}
 
 function App() {
   const { user, loading } = useAuth()
@@ -115,7 +122,7 @@ function App() {
             !user ? (
               <HomePage />
             ) : (
-              <Navigate to="/dashboard" replace />
+              <NavigateWithParams to="/dashboard" replace />
             )
           } />
           
@@ -124,7 +131,7 @@ function App() {
             !user ? (
               <MemberLogin onLoginSuccess={() => {}} />
             ) : (
-              <Navigate to="/dashboard" replace />
+              <NavigateWithParams to="/dashboard" replace />
             )
           } />
           
@@ -136,7 +143,7 @@ function App() {
             user ? (
               <Dashboard />
             ) : (
-              <Navigate to="/login" replace />
+              <NavigateWithParams to="/login" replace />
             )
           } />
           

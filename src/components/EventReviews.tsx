@@ -679,13 +679,31 @@ export default function EventReviews() {
   // 从 URL 参数读取 reviewId 并自动打开模态框
   useEffect(() => {
     const reviewId = searchParams.get('reviewId')
-    if (reviewId && events.length > 0 && !selectedEvent) {
-      const event = events.find(e => e.id === reviewId)
-      if (event) {
-        setSelectedEvent(event)
+    if (reviewId && !selectedEvent) {
+      // 如果 events 已加载，直接查找
+      if (events.length > 0) {
+        const event = events.find(e => e.id === reviewId)
+        if (event) {
+          setSelectedEvent(event)
+        }
       }
+      // 如果 events 还没加载完，等待加载完成后再处理
+      // 这个逻辑在 fetchPublishedArticles 完成后会自动触发
     }
   }, [searchParams, events, selectedEvent])
+
+  // 当 events 加载完成后，检查是否需要打开模态框
+  useEffect(() => {
+    if (!loading && events.length > 0 && !selectedEvent) {
+      const reviewId = searchParams.get('reviewId')
+      if (reviewId) {
+        const event = events.find(e => e.id === reviewId)
+        if (event) {
+          setSelectedEvent(event)
+        }
+      }
+    }
+  }, [loading, events, selectedEvent, searchParams])
 
   useEffect(() => {
     if (selectedEvent) {

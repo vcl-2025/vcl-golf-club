@@ -342,7 +342,10 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         // console.log('=====================================')
         
         onLoginSuccess()
-        navigate('/dashboard')
+        // 保留 URL 参数（如果有的话）
+        const currentParams = new URLSearchParams(window.location.search)
+        const paramsString = currentParams.toString()
+        navigate(`/dashboard${paramsString ? `?${paramsString}` : ''}`)
       }
     } catch (error: any) {
       if (error.message === '您的账户已被禁用，请联系管理员') {
