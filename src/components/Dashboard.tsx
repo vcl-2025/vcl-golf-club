@@ -120,7 +120,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (viewParam && ['dashboard', 'events', 'posters', 'scores', 'investments', 'expenses', 'reviews', 'information', 'members', 'admin'].includes(viewParam)) {
       setCurrentView(viewParam as any)
-      // 只清除 view 参数，保留其他参数（如 reviewId）
+      // 只清除 view 参数，保留其他参数（如 reviewId, eventId, informationId）
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('view')
       if (newParams.toString()) {
@@ -130,7 +130,7 @@ export default function Dashboard() {
       }
     }
   }, [viewParam, searchParams, setSearchParams])
-  
+
   const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
   const [showMoreActions, setShowMoreActions] = useState(false) // 控制显示更多快捷操作，默认收缩
 
@@ -155,10 +155,85 @@ export default function Dashboard() {
   }, [changePasswordModalOpen])
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+
+  const fetchEventById = async (eventId: string) => {
+    try {
+      if (!supabase) return
+      
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single()
+      
+      if (error || !data) {
+        console.error('获取活动失败:', error)
+        return
+      }
+      
+      setSelectedEvent(data)
+    } catch (error) {
+      console.error('获取活动失败:', error)
+    }
+  }
+
+  // 从 URL 参数读取 eventId 并自动打开模态框
+  useEffect(() => {
+    const eventId = searchParams.get('eventId')
+    
+    // 如果没有 eventId，且当前有打开的模态框，关闭它
+    if (!eventId && selectedEvent) {
+      setSelectedEvent(null)
+      return
+    }
+    
+    // 如果有 eventId 且当前没有打开模态框，尝试打开
+    if (eventId && !selectedEvent) {
+      fetchEventById(eventId)
+    }
+  }, [searchParams, selectedEvent])
+
   const [selectedPoster, setSelectedPoster] = useState<Poster | null>(null)
   const [selectedScore, setSelectedScore] = useState<Score | null>(null)
   const [selectedInvestment, setSelectedInvestment] = useState<InvestmentProject | null>(null)
   const [selectedInformationItem, setSelectedInformationItem] = useState<InformationItem | null>(null)
+
+  const fetchInformationById = async (informationId: string) => {
+    try {
+      if (!supabase) return
+      
+      const { data, error } = await supabase
+        .from('information_items')
+        .select('*')
+        .eq('id', informationId)
+        .single()
+      
+      if (error || !data) {
+        console.error('获取信息失败:', error)
+        return
+      }
+      
+      setSelectedInformationItem(data)
+    } catch (error) {
+      console.error('获取信息失败:', error)
+    }
+  }
+
+  // 从 URL 参数读取 informationId 并自动打开模态框
+  useEffect(() => {
+    const informationId = searchParams.get('informationId')
+    
+    // 如果没有 informationId，且当前有打开的模态框，关闭它
+    if (!informationId && selectedInformationItem) {
+      setSelectedInformationItem(null)
+      return
+    }
+    
+    // 如果有 informationId 且当前没有打开模态框，尝试打开
+    if (informationId && !selectedInformationItem) {
+      fetchInformationById(informationId)
+    }
+  }, [searchParams, selectedInformationItem])
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([])
   const [recentScores, setRecentScores] = useState<CompetitionResult[]>([])
   const [recentInvestments, setRecentInvestments] = useState<InvestmentProject[]>([])
@@ -2247,7 +2322,10 @@ export default function Dashboard() {
       {selectedEvent && (
         <EventDetail
           event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
+          onClose={() => {
+            setSelectedEvent(null)
+            // URL 更新由 EventDetail 组件内部处理
+          }}
           user={user}
           userProfile={userProfile}
         />
@@ -2280,7 +2358,10 @@ export default function Dashboard() {
       {selectedInformationItem && (
         <InformationCenterDetail
           item={selectedInformationItem}
-          onClose={() => setSelectedInformationItem(null)}
+          onClose={() => {
+            setSelectedInformationItem(null)
+            // URL 更新由 InformationCenterDetail 组件内部处理
+          }}
         />
       )}
     </div>

@@ -210,7 +210,11 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
 
   const handleItemClick = (item: InformationItem) => {
     markAsRead(item.id)
-    navigate(`/information/${item.id}`)
+    // 使用 URL 参数打开模态框，支持分享
+    const params = new URLSearchParams()
+    params.set('view', 'information')
+    params.set('informationId', item.id)
+    navigate(`/dashboard?${params.toString()}`, { replace: true })
   }
 
   const formatDate = (dateString?: string) => {

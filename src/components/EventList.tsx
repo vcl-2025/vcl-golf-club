@@ -303,7 +303,13 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
             <div
               key={event.id}
               className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer overflow-hidden flex flex-col lg:flex-col"
-              onClick={() => navigate(`/event/${event.id}`)}
+              onClick={() => {
+                // 使用 URL 参数打开模态框，支持分享
+                const params = new URLSearchParams()
+                params.set('view', 'events')
+                params.set('eventId', event.id)
+                navigate(`/dashboard?${params.toString()}`, { replace: true })
+              }}
               style={{ 
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
               }}
