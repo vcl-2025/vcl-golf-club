@@ -814,19 +814,36 @@ export default function Dashboard() {
 
   return (
     <div 
-      className="min-h-screen dashboard-background"
-      style={{
-        backgroundImage: 'url(/flower-pattern.png)',
-        backgroundRepeat: 'repeat',
-        backgroundAttachment: 'fixed',
-        backgroundSize: '480px 480px',
-        backgroundPosition: '-30px 30px'
-      }}
+      className="min-h-screen dashboard-background relative"
     >
       <style>{`
+        .dashboard-background::before {
+          content: '';
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image: url(/flower-pattern.png);
+          background-repeat: repeat;
+          background-size: 960px auto;
+          background-position: -30px 30px;
+          background-attachment: fixed;
+          z-index: -1;
+          pointer-events: none;
+        }
+        @media (max-width: 640px) {
+          .dashboard-background::before {
+            background-repeat: no-repeat !important;
+            background-size: 480px auto !important;
+            background-attachment: scroll !important;
+            background-position: center center !important;
+          }
+        }
         @media (min-width: 641px) {
-          .dashboard-background {
-            background-size: 800px 800px !important;
+          .dashboard-background::before {
+            background-size: 1600px auto !important;
+            background-attachment: fixed !important;
           }
         }
       `}</style>
@@ -1356,7 +1373,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-10 py-4 sm:py-6 lg:py-8">
+      <main className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-10 py-4 sm:py-6 lg:py-8 relative z-10">
         {currentView === 'dashboard' ? (
           <>
             {/* Welcome Banner - 高尔夫主题设计 */}
@@ -2047,8 +2064,38 @@ export default function Dashboard() {
               <div className="flex justify-center -mt-2 sm:-mt-1">
                 <button
                   onClick={() => setShowMoreActions(!showMoreActions)}
-                  className="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 hover:opacity-90"
-                  style={{ backgroundColor: '#F36C92' }}
+                  className="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200"
+                  style={{ 
+                    backgroundColor: '#F36C92',
+                    boxShadow: '0 2px 8px rgba(243, 108, 146, 0.3), 0 1px 3px rgba(0, 0, 0, 0.1)',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.1)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(243, 108, 146, 0.4), 0 2px 6px rgba(0, 0, 0, 0.15)'
+                    e.currentTarget.style.backgroundColor = '#FF7BA3'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(243, 108, 146, 0.3), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                    e.currentTarget.style.backgroundColor = '#F36C92'
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'scale(0.95)'
+                    e.currentTarget.style.boxShadow = '0 1px 4px rgba(243, 108, 146, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.1)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(243, 108, 146, 0.4), 0 2px 6px rgba(0, 0, 0, 0.15)'
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.transform = 'scale(0.95)'
+                    e.currentTarget.style.boxShadow = '0 1px 4px rgba(243, 108, 146, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onTouchEnd={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(243, 108, 146, 0.3), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
                   title={showMoreActions ? '收起' : '更多'}
                   aria-label={showMoreActions ? '收起' : '更多'}
                 >
@@ -2064,7 +2111,7 @@ export default function Dashboard() {
             {/* Main Content Sections */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-3">
               {/* 即将举行的活动 */}
-              <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
+              <div className="p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)', borderRadius: '24px' }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
                     <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
@@ -2081,7 +2128,8 @@ export default function Dashboard() {
                     {upcomingEvents.map((event) => (
                       <div 
                         key={event.id} 
-                        className="flex items-start gap-3 p-3 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="flex items-start gap-3 p-3 bg-white border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
+                        style={{ borderRadius: '20px' }}
                         onClick={() => navigate(`/event/${event.id}`)}
                       >
                         {/* 左侧小图 */}
@@ -2137,7 +2185,7 @@ export default function Dashboard() {
               </div>
 
               {/* 最新发布的成绩活动 */}
-              <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
+              <div className="p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)', borderRadius: '24px' }}>
                 <div className="mb-4 sm:mb-6">
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
                     <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
@@ -2152,7 +2200,7 @@ export default function Dashboard() {
                 ) : recentScores.length > 0 ? (
                   <div className="space-y-2 sm:space-y-3">
                     {recentScores.map((result, index) => (
-                      <div key={index} className="bg-white rounded-lg p-3 border border-gray-200 flex gap-3 sm:gap-4">
+                      <div key={index} className="bg-white p-3 border border-gray-200 flex gap-3 sm:gap-4" style={{ borderRadius: '20px' }}>
                         {/* 左侧图片或图标 */}
                         <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
                           {result.image_url ? (
