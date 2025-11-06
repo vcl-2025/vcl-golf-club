@@ -1034,7 +1034,8 @@ export default function EventReviews() {
     if (!selectedEvent) return
     
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    const shareUrl = `${window.location.origin}/dashboard?view=reviews&reviewId=${selectedEvent.id}`
+    // 使用公开的分享页面URL，这样社交媒体爬虫可以读取到meta标签
+    const shareUrl = `${window.location.origin}/review/${selectedEvent.id}`
     
     if (navigator.share && (isMobile || window.location.protocol === 'https:')) {
       try {
@@ -1701,7 +1702,7 @@ export default function EventReviews() {
         <ShareModal
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
-          url={`${window.location.origin}/dashboard?view=reviews&reviewId=${selectedEvent.id}`}
+          url={`${window.location.origin}/review/${selectedEvent.id}`}
           title={selectedEvent.title}
           description={selectedEvent.article_excerpt || selectedEvent.description}
           imageUrl={selectedEvent.image_url || selectedEvent.article_featured_image_url}
