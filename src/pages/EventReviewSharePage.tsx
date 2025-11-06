@@ -19,6 +19,14 @@ export default function EventReviewSharePage() {
     }
   }, [id])
 
+  // 去除 HTML 标签，只保留纯文本
+  const stripHtml = (html: string) => {
+    if (!html) return ''
+    const tmp = document.createElement('DIV')
+    tmp.innerHTML = html
+    return tmp.textContent || tmp.innerText || ''
+  }
+
   // 动态设置页面标题和 Open Graph 元标签
   useEffect(() => {
     if (event) {
@@ -34,8 +42,11 @@ export default function EventReviewSharePage() {
         meta.setAttribute('content', content)
       }
 
+      // 去除 HTML 标签，只保留纯文本
+      const description = stripHtml(event.article_excerpt || event.description || '')
+      
       setMetaTag('og:title', event.title)
-      setMetaTag('og:description', event.article_excerpt || event.description || '')
+      setMetaTag('og:description', description)
       setMetaTag('og:url', window.location.href)
       setMetaTag('og:type', 'article')
       

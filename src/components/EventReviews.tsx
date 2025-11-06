@@ -676,34 +676,24 @@ export default function EventReviews() {
     }
   }, [user])
 
-  // 从 URL 参数读取 reviewId 并自动打开模态框
+  // 从 URL 参数读取 reviewId 并自动打开模态框（合并逻辑，避免重复触发）
   useEffect(() => {
     const reviewId = searchParams.get('reviewId')
-    if (reviewId && !selectedEvent) {
-      // 如果 events 已加载，直接查找
-      if (events.length > 0) {
-        const event = events.find(e => e.id === reviewId)
-        if (event) {
-          setSelectedEvent(event)
-        }
-      }
-      // 如果 events 还没加载完，等待加载完成后再处理
-      // 这个逻辑在 fetchPublishedArticles 完成后会自动触发
+    
+    // 如果没有 reviewId，且当前有打开的模态框，关闭它
+    if (!reviewId && selectedEvent) {
+      setSelectedEvent(null)
+      return
     }
-  }, [searchParams, events, selectedEvent])
-
-  // 当 events 加载完成后，检查是否需要打开模态框
-  useEffect(() => {
-    if (!loading && events.length > 0 && !selectedEvent) {
-      const reviewId = searchParams.get('reviewId')
-      if (reviewId) {
-        const event = events.find(e => e.id === reviewId)
-        if (event) {
-          setSelectedEvent(event)
-        }
+    
+    // 如果有 reviewId 且事件已加载完成，尝试打开模态框
+    if (reviewId && !loading && events.length > 0 && !selectedEvent) {
+      const event = events.find(e => e.id === reviewId)
+      if (event) {
+        setSelectedEvent(event)
       }
     }
-  }, [loading, events, selectedEvent, searchParams])
+  }, [searchParams, loading, events, selectedEvent])
 
   useEffect(() => {
     if (selectedEvent) {
@@ -713,6 +703,14 @@ export default function EventReviews() {
       
       // 动态设置页面标题和 Open Graph 元标签（用于分享预览）
       document.title = `${selectedEvent.title} - 活动回顾 - VCL Golf Club`
+      
+      // 去除 HTML 标签，只保留纯文本
+      const stripHtml = (html: string) => {
+        if (!html) return ''
+        const tmp = document.createElement('DIV')
+        tmp.innerHTML = html
+        return tmp.textContent || tmp.innerText || ''
+      }
       
       const setMetaTag = (property: string, content: string) => {
         let meta = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement
@@ -724,8 +722,11 @@ export default function EventReviews() {
         meta.setAttribute('content', content)
       }
 
+      // 去除 HTML 标签，只保留纯文本
+      const description = stripHtml(selectedEvent.article_excerpt || selectedEvent.description || '')
+      
       setMetaTag('og:title', selectedEvent.title)
-      setMetaTag('og:description', selectedEvent.article_excerpt || selectedEvent.description || '')
+      setMetaTag('og:description', description)
       setMetaTag('og:url', window.location.href)
       setMetaTag('og:type', 'article')
       
@@ -1019,8 +1020,7 @@ export default function EventReviews() {
   }, [])
 
   const handleCloseModal = useCallback(() => {
-    setSelectedEvent(null)
-    // 更新 URL，移除 reviewId 参数，保留 view 参数
+    // 先更新 URL，移除 reviewId 参数
     const newParams = new URLSearchParams(searchParams)
     newParams.delete('reviewId')
     if (newParams.toString()) {
@@ -1028,6 +1028,9 @@ export default function EventReviews() {
     } else {
       navigate('/dashboard?view=reviews', { replace: true })
     }
+    // 然后关闭模态框（URL 更新后，useEffect 会自动处理关闭）
+    // 但为了确保立即关闭，我们也直接设置
+    setSelectedEvent(null)
   }, [searchParams, navigate])
 
   const handleShare = async () => {
@@ -1312,7 +1315,7 @@ export default function EventReviews() {
             key={event.id}
             className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
             onClick={() => {
-              setSelectedEvent(event)
+              // 只更新 URL，让 useEffect 统一处理打开逻辑，避免重复打开
               const params = new URLSearchParams()
               params.set('view', 'reviews')
               params.set('reviewId', event.id)
