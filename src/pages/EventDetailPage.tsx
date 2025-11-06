@@ -23,6 +23,58 @@ export default function EventDetailPage() {
     }
   }, [id, user])
 
+  // 动态设置页面标题和 Open Graph 元标签
+  useEffect(() => {
+    if (event) {
+      // 设置页面标题
+      document.title = `${event.title} - VCL Golf Club`
+      
+      // 设置或更新 Open Graph 元标签
+      const setMetaTag = (property: string, content: string) => {
+        let meta = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement
+        if (!meta) {
+          meta = document.createElement('meta')
+          meta.setAttribute('property', property)
+          document.head.appendChild(meta)
+        }
+        meta.setAttribute('content', content)
+      }
+
+      // 设置 Open Graph 标签
+      setMetaTag('og:title', event.title)
+      setMetaTag('og:description', event.description || event.article_excerpt || '')
+      setMetaTag('og:url', window.location.href)
+      setMetaTag('og:type', 'article')
+      
+      if (event.image_url || event.article_featured_image_url) {
+        setMetaTag('og:image', event.image_url || event.article_featured_image_url || '')
+      }
+
+      // 设置 Twitter Card 标签
+      const setTwitterTag = (name: string, content: string) => {
+        let meta = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement
+        if (!meta) {
+          meta = document.createElement('meta')
+          meta.setAttribute('name', name)
+          document.head.appendChild(meta)
+        }
+        meta.setAttribute('content', content)
+      }
+
+      setTwitterTag('twitter:card', 'summary_large_image')
+      setTwitterTag('twitter:title', event.title)
+      setTwitterTag('twitter:description', event.description || event.article_excerpt || '')
+      if (event.image_url || event.article_featured_image_url) {
+        setTwitterTag('twitter:image', event.image_url || event.article_featured_image_url || '')
+      }
+    }
+
+    // 清理函数：恢复默认标题
+    return () => {
+      document.title = 'VCL Golf Club'
+    }
+  }, [event])
+
   const fetchEvent = async () => {
     try {
       if (!supabase) return
