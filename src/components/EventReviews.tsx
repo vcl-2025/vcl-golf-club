@@ -710,15 +710,44 @@ export default function EventReviews() {
       fetchReplies(selectedEvent.id)
       // 禁止背景滚动
       document.body.style.overflow = 'hidden'
+      
+      // 动态设置页面标题和 Open Graph 元标签（用于分享预览）
+      document.title = `${selectedEvent.title} - 活动回顾 - VCL Golf Club`
+      
+      const setMetaTag = (property: string, content: string) => {
+        let meta = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement
+        if (!meta) {
+          meta = document.createElement('meta')
+          meta.setAttribute('property', property)
+          document.head.appendChild(meta)
+        }
+        meta.setAttribute('content', content)
+      }
+
+      setMetaTag('og:title', selectedEvent.title)
+      setMetaTag('og:description', selectedEvent.article_excerpt || selectedEvent.description || '')
+      setMetaTag('og:url', window.location.href)
+      setMetaTag('og:type', 'article')
+      
+      if (selectedEvent.image_url || selectedEvent.article_featured_image_url) {
+        setMetaTag('og:image', selectedEvent.image_url || selectedEvent.article_featured_image_url || '')
+      }
     } else {
       setReplies([])
       // 恢复背景滚动
       document.body.style.overflow = ''
+      
+      // 恢复默认标题
+      document.title = 'VCL Golf Club'
     }
     
     // 清理函数
     return () => {
       document.body.style.overflow = ''
+      // 清理时恢复默认标题
+      if (!selectedEvent) {
+        document.title = 'VCL Golf Club'
+      }
     }
   }, [selectedEvent])
 
