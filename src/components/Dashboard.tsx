@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
@@ -88,6 +89,7 @@ interface InvestmentProject {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const [userProfile, setUserProfile] = useState<any>(null)
   const [memberCount, setMemberCount] = useState<number>(0)
@@ -1688,7 +1690,7 @@ export default function Dashboard() {
                       <div 
                         key={event.id} 
                         className="flex items-start gap-3 p-3 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => setCurrentView('events')}
+                        onClick={() => navigate(`/event/${event.id}`)}
                       >
                         {/* 左侧小图 */}
                         <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">

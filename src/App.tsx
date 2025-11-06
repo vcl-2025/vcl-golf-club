@@ -6,6 +6,7 @@ import MemberLogin from './components/MemberLogin'
 import Dashboard from './components/Dashboard'
 import HomePage from './pages/HomePage'
 import ResetPassword from './pages/ResetPassword'
+import EventDetailPage from './pages/EventDetailPage'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
 import { initMobileViewport } from './utils/viewport'
@@ -138,6 +139,9 @@ function App() {
               <Navigate to="/login" replace />
             )
           } />
+          
+          {/* 活动详情页（公开，不需要登录） */}
+          <Route path="/event/:id" element={<EventDetailPage />} />
           
           {/* 其他路由重定向到首页 */}
           <Route path="*" element={

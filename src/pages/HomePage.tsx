@@ -587,7 +587,7 @@ export default function HomePage() {
                 <div
                   key={event.id}
                   className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border border-gray-100"
-                  onClick={() => setSelectedEvent(event)}
+                  onClick={() => navigate(`/event/${event.id}`)}
                 >
                   {/* 活动图片 */}
                   <div className="aspect-[16/11] bg-gradient-to-br from-golf-200 to-golf-300 overflow-hidden">

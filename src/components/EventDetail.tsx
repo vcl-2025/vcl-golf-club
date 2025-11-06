@@ -16,9 +16,10 @@ interface EventDetailProps {
   onClose: () => void
   user: any
   userProfile?: any
+  isStandalonePage?: boolean // 是否为独立页面模式
 }
 
-export default function EventDetail({ event, onClose, user, userProfile }: EventDetailProps) {
+export default function EventDetail({ event, onClose, user, userProfile, isStandalonePage = false }: EventDetailProps) {
   const [stats, setStats] = useState<EventStats | null>(null)
   const [userRegistration, setUserRegistration] = useState<EventRegistration | null>(null)
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
@@ -37,8 +38,10 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
     fetchEventData()
   }, [event.id, user])
 
-  // 防止背景滚动 - 更强力的方案
+  // 防止背景滚动 - 更强力的方案（仅Modal模式）
   useEffect(() => {
+    if (isStandalonePage) return // 独立页面不需要阻止滚动
+
     const originalStyle = window.getComputedStyle(document.body).overflow
     const originalPosition = window.getComputedStyle(document.body).position
     
@@ -61,7 +64,7 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
       // 恢复滚动位置
       window.scrollTo(0, scrollY)
     }
-  }, [])
+  }, [isStandalonePage])
 
   const fetchEventData = async () => {
     try {
@@ -352,6 +355,299 @@ export default function EventDetail({ event, onClose, user, userProfile }: Event
   const status = getRegistrationStatus()
   const StatusIcon = status.icon
 
+  // 如果是独立页面，使用不同的布局
+  if (isStandalonePage) {
+    return (
+      <div className="bg-white rounded-2xl w-full overflow-y-auto relative">
+        <div className="p-6">
+          {/* 活动图片横幅 */}
+          <div className="aspect-[16/9] bg-gradient-to-br from-golf-200 to-golf-300 rounded-2xl overflow-hidden mb-8">
+            <img
+              src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* 左侧：活动详情 */}
+            <div className="space-y-8 lg:col-span-2">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-6">{event.title}</h1>
+                <div className="text-gray-600 text-lg leading-relaxed">
+                  <TinyMCEViewer content={event.description || ''} />
+                </div>
+              </div>
+
+              {/* 活动规则 */}
+              {event.rules && (
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-golf-600" />
+                    活动规则
+                  </h3>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <TinyMCEViewer content={event.rules} />
+                  </div>
+                </div>
+              )}
+
+              {/* 活动精彩文章 */}
+              {userProfile?.role === 'admin' && getEventStatus(event) === 'completed' && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-golf-600" />
+                      活动精彩回顾
+                    </h3>
+                    <button
+                      onClick={() => setIsFullscreenEditing(true)}
+                      className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
+                    >
+                      <Maximize2 className="w-4 h-4 mr-2" />
+                      {event.article_content ? '编辑文章' : '写精彩回顾'}
+                    </button>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-6">
+                      {articleContent ? (
+                        <div>
+                          <TinyMCEViewer content={articleContent} />
+                          {isArticlePublished && (
+                            <div className="mt-4 text-sm text-green-600 flex items-center">
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              已发布 - {new Date(articlePublishedAt).toLocaleDateString('zh-CN')}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-gray-500 text-center py-8">
+                          <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                          <p>还没有写活动回顾</p>
+                          <p className="text-sm">点击上方按钮开始写精彩回顾</p>
+                        </div>
+                      )}
+                    </div>
+                </div>
+              )}
+            </div>
+
+            {/* 右侧：报名信息 */}
+            <div className="space-y-6 lg:col-span-1">
+              {/* 活动信息卡片 */}
+              <div className="bg-gray-50 rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">活动信息</h3>
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <Calendar className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {formatEventDateTime().date}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {formatEventDateTime().time}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <MapPin className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />
+                    <div className="font-medium text-gray-900">
+                      {event.location}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <DollarSign className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />
+                    <div className="font-medium text-gray-900">
+                      ¥{event.fee.toFixed(2)}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <Users className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-gray-900">
+                        {loading ? '加载中...' : `${stats?.total_registrations || 0}/${event.max_participants}`}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        还有 {stats?.available_spots || 0} 个名额
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start">
+                    <Clock className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-gray-900">报名截止</div>
+                      <div className="text-sm text-gray-600">
+                        {formatDateTime(event.registration_deadline)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 报名状态按钮 */}
+              <div className="bg-white border-2 border-gray-200 rounded-2xl p-6">
+                <div className="flex items-center justify-center">
+                  <StatusIcon className={`w-5 h-5 mr-2 ${status.color}`} />
+                  <span className={`font-medium ${status.color}`}>
+                    {status.text}
+                  </span>
+                </div>
+
+                {/* 报名按钮 */}
+                {canRegister() && (
+                  <button
+                    onClick={() => setShowRegistrationModal(true)}
+                    className="w-full btn-primary py-3 text-lg mt-4"
+                  >
+                    立即报名
+                  </button>
+                )}
+
+                {/* 取消报名按钮 */}
+                {canCancelRegistration() && (
+                  <div className="space-y-3 mt-4">
+                    <div className="text-sm text-gray-600 text-center">
+                      报名时间：{formatDateTime(userRegistration!.registration_time)}
+                    </div>
+                    <button
+                      onClick={handleCancelRegistration}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-colors"
+                    >
+                      取消报名
+                    </button>
+                  </div>
+                )}
+
+                {/* 登录提示 */}
+                {!user && (
+                  <div className="text-center text-gray-500 text-sm mt-4">
+                    请先登录后再报名参加活动
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 报名弹窗 */}
+        {showRegistrationModal && (
+          <EventRegistrationModal
+            event={event}
+            user={user}
+            onClose={() => setShowRegistrationModal(false)}
+            onSuccess={() => {
+              setShowRegistrationModal(false)
+              fetchEventData()
+            }}
+          />
+        )}
+
+        {/* 全屏编辑模态窗口 */}
+        {isFullscreenEditing && (
+          <div className="fixed inset-0 bg-white z-[80] flex flex-col">
+            {/* 全屏编辑器头部 */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+              <div className="flex items-center">
+                <button
+                  onClick={() => setIsFullscreenEditing(false)}
+                  className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  返回
+                </button>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  全屏编辑 - {event.title}
+                </h2>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleSaveArticle}
+                  disabled={savingArticle}
+                  className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {savingArticle ? '保存中...' : '保存草稿'}
+                </button>
+                <button
+                  onClick={handlePublishArticle}
+                  disabled={savingArticle}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  {savingArticle ? '发布中...' : '发布文章'}
+                </button>
+                <button
+                  onClick={() => setIsFullscreenEditing(false)}
+                  className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  <Minimize2 className="w-4 h-4 mr-2" />
+                  退出全屏
+                </button>
+              </div>
+            </div>
+
+            {/* 全屏编辑器内容 */}
+            <div className="flex-1 flex flex-col p-6">
+              {/* 发布设置 */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isPublic}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    className="w-4 h-4 text-golf-600 border-gray-300 rounded focus:ring-golf-500"
+                  />
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    公开可见（所有人可查看，不仅仅是会员）
+                  </span>
+                </label>
+                <p className="ml-7 mt-1 text-xs text-gray-500">
+                  勾选后，此活动回顾将在网站首页公开显示；不勾选则仅会员可见
+                </p>
+              </div>
+
+              {/* 文章摘要 */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  文章摘要
+                </label>
+                <textarea
+                  value={articleExcerpt}
+                  onChange={(e) => setArticleExcerpt(e.target.value)}
+                  placeholder="请输入文章摘要，用于列表展示..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={3}
+                />
+              </div>
+
+              {/* 文章内容 */}
+              <div className="flex-1 flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  文章内容
+                </label>
+                <div className="flex-1">
+                  <TinyMCEEditor
+                    content={articleContent}
+                    onChange={setArticleContent}
+                    placeholder="请写下活动的精彩回顾..."
+                    editorId="fullscreen-article-editor"
+                    height={window.innerHeight - 300}
+                  />
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Modal模式（原有代码）
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-hidden"

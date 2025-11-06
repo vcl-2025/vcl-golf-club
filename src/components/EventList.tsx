@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, Users, Clock, DollarSign, ChevronRight, CheckCircle, AlertCircle, FileText, User } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getEventStatus, getEventStatusText, getEventStatusStyles, canRegister } from '../utils/eventStatus'
@@ -11,6 +12,7 @@ interface EventListProps {
 }
 
 export default function EventList({ onEventSelect, user }: EventListProps) {
+  const navigate = useNavigate()
   const [events, setEvents] = useState<Event[]>([])
   const [eventStats, setEventStats] = useState<Record<string, EventStats>>({})
   const [userRegistrations, setUserRegistrations] = useState<Record<string, any>>({})
@@ -301,7 +303,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
             <div
               key={event.id}
               className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-150 cursor-pointer overflow-hidden flex flex-col lg:flex-col"
-              onClick={() => onEventSelect(event)}
+              onClick={() => navigate(`/event/${event.id}`)}
               style={{ 
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
               }}
