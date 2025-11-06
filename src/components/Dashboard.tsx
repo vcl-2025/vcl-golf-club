@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
@@ -90,6 +90,7 @@ interface InvestmentProject {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user, signOut } = useAuth()
   const [userProfile, setUserProfile] = useState<any>(null)
   const [memberCount, setMemberCount] = useState<number>(0)
@@ -108,7 +109,22 @@ export default function Dashboard() {
   const [rememberNewPassword, setRememberNewPassword] = useState(false)
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false)
   const [passwordChangeMessage, setPasswordChangeMessage] = useState('')
-  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin'>('dashboard')
+  
+  // 从URL参数读取view，如果没有则使用默认值
+  const viewParam = searchParams.get('view')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin'>(
+    (viewParam as any) || 'dashboard'
+  )
+  
+  // 当URL参数变化时，更新currentView
+  useEffect(() => {
+    if (viewParam && ['dashboard', 'events', 'posters', 'scores', 'investments', 'expenses', 'reviews', 'information', 'members', 'admin'].includes(viewParam)) {
+      setCurrentView(viewParam as any)
+      // 清除URL参数，避免重复
+      setSearchParams({}, { replace: true })
+    }
+  }, [viewParam, setSearchParams])
+  
   const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
   const [showMoreActions, setShowMoreActions] = useState(false) // 控制显示更多快捷操作，默认收缩
 

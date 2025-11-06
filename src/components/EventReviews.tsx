@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { 
   Calendar, MapPin, Users, Trophy, Clock, FileText, 
   ChevronRight, Star, Eye, Heart, X, MessageCircle, Send,
@@ -645,6 +646,7 @@ interface Reply {
 }
 
 export default function EventReviews() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -1211,7 +1213,7 @@ export default function EventReviews() {
           <div
             key={event.id}
             className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
-            onClick={() => setSelectedEvent(event)}
+            onClick={() => navigate(`/review/${event.id}`)}
           >
             {/* 活动图片 */}
             <div className="aspect-[16/9] bg-gradient-to-br from-[#F15B98]/20 to-[#F15B98]/30 overflow-hidden">

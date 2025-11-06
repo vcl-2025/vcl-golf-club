@@ -1118,22 +1118,18 @@ export default function UserScoreQuery() {
                                           return (
                                             <div className="flex items-center justify-center px-2 sm:px-3">
                                               <div 
-                                                className="flex items-center rounded-md border border-gray-200 shadow-sm overflow-hidden"
+                                                className="flex items-center gap-2 sm:gap-3 rounded-xl px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-200 shadow-lg bg-gray-50"
                                               >
                                                 <span 
-                                                  className="font-bold text-base sm:text-lg px-2 sm:px-3 py-1 sm:py-1.5 text-white text-center"
-                                                  style={{ 
-                                                    background: `linear-gradient(135deg, ${color1.bg}, ${color1.bg}dd)`
-                                                  }}
+                                                  className="font-bold text-xl sm:text-2xl"
+                                                  style={{ color: color1.bg }}
                                                 >
                                                   {score1 === 0.5 ? '0.5' : score1.toString()}
                                                 </span>
-                                                <span className="text-gray-600 text-sm sm:text-base font-medium px-1 sm:px-1.5 bg-white">-</span>
+                                                <span className="text-gray-600 text-lg sm:text-xl font-medium">-</span>
                                                 <span 
-                                                  className="font-bold text-base sm:text-lg px-2 sm:px-3 py-1 sm:py-1.5 text-white text-center"
-                                                  style={{ 
-                                                    background: `linear-gradient(135deg, ${color2.bg}, ${color2.bg}dd)`
-                                                  }}
+                                                  className="font-bold text-xl sm:text-2xl"
+                                                  style={{ color: color2.bg }}
                                                 >
                                                   {score2 === 0.5 ? '0.5' : score2.toString()}
                                                 </span>
@@ -1269,17 +1265,17 @@ export default function UserScoreQuery() {
                                                 return (
                                                   <div
                                                     key={hole}
-                                                    className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex items-center justify-center flex-shrink-0"
+                                                    className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center flex-shrink-0"
                                                     style={{
                                                       backgroundColor: isTie ? 'transparent' : (team1Won ? color1.bg : (team2Won ? color2.bg : 'transparent')),
-                                                      borderWidth: isTie ? '1.5px' : '0px',
+                                                      borderWidth: isTie ? '2px' : '0px',
                                                       borderStyle: isTie ? 'solid' : 'none',
                                                       borderColor: isTie ? '#9CA3AF' : 'transparent'
                                                     }}
                                                   >
                                                     {isTie && (
                                                       <div 
-                                                        className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full"
+                                                        className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full"
                                                         style={{ backgroundColor: '#6B7280' }}
                                                       />
                                                     )}
@@ -1720,3 +1716,4 @@ export default function UserScoreQuery() {
     </div>
   )
 }
+

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Bell, FileText, BookOpen, AlertCircle, Search, Filter, ChevronDown, ChevronUp, Pin, Eye, Calendar, Clock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { InformationItem } from '../types'
@@ -42,6 +43,7 @@ const priorityColors = {
 }
 
 export default function InformationCenterList({ onItemSelect }: InformationCenterListProps) {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [items, setItems] = useState<InformationItem[]>([])
   const [filteredItems, setFilteredItems] = useState<InformationItem[]>([])
@@ -208,7 +210,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
 
   const handleItemClick = (item: InformationItem) => {
     markAsRead(item.id)
-    onItemSelect(item)
+    navigate(`/information/${item.id}`)
   }
 
   const formatDate = (dateString?: string) => {
