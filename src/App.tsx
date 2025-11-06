@@ -7,8 +7,6 @@ import Dashboard from './components/Dashboard'
 import HomePage from './pages/HomePage'
 import ResetPassword from './pages/ResetPassword'
 import EventDetailPage from './pages/EventDetailPage'
-import EventReviewPage from './pages/EventReviewPage'
-import InformationCenterDetailPage from './pages/InformationCenterDetailPage'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
 import { initMobileViewport } from './utils/viewport'
@@ -144,12 +142,6 @@ function App() {
           
           {/* 活动详情页（公开，不需要登录） */}
           <Route path="/event/:id" element={<EventDetailPage />} />
-          
-          {/* 活动回顾页（公开，不需要登录） */}
-          <Route path="/review/:id" element={<EventReviewPage />} />
-          
-          {/* 信息中心详情页（公开，不需要登录） */}
-          <Route path="/information/:id" element={<InformationCenterDetailPage />} />
           
           {/* 其他路由重定向到首页 */}
           <Route path="*" element={

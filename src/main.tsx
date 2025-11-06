@@ -5,8 +5,8 @@ import './index.css'
 import { injectSpeedInsights } from '@vercel/speed-insights';
 injectSpeedInsights();
 
-// 注册Service Worker (PWA功能)
-if ('serviceWorker' in navigator) {
+// 注册Service Worker (PWA功能) - 仅在生产环境启用
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
@@ -39,6 +39,17 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       // 新版本激活后刷新页面
       window.location.reload();
+    });
+  });
+} else if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  // 开发环境：卸载已存在的 Service Worker
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => {
+        registration.unregister().then(() => {
+          console.log('🔧 开发环境：已卸载 Service Worker');
+        });
+      });
     });
   });
 }

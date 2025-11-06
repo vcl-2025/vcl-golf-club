@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Calendar, Eye, FileText, Download, Clock, User, Pin, AlertCircle } from 'lucide-react'
+import { X, Calendar, Eye, FileText, Download, Clock, User, Pin, AlertCircle, Share2 } from 'lucide-react'
 import { InformationItem } from '../types'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -25,6 +25,7 @@ const priorityColors = {
 export default function InformationCenterDetail({ item, onClose }: InformationCenterDetailProps) {
   const { user } = useAuth()
   const [viewCount, setViewCount] = useState(item.view_count)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     incrementViewCount()
@@ -133,13 +134,22 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
               </div>
             </div>
 
-            {/* 关闭按钮 */}
-            <button
-              onClick={onClose}
-              className="ml-4 p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-            >
-              <X className="w-6 h-6" />
-            </button>
+            {/* 分享和关闭按钮 */}
+            <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+              <button
+                onClick={handleShare}
+                className="flex items-center px-3 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors text-sm"
+              >
+                <Share2 className="w-4 h-4 mr-1.5" />
+                {copied ? '已复制' : '分享'}
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </div>
 

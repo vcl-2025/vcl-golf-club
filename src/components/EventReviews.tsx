@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   Calendar, MapPin, Users, Trophy, Clock, FileText, 
   ChevronRight, Star, Eye, Heart, X, MessageCircle, Send,
-  Edit2, Trash2, Reply, Check, X as XIcon, Image as ImageIcon, Smile, MoreVertical
+  Edit2, Trash2, Reply, Check, X as XIcon, Image as ImageIcon, Smile, MoreVertical, Share2, ChevronLeft
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
@@ -11,6 +11,7 @@ import TinyMCEViewer from './TinyMCEViewer'
 import { useAuth } from '../hooks/useAuth'
 import { User } from '@supabase/supabase-js'
 import { uploadImageToSupabase, validateImageFile } from '../utils/imageUpload'
+import ShareModal from './ShareModal'
 
 // 常用emoji列表
 const COMMON_EMOJIS = [
@@ -647,10 +648,12 @@ interface Reply {
 
 export default function EventReviews() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [showShareModal, setShowShareModal] = useState(false)
   const [replies, setReplies] = useState<Reply[]>([])
   const [loadingReplies, setLoadingReplies] = useState(false)
   const [replyContent, setReplyContent] = useState('')
@@ -672,6 +675,17 @@ export default function EventReviews() {
       fetchUserProfile()
     }
   }, [user])
+
+  // 从 URL 参数读取 reviewId 并自动打开模态框
+  useEffect(() => {
+    const reviewId = searchParams.get('reviewId')
+    if (reviewId && events.length > 0 && !selectedEvent) {
+      const event = events.find(e => e.id === reviewId)
+      if (event) {
+        setSelectedEvent(event)
+      }
+    }
+  }, [searchParams, events, selectedEvent])
 
   useEffect(() => {
     if (selectedEvent) {
@@ -957,6 +971,42 @@ export default function EventReviews() {
     setEditingReply(null)
   }, [])
 
+  const handleCloseModal = useCallback(() => {
+    setSelectedEvent(null)
+    // 更新 URL，移除 reviewId 参数，保留 view 参数
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('reviewId')
+    if (newParams.toString()) {
+      navigate(`/dashboard?${newParams.toString()}`, { replace: true })
+    } else {
+      navigate('/dashboard?view=reviews', { replace: true })
+    }
+  }, [searchParams, navigate])
+
+  const handleShare = async () => {
+    if (!selectedEvent) return
+    
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const shareUrl = `${window.location.origin}/dashboard?view=reviews&reviewId=${selectedEvent.id}`
+    
+    if (navigator.share && (isMobile || window.location.protocol === 'https:')) {
+      try {
+        await navigator.share({
+          title: selectedEvent.title || '活动回顾',
+          text: selectedEvent.article_excerpt || selectedEvent.description || '',
+          url: shareUrl,
+        })
+        return
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          return
+        }
+      }
+    }
+    
+    setShowShareModal(true)
+  }
+
   // 回复项组件 - 简化版，点击编辑/回复按钮打开 modal
   const ReplyItem = ({
     reply,
@@ -1213,7 +1263,13 @@ export default function EventReviews() {
           <div
             key={event.id}
             className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
-            onClick={() => navigate(`/review/${event.id}`)}
+            onClick={() => {
+              setSelectedEvent(event)
+              const params = new URLSearchParams()
+              params.set('view', 'reviews')
+              params.set('reviewId', event.id)
+              navigate(`/dashboard?${params.toString()}`, { replace: true })
+            }}
           >
             {/* 活动图片 */}
             <div className="aspect-[16/9] bg-gradient-to-br from-[#F15B98]/20 to-[#F15B98]/30 overflow-hidden">
@@ -1271,7 +1327,7 @@ export default function EventReviews() {
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedEvent(null)
+              handleCloseModal()
             }
           }}
           style={{ 
@@ -1283,27 +1339,38 @@ export default function EventReviews() {
           }}
         >
           <div 
-            className="bg-white rounded-2xl w-full max-w-[1080px] my-auto max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative mx-auto"
+            className="bg-white rounded-2xl w-full max-w-[1080px] max-h-[95vh] sm:max-h-[90vh] flex flex-col relative mx-auto my-auto"
             onClick={(e) => e.stopPropagation()}
             style={{
               maxHeight: 'calc(100vh - 2rem)'
             }}
           >
-            {/* 头部 */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">{selectedEvent.title}</h2>
+            {/* 固定头部 */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 z-10 flex items-center justify-between px-6 py-4 rounded-t-2xl">
               <button
-                onClick={() => setSelectedEvent(null)}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={handleCloseModal}
+                className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <X className="w-6 h-6" />
+                <ChevronLeft className="w-5 h-5 mr-1" />
+                <span className="text-base font-medium">返回列表</span>
+              </button>
+              <button
+                onClick={handleShare}
+                className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                分享
               </button>
             </div>
 
-            {/* 内容 */}
-            <div className="p-6">
-              {/* 活动信息 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            {/* 可滚动内容 */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6 pt-0">
+                {/* 标题 */}
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">{selectedEvent.title}</h2>
+                
+                {/* 活动信息 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="flex items-center text-gray-600">
                   <Calendar className="w-5 h-5 mr-3 text-golf-500" />
                   <div>
@@ -1557,6 +1624,7 @@ export default function EventReviews() {
                   </div>
                 )}
               </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1580,6 +1648,18 @@ export default function EventReviews() {
         onSave={(content) => handleSubmitReply(replyingToReply?.id || null, content)}
         submitting={submittingReply}
       />
+
+      {/* 分享弹窗 */}
+      {selectedEvent && (
+        <ShareModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          url={`${window.location.origin}/dashboard?view=reviews&reviewId=${selectedEvent.id}`}
+          title={selectedEvent.title}
+          description={selectedEvent.article_excerpt || selectedEvent.description}
+          imageUrl={selectedEvent.image_url || selectedEvent.article_featured_image_url}
+        />
+      )}
 
       {/* 图片查看器 Modal */}
       {imageViewerOpen && (
