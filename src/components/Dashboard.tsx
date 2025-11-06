@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -47,6 +47,30 @@ interface Score {
   holes_played: number
   notes: string | null
   created_at: string
+  team_name?: string | null
+  full_name?: string
+}
+
+interface CompetitionResult {
+  competition_name: string
+  competition_date: string
+  event_type: '普通活动' | '个人赛' | '团体赛'
+  location?: string
+  image_url?: string | null // 活动图片
+  team_colors?: Record<string, string> // 队伍颜色配置：队伍名称 -> 颜色代码
+  // 个人赛前三名
+  topThree?: Array<{
+    name: string
+    total_strokes: number
+    net_strokes?: number | null
+    rank: number
+  }>
+  // 团体赛队伍
+  teams?: Array<{
+    team_name: string
+    score: number
+    rank?: number
+  }>
 }
 
 interface InvestmentProject {
@@ -84,7 +108,7 @@ export default function Dashboard() {
   const [passwordChangeMessage, setPasswordChangeMessage] = useState('')
   const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin'>('dashboard')
   const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
-  const [showMoreActions, setShowMoreActions] = useState(false) // 控制显示更多快捷操作
+  const [showMoreActions, setShowMoreActions] = useState(false) // 控制显示更多快捷操作，默认收缩
 
   // 监听用户菜单状态变化
   useEffect(() => {
@@ -112,7 +136,7 @@ export default function Dashboard() {
   const [selectedInvestment, setSelectedInvestment] = useState<InvestmentProject | null>(null)
   const [selectedInformationItem, setSelectedInformationItem] = useState<InformationItem | null>(null)
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([])
-  const [recentScores, setRecentScores] = useState<Score[]>([])
+  const [recentScores, setRecentScores] = useState<CompetitionResult[]>([])
   const [recentInvestments, setRecentInvestments] = useState<InvestmentProject[]>([])
   const [recentExpenses, setRecentExpenses] = useState<any[]>([])
   const [recentPosters, setRecentPosters] = useState<Poster[]>([])
@@ -229,14 +253,290 @@ export default function Dashboard() {
       // console.log('活动查询结果:', { events, eventsError })
       setUpcomingEvents(events || [])
 
-      // 获取用户最近的成绩 - 显示2个
-      const { data: scores, error: scoresError } = await supabase
+      // 获取最新活动的成绩信息
+      // 1. 获取所有成绩（包括会员成绩和访客成绩，和UserScoreQuery一样）
+      
+      // 获取会员成绩
+      const { data: memberScores, error: memberError } = await supabase
         .from('scores')
-        .select('*')
-        .eq('user_id', user.id)
-        .limit(2)
-      // console.log('成绩查询结果:', { scores, scoresError })
-      setRecentScores(scores || [])
+        .select(`
+          *,
+          events!left (
+            id,
+            title,
+            start_time,
+            end_time,
+            location,
+            event_type,
+            team_colors,
+            image_url,
+            article_featured_image_url
+          ),
+          user_profiles(full_name)
+        `)
+        .order('created_at', { ascending: false })
+      
+      // 获取访客成绩
+      const { data: guestScores, error: guestError } = await supabase
+        .from('guest_scores')
+        .select(`
+          *,
+          events!left (
+            id,
+            title,
+            start_time,
+            end_time,
+            location,
+            event_type,
+            team_colors,
+            image_url,
+            article_featured_image_url
+          )
+        `)
+        .order('created_at', { ascending: false })
+      
+      if (memberError) {
+        console.error('Dashboard - 获取会员成绩失败:', memberError)
+      }
+      
+      if (guestError) {
+        console.error('Dashboard - 获取访客成绩失败:', guestError)
+      }
+      
+      // 合并会员和访客成绩，统一格式
+      const memberScoresFormatted = (memberScores || []).map(score => ({
+        ...score,
+        is_guest: false,
+        player_name: score.user_profiles?.full_name || '未知'
+      }))
+      
+      const guestScoresFormatted = (guestScores || []).map(score => ({
+        ...score,
+        is_guest: true,
+        player_name: score.player_name || '未知',
+        user_profiles: null,
+        full_name: score.player_name || '未知'
+      }))
+      
+      const allScores = [...memberScoresFormatted, ...guestScoresFormatted]
+      
+      if (allScores.length === 0) {
+        console.log('Dashboard - 没有找到任何成绩数据')
+        setRecentScores([])
+      } else {
+        // 2. 按event分组
+        // 如果关联查询失败（events为null），需要手动查询events表匹配competition_name
+        const competitionMap = new Map<string, any[]>()
+        
+        // 先分离有events关联和没有events关联的成绩
+        const scoresWithEvents: any[] = []
+        const scoresWithoutEvents: any[] = []
+        
+        allScores.forEach(score => {
+          if (score.events?.id) {
+            scoresWithEvents.push(score)
+          } else if (score.event_id) {
+            // guest_scores表有event_id，需要单独查询
+            scoresWithoutEvents.push(score)
+          } else if (score.competition_name) {
+            // scores表可能有competition_name
+            scoresWithoutEvents.push(score)
+          }
+        })
+        
+        // 对于没有events关联的成绩，批量查询events表
+        if (scoresWithoutEvents.length > 0) {
+          // 收集需要查询的event_id和competition_name
+          const eventIds = [...new Set(scoresWithoutEvents.map(s => s.event_id).filter(Boolean))]
+          const competitionNames = [...new Set(scoresWithoutEvents.map(s => s.competition_name).filter(Boolean))]
+          
+          const eventMap = new Map<string, any>()
+          
+          // 通过event_id查询
+          if (eventIds.length > 0) {
+            const { data: eventsById } = await supabase
+              .from('events')
+              .select('id, title, start_time, end_time, location, event_type, team_colors')
+              .in('id', eventIds)
+            
+            eventsById?.forEach(event => {
+              eventMap.set(event.id, event)
+            })
+          }
+          
+          // 通过competition_name匹配
+          if (competitionNames.length > 0) {
+            const { data: eventsByTitle } = await supabase
+              .from('events')
+              .select('id, title, start_time, end_time, location, event_type, team_colors')
+              .in('title', competitionNames)
+            
+            eventsByTitle?.forEach(event => {
+              eventMap.set(event.title, event)
+            })
+          }
+          
+          // 为没有关联的成绩添加event信息
+          scoresWithoutEvents.forEach(score => {
+            let matchedEvent = null
+            if (score.event_id) {
+              matchedEvent = eventMap.get(score.event_id)
+            } else if (score.competition_name) {
+              matchedEvent = eventMap.get(score.competition_name)
+            }
+            
+            if (matchedEvent) {
+              score.events = matchedEvent
+              scoresWithEvents.push(score)
+            }
+          })
+        }
+        
+        // 合并所有成绩（包括有events关联的和手动匹配的）
+        const allScoresWithEvents = [...scoresWithEvents]
+        
+        // 按events.id分组
+        allScoresWithEvents.forEach(score => {
+          const key = score.events?.id
+          if (!key) {
+            return
+          }
+          
+          if (!competitionMap.has(key)) {
+            competitionMap.set(key, [])
+          }
+          competitionMap.get(key)!.push({
+            ...score,
+            full_name: score.is_guest ? score.player_name : (score.user_profiles?.full_name || score.full_name || '未知'),
+            event: score.events || null
+          })
+        })
+
+        // 3. 处理每个活动的成绩信息
+        const competitionResults: CompetitionResult[] = []
+        // 按活动结束时间排序，获取所有有成绩的活动（不限制数量）
+        const competitionKeys = Array.from(competitionMap.keys())
+          .map(key => {
+            const scores = competitionMap.get(key) || []
+            // 获取活动的end_time（从关联的events表），如果没有则使用created_at
+            const event = scores[0]?.event || scores[0]?.events
+            const endTime = event?.end_time || scores[0]?.created_at || new Date().toISOString()
+            return {
+              key,
+              endTime: new Date(endTime),
+              event: event
+            }
+          })
+          .sort((a, b) => b.endTime.getTime() - a.endTime.getTime())
+        
+        // 过滤：只显示已结束的活动（end_time < 当前时间），并限制为最新2个
+        const now = new Date()
+        const endedCompetitionKeys = competitionKeys
+          .filter(({ event }) => {
+            if (!event?.end_time) return false
+            return new Date(event.end_time) < now
+          })
+          .slice(0, 2) // 只取最新2个
+        
+        console.log('Dashboard - 已结束的活动数量:', endedCompetitionKeys.length)
+
+        for (const { key, event: eventFromScores } of endedCompetitionKeys) {
+          const scores = competitionMap.get(key) || []
+          if (scores.length === 0) continue
+
+          // 获取活动信息（从关联的events表或单独查询）
+          let event = eventFromScores || scores[0]?.events
+          
+          // 如果没有从关联查询获取到，尝试单独查询
+          if (!event) {
+            // 如果key是event_id
+            if (key.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+              const { data: eventData } = await supabase
+                .from('events')
+                .select('id, title, event_type, location, end_time, team_colors, image_url, article_featured_image_url')
+                .eq('id', key)
+                .single()
+              event = eventData
+            } else {
+              // 如果key是title，尝试匹配
+              const { data: eventData } = await supabase
+                .from('events')
+                .select('id, title, event_type, location, end_time, team_colors, image_url, article_featured_image_url')
+                .eq('title', key)
+                .limit(1)
+              event = eventData?.[0]
+            }
+          }
+
+          const competitionName = event?.title || scores[0]?.competition_name || key
+          const competitionDate = event?.end_time || scores[0]?.created_at || new Date().toISOString()
+          const eventType = event?.event_type || '个人赛' // 默认为个人赛
+
+          if (eventType === '个人赛') {
+            // 个人赛：按总杆数排序，取前三名
+            const sortedScores = scores
+              .filter(s => s.total_strokes != null)
+              .sort((a, b) => a.total_strokes - b.total_strokes)
+              .slice(0, 3)
+              .map((s, index) => ({
+                name: s.full_name || '未知',
+                total_strokes: s.total_strokes,
+                net_strokes: s.net_strokes,
+                rank: index + 1
+              }))
+
+            // 即使没有前三名，只要有成绩就显示
+            competitionResults.push({
+              competition_name: competitionName,
+              competition_date: competitionDate,
+              event_type: eventType as '个人赛',
+              location: event?.location,
+              image_url: (event as any)?.image_url || (event as any)?.article_featured_image_url || null,
+              topThree: sortedScores.length > 0 ? sortedScores : undefined
+            })
+          } else if (eventType === '团体赛') {
+            // 团体赛：按team_name分组，计算每个队伍的净杆总数
+            const teamMap = new Map<string, number[]>()
+            scores.forEach(score => {
+              if (score.team_name) {
+                if (!teamMap.has(score.team_name)) {
+                  teamMap.set(score.team_name, [])
+                }
+                // 使用净杆数，如果没有净杆数则使用总杆数
+                const netStrokes = score.net_strokes != null ? score.net_strokes : score.total_strokes
+                if (netStrokes != null) {
+                  teamMap.get(score.team_name)!.push(netStrokes)
+                }
+              }
+            })
+
+            // 计算每个队伍的净杆总数
+            const teams = Array.from(teamMap.entries())
+              .map(([teamName, netStrokes]) => ({
+                team_name: teamName,
+                score: Math.round(netStrokes.reduce((sum, s) => sum + s, 0)) // 净杆总数，四舍五入为整数
+              }))
+              .sort((a, b) => a.score - b.score) // 按分数升序（分数越低越好）
+              .map((team, index) => ({
+                ...team,
+                rank: index + 1
+              }))
+
+            // 即使没有队伍数据，只要有成绩就显示
+            competitionResults.push({
+              competition_name: competitionName,
+              competition_date: competitionDate,
+              event_type: eventType as '团体赛',
+              location: event?.location,
+              team_colors: (event as any)?.team_colors || {},
+              image_url: (event as any)?.image_url || (event as any)?.article_featured_image_url || null,
+              teams: teams.length > 0 ? teams : undefined
+            })
+          }
+        }
+
+        setRecentScores(competitionResults)
+      }
 
       // 获取最近的投资项目 - 显示2个，并计算实际筹集金额
       const { data: investments, error: investmentsError } = await supabase
@@ -346,7 +646,7 @@ export default function Dashboard() {
       `}</style>
       {/* Header */}
       <header className="shadow-sm border-b sticky top-0 z-50" style={{ backgroundColor: '#619f56', borderColor: 'rgba(255,255,255,0.2)' }}>
-        <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
+        <div className="max-w-[1280px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
           <div className="flex justify-between items-center">
             {/* Logo and Brand */}
             <div 
@@ -855,7 +1155,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-10 py-4 sm:py-6 lg:py-8">
+      <main className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-10 py-4 sm:py-6 lg:py-8">
         {currentView === 'dashboard' ? (
           <>
             {/* Welcome Banner - 高尔夫主题设计 */}
@@ -866,28 +1166,6 @@ export default function Dashboard() {
                 boxShadow: 'inset 0 0 8px rgba(255,255,255,0.4), 0 6px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.1)'
               }}
             >
-              {/* 点状纹理叠加层 */}
-              <div 
-                className="absolute inset-0 opacity-20"
-                style={{
-                  backgroundImage: `
-                    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 1px, transparent 1px),
-                    radial-gradient(circle at 40% 20%, rgba(255,255,255,0.1) 1px, transparent 1px),
-                    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.1) 1px, transparent 1px),
-                    radial-gradient(circle at 60% 70%, rgba(255,255,255,0.1) 1px, transparent 1px)
-                  `,
-                  backgroundSize: '60px 60px, 80px 80px, 100px 100px, 70px 70px'
-                }}
-              ></div>
-              
-              {/* 人物线稿右侧雾层 */}
-              <div 
-                className="absolute right-0 top-0 bottom-0 w-1/3 opacity-30 pointer-events-none"
-                style={{
-                  background: 'linear-gradient(to left, rgba(255,255,255,0.15), transparent)'
-                }}
-              ></div>
-              
               {/* 主要内容 */}
               <div className="relative z-10">
                 <div className="flex items-center mb-4 sm:mb-5">
@@ -902,13 +1180,13 @@ export default function Dashboard() {
                     欢迎回来，{userProfile?.full_name || '用户'}！
                   </h2>
                   <span 
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm border"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg border"
                     style={{
-                      background: 'rgba(255,255,255,0.25)',
-                      borderColor: 'rgba(255,255,255,0.3)',
-                      color: '#FFFFFF',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.4)'
+                      background: '#FFFFFF',
+                      borderColor: '#FFFFFF',
+                      color: '#FAD4D8',
+                      textShadow: 'none',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
                     }}
                   >
                     {getMembershipTypeText(userProfile?.membership_type || 'standard')}
@@ -925,13 +1203,13 @@ export default function Dashboard() {
                 >
                   祝您今天有美好的高尔夫体验
                 </p>
-                <div className="text-xs flex items-center space-x-4" style={{ color: 'rgba(255, 248, 245, 0.9)' }}>
+                <div className="text-xs flex items-center space-x-4" style={{ color: '#FFFFFF' }}>
                   <span className="flex items-center">
-                    <div className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: 'rgba(255, 248, 245, 0.8)' }}></div>
+                    <div className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: '#FFFFFF' }}></div>
                     会员数量：{memberCount}
                   </span>
                   <span className="flex items-center">
-                    <div className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: 'rgba(255, 248, 245, 0.8)' }}></div>
+                    <div className="w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: '#FFFFFF' }}></div>
                     加入日期：{new Date().toLocaleDateString('zh-CN')}
                   </span>
                 </div>
@@ -1057,30 +1335,11 @@ export default function Dashboard() {
             `}</style>
 
             {/* Quick Actions */}
-            <div 
-              className="mb-4 sm:mb-6 lg:mb-8"
-              style={{
-                transition: 'margin-bottom 0.5s cubic-bezier(0.4, 0, 1, 1)'
-              }}
-            >
+            <div className="mb-4 sm:mb-6 lg:mb-8">
               <div className="flex items-center justify-between mb-3 sm:mb-4 lg:mb-6">
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">快捷操作</h3>
-                <button
-                  onClick={() => setShowMoreActions(!showMoreActions)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-all duration-200"
-                >
-                  <span>{showMoreActions ? '收起' : '更多'}</span>
-                  <ChevronDown 
-                    className={`w-4 h-4 transition-transform duration-300 ${showMoreActions ? 'rotate-180' : ''}`}
-                  />
-                </button>
+                <h3 className="hidden sm:block text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">快捷操作</h3>
               </div>
-              <div 
-                className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6"
-                style={{
-                  transition: 'grid-template-rows 0.5s cubic-bezier(0.4, 0, 1, 1)'
-                }}
-              >
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 <div 
                   onClick={() => setCurrentView('information')}
                   className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
@@ -1237,197 +1496,186 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* 可折叠的卡片容器 */}
                 <div
-                  onClick={() => showMoreActions && setCurrentView('investments')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ 
-                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
-                    touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
-                    maxHeight: showMoreActions ? '500px' : '0px',
-                    opacity: showMoreActions ? 1 : 0,
-                    marginBottom: showMoreActions ? '0' : '0',
-                    marginTop: showMoreActions ? '0' : '0',
-                    paddingTop: showMoreActions ? undefined : '0',
-                    paddingBottom: showMoreActions ? undefined : '0',
+                  className="col-span-2 lg:col-span-5"
+                  style={{
+                    maxHeight: showMoreActions ? '1000px' : '0px',
                     overflow: 'hidden',
-                    pointerEvents: showMoreActions ? 'auto' : 'none',
-                    cursor: showMoreActions ? 'pointer' : 'default',
-                    transform: showMoreActions ? 'scale(1)' : 'scale(0.95)',
-                    transition: showMoreActions 
-                      ? 'max-height 0.5s cubic-bezier(0, 0, 0.2, 1), opacity 0.5s cubic-bezier(0, 0, 0.2, 1), transform 0.5s cubic-bezier(0, 0, 0.2, 1), padding 0.5s cubic-bezier(0, 0, 0.2, 1), margin 0.5s cubic-bezier(0, 0, 0.2, 1)'
-                      : 'max-height 0.5s cubic-bezier(0.4, 0, 1, 1), opacity 0.4s cubic-bezier(0.4, 0, 1, 1), transform 0.5s cubic-bezier(0.4, 0, 1, 1), padding 0.5s cubic-bezier(0.4, 0, 1, 1), margin 0.5s cubic-bezier(0.4, 0, 1, 1)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (showMoreActions) {
-                      e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (showMoreActions) {
-                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
-                    }
+                    transition: showMoreActions
+                      ? 'max-height 0.5s cubic-bezier(0, 0, 0.2, 1)'
+                      : 'max-height 0.5s cubic-bezier(0.4, 0, 1, 1)'
                   }}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
-                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Heart className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 py-2 sm:py-3">
+                    <div
+                      onClick={() => showMoreActions && setCurrentView('investments')}
+                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                      style={{ 
+                        backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                        touchAction: 'manipulation',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                        opacity: showMoreActions ? 1 : 0,
+                        pointerEvents: showMoreActions ? 'auto' : 'none',
+                        transition: 'opacity 0.5s cubic-bezier(0, 0, 0.2, 1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (showMoreActions) {
+                          e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (showMoreActions) {
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                          <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                            <Heart className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
+                          </div>
+                          <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                            捐赠与赞助
+                            <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </h4>
+                          <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">捐赠与赞助俱乐部建设发展</p>
+                        </div>
+                        <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                          <img 
+                            src="/golf_gesture5.png" 
+                            alt="Golf gesture" 
+                            className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                            draggable="false"
+                            onDragStart={(e) => e.preventDefault()}
+                            onContextMenu={(e) => e.preventDefault()}
+                          />
+                        </div>
                       </div>
-                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                        捐赠与赞助
-                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </h4>
-                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">捐赠与赞助俱乐部建设发展</p>
                     </div>
-                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
-                      <img 
-                        src="/golf_gesture5.png" 
-                        alt="Golf gesture" 
-                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
-                        draggable="false"
-                        onDragStart={(e) => e.preventDefault()}
-                        onContextMenu={(e) => e.preventDefault()}
-                      />
-                    </div>
-                  </div>
-                </div>
 
-                <div
-                  onClick={() => showMoreActions && setCurrentView('expenses')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ 
-                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
-                    touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
-                    maxHeight: showMoreActions ? '500px' : '0px',
-                    opacity: showMoreActions ? 1 : 0,
-                    marginBottom: showMoreActions ? '0' : '0',
-                    marginTop: showMoreActions ? '0' : '0',
-                    paddingTop: showMoreActions ? undefined : '0',
-                    paddingBottom: showMoreActions ? undefined : '0',
-                    overflow: 'hidden',
-                    pointerEvents: showMoreActions ? 'auto' : 'none',
-                    cursor: showMoreActions ? 'pointer' : 'default',
-                    transform: showMoreActions ? 'scale(1)' : 'scale(0.95)',
-                    transition: showMoreActions 
-                      ? 'max-height 0.5s cubic-bezier(0, 0, 0.2, 1), opacity 0.5s cubic-bezier(0, 0, 0.2, 1), transform 0.5s cubic-bezier(0, 0, 0.2, 1), padding 0.5s cubic-bezier(0, 0, 0.2, 1), margin 0.5s cubic-bezier(0, 0, 0.2, 1)'
-                      : 'max-height 0.5s cubic-bezier(0.4, 0, 1, 1), opacity 0.4s cubic-bezier(0.4, 0, 1, 1), transform 0.5s cubic-bezier(0.4, 0, 1, 1), padding 0.5s cubic-bezier(0.4, 0, 1, 1), margin 0.5s cubic-bezier(0.4, 0, 1, 1)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (showMoreActions) {
-                      e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (showMoreActions) {
-                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
-                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Receipt className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
+                    <div
+                      onClick={() => showMoreActions && setCurrentView('expenses')}
+                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-gray-200/30 select-none"
+                      style={{ 
+                        backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                        touchAction: 'manipulation',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                        opacity: showMoreActions ? 1 : 0,
+                        pointerEvents: showMoreActions ? 'auto' : 'none',
+                        transition: 'opacity 0.5s cubic-bezier(0, 0, 0.2, 1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (showMoreActions) {
+                          e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (showMoreActions) {
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                          <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                            <Receipt className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
+                          </div>
+                          <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                            费用公示
+                            <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </h4>
+                          <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看俱乐部财务支出</p>
+                        </div>
+                        <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                          <img 
+                            src="/golf_gesture6.png" 
+                            alt="Golf gesture" 
+                            className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                            draggable="false"
+                            onDragStart={(e) => e.preventDefault()}
+                            onContextMenu={(e) => e.preventDefault()}
+                          />
+                        </div>
                       </div>
-                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                        费用公示
-                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </h4>
-                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">查看俱乐部财务支出</p>
                     </div>
-                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
-                      <img 
-                        src="/golf_gesture6.png" 
-                        alt="Golf gesture" 
-                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
-                        draggable="false"
-                        onDragStart={(e) => e.preventDefault()}
-                        onContextMenu={(e) => e.preventDefault()}
-                      />
-                    </div>
-                  </div>
-                </div>
 
-                <div
-                  onClick={() => showMoreActions && setCurrentView('members')}
-                  className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 group relative overflow-hidden border border-gray-200/30 select-none"
-                  style={{ 
-                    backgroundColor: 'rgba(249, 246, 244, 0.4)', 
-                    touchAction: 'manipulation',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
-                    maxHeight: showMoreActions ? '500px' : '0px',
-                    opacity: showMoreActions ? 1 : 0,
-                    marginBottom: showMoreActions ? '0' : '0',
-                    marginTop: showMoreActions ? '0' : '0',
-                    paddingTop: showMoreActions ? undefined : '0',
-                    paddingBottom: showMoreActions ? undefined : '0',
-                    overflow: 'hidden',
-                    pointerEvents: showMoreActions ? 'auto' : 'none',
-                    cursor: showMoreActions ? 'pointer' : 'default',
-                    transform: showMoreActions ? 'scale(1)' : 'scale(0.95)',
-                    transition: showMoreActions 
-                      ? 'max-height 0.5s cubic-bezier(0, 0, 0.2, 1), opacity 0.5s cubic-bezier(0, 0, 0.2, 1), transform 0.5s cubic-bezier(0, 0, 0.2, 1), padding 0.5s cubic-bezier(0, 0, 0.2, 1), margin 0.5s cubic-bezier(0, 0, 0.2, 1)'
-                      : 'max-height 0.5s cubic-bezier(0.4, 0, 1, 1), opacity 0.4s cubic-bezier(0.4, 0, 1, 1), transform 0.5s cubic-bezier(0.4, 0, 1, 1), padding 0.5s cubic-bezier(0.4, 0, 1, 1), margin 0.5s cubic-bezier(0.4, 0, 1, 1)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (showMoreActions) {
-                      e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (showMoreActions) {
-                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
-                      <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
-                        <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
+                    <div
+                      onClick={() => showMoreActions && setCurrentView('members')}
+                      className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-visible border border-gray-200/30 select-none"
+                      style={{ 
+                        backgroundColor: 'rgba(249, 246, 244, 0.4)', 
+                        touchAction: 'manipulation',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+                        opacity: showMoreActions ? 1 : 0,
+                        pointerEvents: showMoreActions ? 'auto' : 'none',
+                        transition: 'opacity 0.5s cubic-bezier(0, 0, 0.2, 1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (showMoreActions) {
+                          e.currentTarget.style.boxShadow = '0 3px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (showMoreActions) {
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
+                          <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4">
+                            <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4" style={{ color: '#4B5563', fill: '#92c648' }} strokeWidth={2} />
+                          </div>
+                          <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
+                            会员照片
+                            <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </h4>
+                          <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">浏览所有会员照片</p>
+                        </div>
+                        <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
+                          <img 
+                            src="/golf_gesture7.png" 
+                            alt="Golf gesture" 
+                            className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
+                            draggable="false"
+                            onDragStart={(e) => e.preventDefault()}
+                            onContextMenu={(e) => e.preventDefault()}
+                          />
+                        </div>
                       </div>
-                      <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1 sm:mb-2 flex items-center">
-                        会员照片
-                        <ArrowRight className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </h4>
-                      <p className="text-gray-600 text-xs sm:text-sm hidden sm:block">浏览所有会员照片</p>
-                    </div>
-                    <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end" style={{ transform: 'translateX(-10%)' }}>
-                      <img 
-                        src="/golf_gesture7.png" 
-                        alt="Golf gesture" 
-                        className="h-full max-h-32 sm:max-h-40 lg:max-h-52 w-auto object-contain select-none pointer-events-none" 
-                        draggable="false"
-                        onDragStart={(e) => e.preventDefault()}
-                        onContextMenu={(e) => e.preventDefault()}
-                      />
                     </div>
                   </div>
                 </div>
               </div>
+              
+              {/* 展开/收起按钮 */}
+              <div className="flex justify-center -mt-2 sm:-mt-1">
+                <button
+                  onClick={() => setShowMoreActions(!showMoreActions)}
+                  className="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 hover:opacity-90"
+                  style={{ backgroundColor: '#F36C92' }}
+                  title={showMoreActions ? '收起' : '更多'}
+                  aria-label={showMoreActions ? '收起' : '更多'}
+                >
+                  {showMoreActions ? (
+                    <Minus className="w-5 h-5 text-white" strokeWidth={3} />
+                  ) : (
+                    <Plus className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Main Content Sections */}
-            <div 
-              className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8"
-              style={{
-                transition: 'transform 0s cubic-bezier(0.4, 0, 1, 1), margin-top 0s cubic-bezier(0.4, 0, 1, 1)'
-              }}
-            >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-3">
               {/* 即将举行的活动 */}
               <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
                     <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
                     即将举行的活动
                   </h3>
-                  <button 
-                    onClick={() => setCurrentView('events')}
-                    className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base flex items-center"
-                  >
-                    查看全部
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </button>
                 </div>
                 {loading ? (
                   <div className="text-center py-6 sm:py-8">
@@ -1437,14 +1685,37 @@ export default function Dashboard() {
                 ) : upcomingEvents.length > 0 ? (
                   <div className="space-y-3">
                     {upcomingEvents.map((event) => (
-                      <div key={event.id} className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'rgba(252, 250, 248, 0.95)' }}>
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1">{event.title}</div>
-                          <div className="text-xs sm:text-sm text-gray-600 mb-1">
-                            日期: {new Date(event.start_time).toLocaleDateString('zh-CN')}
+                      <div 
+                        key={event.id} 
+                        className="flex items-start gap-3 p-3 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => setCurrentView('events')}
+                      >
+                        {/* 左侧小图 */}
+                        <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
+                          {event.image_url || event.article_featured_image_url ? (
+                            <img
+                              src={event.image_url || event.article_featured_image_url}
+                              alt={event.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Calendar className="w-8 h-8 text-gray-300" />
+                            </div>
+                          )}
+                        </div>
+                        {/* 右侧文字 */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1.5 line-clamp-2">
+                            {event.title}
                           </div>
-                          <div className="text-xs sm:text-sm text-[#F15B98]">
-                            {event.location || '地点未设置'} · {event.max_participants || 0}人
+                          <div className="text-xs sm:text-sm text-gray-600 mb-1 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span>{event.location || '地点未设置'} · {event.max_participants || 0}人</span>
                           </div>
                         </div>
                       </div>
@@ -1452,7 +1723,7 @@ export default function Dashboard() {
                     <div className="text-center pt-2">
                       <button 
                         onClick={() => setCurrentView('events')}
-                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm"
+                        className="px-4 py-2 bg-[#F15B98] hover:bg-[#F15B98]/90 text-white font-bold text-sm rounded-lg transition-colors"
                       >
                         查看更多活动
                       </button>
@@ -1463,7 +1734,7 @@ export default function Dashboard() {
                     <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无即将举行的活动</p>
                     <button 
                       onClick={() => setCurrentView('events')}
-                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base"
+                      className="px-4 py-2 bg-[#F15B98] hover:bg-[#F15B98]/90 text-white font-bold text-sm sm:text-base rounded-lg transition-colors"
                     >
                       查看更多活动
                     </button>
@@ -1473,18 +1744,11 @@ export default function Dashboard() {
 
               {/* 最新发布的成绩活动 */}
               <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
+                <div className="mb-4 sm:mb-6">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
                     <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
                     最新发布的成绩活动
                   </h3>
-                  <button 
-                    onClick={() => setCurrentView('scores')}
-                    className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base flex items-center"
-                  >
-                    查看全部
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </button>
                 </div>
                 {loading ? (
                   <div className="text-center py-6 sm:py-8">
@@ -1492,23 +1756,97 @@ export default function Dashboard() {
                     <p className="text-gray-500 mt-2 text-sm">加载中...</p>
                   </div>
                 ) : recentScores.length > 0 ? (
-                  <div className="space-y-3 sm:space-y-4">
-                    {recentScores.map((score) => (
-                      <div key={score.id} className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'rgba(252, 250, 248, 0.95)' }}>
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1">
-                            {score.competition_name || '比赛'}
+                  <div className="space-y-2 sm:space-y-3">
+                    {recentScores.map((result, index) => (
+                      <div key={index} className="bg-white rounded-lg p-3 border border-gray-200 flex gap-3 sm:gap-4">
+                        {/* 左侧图片或图标 */}
+                        <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
+                          {result.image_url ? (
+                            <img
+                              src={result.image_url}
+                              alt={result.competition_name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-[#F15B98]" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* 右侧文字内容 */}
+                        <div className="flex-1 min-w-0">
+                          {/* 活动标题和日期 */}
+                          <div>
+                            <div className="font-semibold text-gray-900 text-base sm:text-lg mb-1.5 line-clamp-1">
+                              {result.competition_name}
+                            </div>
+                            <div className="text-xs sm:text-sm text-gray-600 mb-2.5 flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>{new Date(result.competition_date).toLocaleDateString('zh-CN')} {new Date(result.competition_date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                              {result.location && (
+                                <>
+                                  <span className="mx-1">·</span>
+                                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span>{result.location}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-xs sm:text-sm text-gray-600">
-                            日期: {new Date(score.competition_date).toLocaleDateString('zh-CN')}
-                          </div>
+
+                          {/* 成绩信息 - 一行显示 */}
+                          {result.event_type === '个人赛' && result.topThree && result.topThree.length > 0 && (
+                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                              {result.topThree.slice(0, 3).map((player, idx) => {
+                                const medalColors = [
+                                  { color: '#FFD700', name: 'gold' }, // 金色
+                                  { color: '#C0C0C0', name: 'silver' }, // 银色
+                                  { color: '#CD7F32', name: 'bronze' } // 铜色
+                                ]
+                                const medal = medalColors[player.rank - 1]
+                                return (
+                                  <span key={idx} className="text-gray-700 flex items-center gap-1.5">
+                                    {medal && (
+                                      <Medal className="w-5 h-5 flex-shrink-0" style={{ color: medal.color }} />
+                                    )}
+                                    <span className="font-medium">{player.name}</span>
+                                    {idx < Math.min(result.topThree.length, 3) - 1 && <span className="mx-1.5 text-gray-400">·</span>}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {result.event_type === '团体赛' && result.teams && result.teams.length > 0 && (
+                            <div className="flex items-center gap-2 text-xs flex-wrap">
+                              {result.teams.slice(0, 4).map((team, idx) => {
+                                // 根据队伍名称查找颜色，team_colors的key可能是原始名称或显示名称
+                                const teamColors = result.team_colors || {}
+                                let teamColor = '#6B7280' // 默认灰色
+                                // 先尝试用team_name直接查找
+                                if (teamColors[team.team_name]) {
+                                  teamColor = teamColors[team.team_name]
+                                }
+                                return (
+                                  <span key={idx} className="text-gray-700 flex items-center gap-1.5">
+                                    <span 
+                                      className="w-3 h-3 rounded flex-shrink-0" 
+                                      style={{ backgroundColor: teamColor }}
+                                    />
+                                    {team.team_name} {Math.round(team.score)}分
+                                    {idx < Math.min(result.teams.length, 4) - 1 && <span className="mx-1 text-gray-400">·</span>}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
-                    <div className="text-center pt-3 sm:pt-4">
+                    <div className="text-center pt-2">
                       <button 
                         onClick={() => setCurrentView('scores')}
-                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm sm:text-base"
+                        className="px-4 py-2 bg-[#F15B98] hover:bg-[#F15B98]/90 text-white font-bold text-sm rounded-lg transition-colors"
                       >
                         查看完整成绩单
                       </button>
@@ -1522,60 +1860,6 @@ export default function Dashboard() {
                       className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm sm:text-base"
                     >
                       查看成绩查询
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 最新捐赠与赞助 */}
-              <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
-                    <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
-                    最新捐赠与赞助
-                  </h3>
-                  <button 
-                    onClick={() => setCurrentView('investments')}
-                    className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base flex items-center"
-                  >
-                    查看全部
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </button>
-                </div>
-                {loading ? (
-                  <div className="text-center py-6 sm:py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98] mx-auto"></div>
-                    <p className="text-gray-500 mt-2 text-sm">加载中...</p>
-                  </div>
-                ) : recentInvestments.length > 0 ? (
-                  <div className="space-y-3">
-                    {recentInvestments.map((investment) => (
-                      <div key={investment.id} className="flex items-start justify-between p-4 rounded-lg" style={{ backgroundColor: 'rgba(252, 250, 248, 0.95)' }}>
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1">{investment.title}</div>
-                          <div className="text-xs sm:text-sm text-gray-600">
-                            日期: {new Date(investment.created_at).toLocaleDateString('zh-CN')}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="text-center pt-2">
-                      <button 
-                        onClick={() => setCurrentView('investments')}
-                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm"
-                      >
-                        查看投资项目
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6 sm:py-8">
-                    <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无投资项目</p>
-                    <button 
-                      onClick={() => setCurrentView('investments')}
-                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm sm:text-base"
-                    >
-                      查看投资项目
                     </button>
                   </div>
                 )}

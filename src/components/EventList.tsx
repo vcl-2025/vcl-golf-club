@@ -291,7 +291,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
       />
 
       {/* 活动列表 */}
-      <div className="space-y-4 lg:grid lg:grid-cols-4 lg:gap-6 lg:space-y-0">
+      <div className="space-y-4 lg:grid lg:grid-cols-3 lg:gap-6 lg:space-y-0">
         {currentEvents.map((event) => {
           const stats = eventStats[event.id]
           const registrationOpen = isRegistrationOpen(event.registration_deadline)

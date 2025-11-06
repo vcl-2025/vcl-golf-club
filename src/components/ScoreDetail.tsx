@@ -152,18 +152,18 @@ export default function ScoreDetail({ score, onClose }: ScoreDetailProps) {
 
               {score.net_strokes && (
                 <div className="bg-white bg-opacity-10 rounded-lg p-4">
-                  <div className="text-golf-100 text-sm mb-1">净杆数</div>
+                  <div className="text-white/90 text-sm mb-1">净杆数</div>
                   <div className="text-3xl font-bold">{score.net_strokes}</div>
                 </div>
               )}
 
               <div className="bg-white bg-opacity-10 rounded-lg p-4">
-                <div className="text-golf-100 text-sm mb-1">差点</div>
+                <div className="text-white/90 text-sm mb-1">差点</div>
                 <div className="text-3xl font-bold">{score.handicap}</div>
               </div>
 
               <div className="bg-white bg-opacity-10 rounded-lg p-4">
-                <div className="text-golf-100 text-sm mb-1">洞数</div>
+                <div className="text-white/90 text-sm mb-1">洞数</div>
                 <div className="text-3xl font-bold">{score.holes_played}</div>
               </div>
             </div>
