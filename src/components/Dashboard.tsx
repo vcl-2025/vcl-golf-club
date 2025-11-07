@@ -17,6 +17,7 @@ import InvestmentList from './InvestmentList'
 import InvestmentDetail from './InvestmentDetail'
 import ExpenseList from './ExpenseList'
 import EventReviews from './EventReviews'
+// import EventReviews from './EventReviews.test'
 import MemberPhotoGallery from './MemberPhotoGallery'
 import InformationCenterList from './InformationCenterList'
 import InformationCenterDetail from './InformationCenterDetail'
@@ -182,10 +183,13 @@ export default function Dashboard() {
   useEffect(() => {
     const eventId = searchParams.get('eventId')
     
-    // 如果没有 eventId，且当前有打开的模态框，关闭它
+    // 如果没有 eventId，且当前有打开的模态框，延迟关闭（让关闭动画完成）
     if (!eventId && selectedEvent) {
-      setSelectedEvent(null)
-      return
+      // 延迟关闭，避免与 EventDetail 的关闭动画冲突导致闪烁
+      const timer = setTimeout(() => {
+        setSelectedEvent(null)
+      }, 300)
+      return () => clearTimeout(timer)
     }
     
     // 如果有 eventId 且当前没有打开模态框，尝试打开
@@ -224,10 +228,13 @@ export default function Dashboard() {
   useEffect(() => {
     const informationId = searchParams.get('informationId')
     
-    // 如果没有 informationId，且当前有打开的模态框，关闭它
+    // 如果没有 informationId，且当前有打开的模态框，延迟关闭（让关闭动画完成）
     if (!informationId && selectedInformationItem) {
-      setSelectedInformationItem(null)
-      return
+      // 延迟关闭，避免与 InformationCenterDetail 的关闭动画冲突导致闪烁
+      const timer = setTimeout(() => {
+        setSelectedInformationItem(null)
+      }, 300)
+      return () => clearTimeout(timer)
     }
     
     // 如果有 informationId 且当前没有打开模态框，尝试打开
@@ -857,11 +864,11 @@ export default function Dashboard() {
               onClick={() => setCurrentView('dashboard')}
               title="返回首页"
             >
-              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-12 lg:h-12 xl:w-12 xl:h-12 rounded-full flex items-center justify-center flex-shrink-0">
                 <img 
                   src="/logo.png" 
                   alt="溫哥華華人女子高爾夫俱樂部" 
-                  className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 object-contain"
+                  className="w-12 h-12 sm:w-14 sm:h-14 lg:w-12 lg:h-12 xl:w-12 xl:h-12 object-contain"
                   draggable="false"
                 />
               </div>

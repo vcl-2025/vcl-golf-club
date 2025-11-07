@@ -138,8 +138,8 @@ export default function InvestmentProjectForm({ project, onClose, onSuccess }: I
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70]">
-      <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 pt-20 z-[70]">
+      <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto">
         <div className="bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">
             {project ? '编辑捐赠项目' : '创建捐赠项目'}

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   Calendar, MapPin, Users, Trophy, Clock, FileText, 
   ChevronRight, Star, Eye, Heart, X, MessageCircle, Send,
-  Edit2, Trash2, Reply, Check, X as XIcon, Image as ImageIcon, Smile, MoreVertical, Share2, ChevronLeft, AlertTriangle
+  Edit2, Trash2, Reply, Check, X as XIcon, Image as ImageIcon, Smile, MoreVertical, Share2, ChevronLeft
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
@@ -171,9 +170,9 @@ const EditReplyModal = ({
 
   if (!isOpen || !reply) return null
 
-  return createPortal(
+  return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4 overflow-y-auto"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4 overflow-y-auto"
       onClick={handleClose}
       style={{
         position: 'fixed',
@@ -313,8 +312,7 @@ const EditReplyModal = ({
           </button>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   )
 }
 
@@ -440,9 +438,9 @@ const ReplyToReplyModal = ({
   // 解析原回复内容以显示图片
   const originalContentParts = reply ? parseContent(reply.content) : []
 
-  return createPortal(
+  return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4 overflow-y-auto"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4 overflow-y-auto"
       onClick={handleClose}
       style={{
         position: 'fixed',
@@ -629,8 +627,7 @@ const ReplyToReplyModal = ({
           </button>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   )
 }
 
@@ -672,8 +669,6 @@ export default function EventReviews() {
   const [imageViewerImages, setImageViewerImages] = useState<string[]>([])
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isClosing, setIsClosing] = useState(false)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [replyIdToDelete, setReplyIdToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPublishedArticles()
@@ -700,11 +695,6 @@ export default function EventReviews() {
       }
     }
   }, [searchParams, loading, events, selectedEvent])
-
-  // 重置关闭状态
-  useEffect(() => {
-    setIsClosing(false)
-  }, [selectedEvent?.id])
 
   useEffect(() => {
     if (selectedEvent) {
@@ -954,19 +944,14 @@ export default function EventReviews() {
   }, [editingReply, selectedEvent])
 
 
-  const handleDeleteReply = useCallback((replyId: string) => {
-    setReplyIdToDelete(replyId)
-    setDeleteConfirmOpen(true)
-  }, [])
-
-  const confirmDeleteReply = useCallback(async () => {
-    if (!replyIdToDelete) return
+  const handleDeleteReply = useCallback(async (replyId: string) => {
+    if (!confirm('确定要删除这条回复吗？')) return
 
     try {
       const { error } = await supabase
         .from('event_replies')
         .delete()
-        .eq('id', replyIdToDelete)
+        .eq('id', replyId)
 
       if (error) throw error
       
@@ -974,16 +959,11 @@ export default function EventReviews() {
       if (selectedEvent) {
         await fetchReplies(selectedEvent.id)
       }
-      
-      setDeleteConfirmOpen(false)
-      setReplyIdToDelete(null)
     } catch (error) {
       console.error('删除回复失败:', error)
       alert('删除回复失败，请重试')
-      setDeleteConfirmOpen(false)
-      setReplyIdToDelete(null)
     }
-  }, [replyIdToDelete, selectedEvent])
+  }, [selectedEvent])
 
 
   const fetchPublishedArticles = async () => {
@@ -1043,21 +1023,24 @@ export default function EventReviews() {
   const handleCloseModal = useCallback(() => {
     // 先触发关闭动画
     setIsClosing(true)
-    // 延迟关闭，让动画完成
+    // 先更新 URL，但延迟关闭模态框，让动画完成
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('reviewId')
+    if (newParams.toString()) {
+      navigate(`/dashboard?${newParams.toString()}`, { replace: true })
+    } else {
+      navigate('/dashboard?view=reviews', { replace: true })
+    }
+    // 延迟关闭，让动画完成后再关闭，避免 Dashboard 的 useEffect 立即关闭导致闪烁
     setTimeout(() => {
-      // 更新 URL，移除 reviewId 参数
-      const newParams = new URLSearchParams(searchParams)
-      newParams.delete('reviewId')
-      if (newParams.toString()) {
-        navigate(`/dashboard?${newParams.toString()}`, { replace: true })
-      } else {
-        navigate('/dashboard?view=reviews', { replace: true })
-      }
-      // 关闭模态框
       setSelectedEvent(null)
-      setIsClosing(false)
     }, 250)
   }, [searchParams, navigate])
+
+  // 重置关闭状态，当模态框重新打开时
+  useEffect(() => {
+    setIsClosing(false)
+  }, [selectedEvent?.id])
 
   const handleShare = async () => {
     if (!selectedEvent) return
@@ -1398,12 +1381,14 @@ export default function EventReviews() {
         ))}
       </div>
 
-      {/* 文章详情模态框 - 使用 Portal 渲染到 body 下 */}
-      {selectedEvent && createPortal(
+      {/* 文章详情模态框 */}
+      {selectedEvent && (
         <div 
-          className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[51] overflow-y-auto transition-opacity duration-200 ${
+          className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-hidden transition-opacity duration-200 ${
             isClosing ? 'opacity-0' : 'opacity-100'
           }`}
+          onTouchMove={(e) => e.preventDefault()}
+          onWheel={(e) => e.preventDefault()}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               handleCloseModal()
@@ -1411,7 +1396,7 @@ export default function EventReviews() {
           }}
         >
           <div 
-            className={`bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-xl transition-transform duration-200 ${
+            className={`bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] flex flex-col relative mx-auto transition-transform duration-200 ${
               isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
             }`}
             onClick={(e) => e.stopPropagation()}
@@ -1434,272 +1419,25 @@ export default function EventReviews() {
               </button>
             </div>
 
-            {/* 可滚动内容 */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="px-4 sm:px-6 py-6">
-                {/* 标题 */}
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">{selectedEvent.title}</h2>
-                
-                {/* 活动信息 */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <div className="flex items-center text-gray-600">
-                    <Calendar className="w-5 h-5 mr-3 text-golf-500" />
-                    <div>
-                      <div className="font-medium">活动日期</div>
-                      <div className="text-sm">{formatDate(selectedEvent.start_time)}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <MapPin className="w-5 h-5 mr-3 text-golf-500" />
-                    <div>
-                      <div className="font-medium">活动地点</div>
-                      <div className="text-sm">{selectedEvent.location}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <Users className="w-5 h-5 mr-3 text-golf-500" />
-                    <div>
-                      <div className="font-medium">参与人数</div>
-                      <div className="text-sm">最多 {selectedEvent.max_participants} 人</div>
-                    </div>
-                  </div>
+            {/* 可滚动内容 - 测试 */}
+            <div className="flex-1 overflow-y-auto bg-yellow-100 p-8">
+              <div className="text-center space-y-6">
+                <h2 className="text-4xl font-bold text-gray-900 mb-6">测试 Modal</h2>
+                <p className="text-xl text-gray-600 mb-8">这是一个简单的测试 modal，用于检查是否会被遮挡</p>
+                <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
+                  <p className="text-lg mb-4 font-semibold">如果这个红色头部和蓝色边框都能完整显示，说明定位没问题</p>
+                  <p className="text-lg mb-4 font-semibold">如果头部被遮挡，说明需要调整定位方式</p>
                 </div>
-
-                {/* 文章内容 */}
-                <div className="prose max-w-none">
-                  <TinyMCEViewer content={selectedEvent.article_content || ''} />
-                </div>
-
-                {/* 发布时间 */}
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Clock className="w-4 h-4 mr-2" />
-                    <span>发布于 {formatDate(selectedEvent.article_published_at || '')}</span>
+                {/* 添加更多内容以增加高度 */}
+                {Array.from({ length: 20 }, (_, i) => (
+                  <div key={i} className="p-4 bg-white rounded-lg shadow mb-4">
+                    <p className="text-gray-700">测试内容行 {i + 1} - 用于增加 modal 高度，检查滚动和定位</p>
                   </div>
-                </div>
-
-                {/* 回复区域 */}
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <MessageCircle className="w-5 h-5 mr-2 text-[#F15B98]" />
-                      <h3 className="text-lg font-semibold text-gray-900">回复</h3>
-                    </div>
-                    {/* 统计显示 */}
-                    <div className="text-sm">
-                      <span className="text-red-500 font-semibold">{countAllReplies(replies)}</span>
-                      <span className="text-gray-600 ml-1">条评论</span>
-                      <span className="text-gray-600 mx-1">/</span>
-                      <span className="text-red-500 font-semibold">
-                        {getAllUserIds(replies).size}
-                      </span>
-                      <span className="text-gray-600 ml-1">人参与</span>
-                    </div>
-                  </div>
-
-                  {/* 回复列表 */}
-                  {loadingReplies ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F15B98] mx-auto"></div>
-                      <p className="text-gray-500 mt-2 text-sm">加载回复中...</p>
-                    </div>
-                  ) : replies.length === 0 ? (
-                    <div className="text-center py-8 bg-gray-50 rounded-lg">
-                      <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">暂无回复，快来发表第一条回复吧！</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4 mb-6">
-                      {replies.map((reply) => (
-                        <ReplyItem
-                          key={reply.id}
-                          reply={reply}
-                          user={user}
-                          userProfile={userProfile}
-                          onStartEditing={handleStartEditing}
-                          onDelete={handleDeleteReply}
-                          onStartReplying={handleStartReplying}
-                          formatDate={formatDate}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 回复输入框（仅会员可见） */}
-                  {user && userProfile && userProfile.role !== 'guest' ? (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        {/* 用户头像 - 手机端隐藏 */}
-                        <div className="hidden sm:flex flex-shrink-0">
-                          {userProfile.avatar_url ? (
-                            <img
-                              src={userProfile.avatar_url}
-                              alt={userProfile.full_name}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold">
-                              {(userProfile.full_name || '用户').charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* 输入框 */}
-                        <div className="flex-1 relative">
-                          <textarea
-                            ref={mainReplyTextareaRef}
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="写下你的回复..."
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] resize-none"
-                            rows={3}
-                          />
-                          {/* 底部回复也添加图片和emoji支持 */}
-                          <div className="flex items-center gap-2 mt-2">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0]
-                                if (!file) return
-                                try {
-                                  validateImageFile(file)
-                                  const result = await uploadImageToSupabase(file, 'golf-club-images', 'event-replies')
-                                  if (result.success && result.url) {
-                                    setMainReplyImages(prev => [...prev, result.url!])
-                                  }
-                                } catch (error: any) {
-                                  alert(error.message || '图片上传失败')
-                                }
-                              }}
-                              className="hidden"
-                              id="main-reply-image-input"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => document.getElementById('main-reply-image-input')?.click()}
-                              className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                              <ImageIcon className="w-3 h-3" />
-                              <span>图片</span>
-                            </button>
-                            
-                            <div className="relative" ref={mainEmojiPickerRef}>
-                              <button
-                                type="button"
-                                onClick={() => setShowMainEmojiPicker(!showMainEmojiPicker)}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                              >
-                                <Smile className="w-3 h-3" />
-                                <span>表情</span>
-                              </button>
-                              
-                              {showMainEmojiPicker && (
-                                <div className="absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3 w-screen max-w-sm sm:w-80 max-h-64 overflow-y-auto z-[100]"
-                                  style={{
-                                    maxHeight: '16rem',
-                                    left: '50%',
-                                    transform: 'translateX(-50%) translateY(0)'
-                                  }}
-                                >
-                                  <div className="grid grid-cols-8 gap-2">
-                                    {COMMON_EMOJIS.map((emoji, index) => (
-                                      <button
-                                        key={index}
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = mainReplyTextareaRef.current
-                                          if (textarea) {
-                                            const start = textarea.selectionStart
-                                            const end = textarea.selectionEnd
-                                            const newContent = replyContent.substring(0, start) + emoji + replyContent.substring(end)
-                                            setReplyContent(newContent)
-                                            setTimeout(() => {
-                                              textarea.focus()
-                                              textarea.setSelectionRange(start + emoji.length, start + emoji.length)
-                                            }, 0)
-                                          }
-                                          setShowMainEmojiPicker(false)
-                                        }}
-                                        className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
-                                      >
-                                        {emoji}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* 已上传的图片预览 */}
-                          {mainReplyImages.length > 0 && (
-                            <div className="mt-3 grid grid-cols-3 gap-2">
-                              {mainReplyImages.map((url, index) => (
-                                <div key={index} className="relative group">
-                                  <img
-                                    src={url}
-                                    alt={`上传的图片 ${index + 1}`}
-                                    className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => setMainReplyImages(prev => prev.filter((_, i) => i !== index))}
-                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {/* 提交按钮 */}
-                          <div className="flex items-center justify-end gap-2 mt-2">
-                            <button
-                              onClick={() => {
-                                // 组合文本和图片，图片放在文字前面
-                                let finalContent = replyContent.trim()
-                                if (mainReplyImages.length > 0) {
-                                  const imageTags = mainReplyImages.map(url => `[IMAGE:${url}]`).join('')
-                                  finalContent = imageTags + (finalContent ? ' ' + finalContent : '')
-                                }
-                                handleSubmitReply(null, finalContent)
-                                setReplyContent('')
-                                setMainReplyImages([])
-                              }}
-                              disabled={(!replyContent.trim() && mainReplyImages.length === 0) || submittingReply}
-                              className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                              {submittingReply ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                  <span>提交中...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="w-4 h-4 mr-2" />
-                                  <span>发表回复</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-4 text-center">
-                      <p className="text-gray-500 text-sm">
-                        {user ? '只有会员可以回复' : '请登录后回复'}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
       {/* 编辑回复 Modal */}
@@ -1736,7 +1474,7 @@ export default function EventReviews() {
       {/* 图片查看器 Modal */}
       {imageViewerOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[70]"
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[90]"
           onClick={() => setImageViewerOpen(false)}
         >
           <button
@@ -1790,48 +1528,6 @@ export default function EventReviews() {
             </div>
           )}
         </div>
-      )}
-
-      {/* 删除确认对话框 */}
-      {deleteConfirmOpen && createPortal(
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[65] p-4"
-          onClick={() => {
-            setDeleteConfirmOpen(false)
-            setReplyIdToDelete(null)
-          }}
-        >
-          <div 
-            className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">确认删除</h3>
-            <p className="text-gray-600 text-center mb-6">确定要删除这条回复吗？</p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => {
-                  setDeleteConfirmOpen(false)
-                  setReplyIdToDelete(null)
-                }}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={confirmDeleteReply}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                确定
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
       )}
     </div>
   )

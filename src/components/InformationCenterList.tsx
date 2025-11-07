@@ -205,17 +205,21 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
 
       // 增加浏览次数
       if (currentItemFull) {
-        try {
-          // 先尝试使用 RPC 函数
-          await supabase.rpc('increment_information_item_views', {
-            item_id: itemId
-          })
-        } catch (rpcError) {
-          // 如果 RPC 不存在，直接更新
-          await supabase
-            .from('information_items')
-            .update({ view_count: (currentItemFull.view_count || 0) + 1 })
-            .eq('id', itemId)
+        // 先尝试使用 RPC 函数
+        const { error: rpcError } = await supabase.rpc('increment_information_item_views', {
+          item_id: itemId
+        })
+        
+        // 如果 RPC 不存在（404）或其他错误，直接更新
+        if (rpcError) {
+          try {
+            await supabase
+              .from('information_items')
+              .update({ view_count: (currentItemFull.view_count || 0) + 1 })
+              .eq('id', itemId)
+          } catch (updateErr) {
+            console.error('更新浏览次数失败:', updateErr)
+          }
         }
       }
 

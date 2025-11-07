@@ -108,6 +108,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_qr_code: '',
         payment_emt_email: '',
         payment_instructions: '',
+        event_type: '普通活动',
         status: 'upcoming'
       })
       setQrCodePreview('')
@@ -215,7 +216,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_qr_code: qrCodeUrl,
         payment_emt_email: formData.payment_emt_email,
         payment_instructions: formData.payment_instructions,
-        event_type: formData.event_type,
+        event_type: formData.event_type || '普通活动',
         status: formData.status === 'cancelled' ? 'cancelled' : 'active'
       }
 
@@ -268,8 +269,8 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-[70] p-4 pt-20">
+      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">

@@ -93,28 +93,32 @@ export default function InformationCenterDetailPage() {
   }
 
   const incrementViewCount = async (itemId: string) => {
-    try {
-      const { error } = await supabase.rpc('increment_information_item_views', {
-        item_id: itemId
-      })
+    if (!supabase) return
+    
+    // 先尝试使用 RPC 函数
+    const { error: rpcError } = await supabase.rpc('increment_information_item_views', {
+      item_id: itemId
+    })
 
-      if (!error) {
-        setViewCount(prev => prev + 1)
-      } else {
-        // 如果RPC不存在，直接更新
-        const { data } = await supabase
-          ?.from('information_items')
+    // 如果 RPC 不存在（404）或其他错误，直接更新
+    if (rpcError) {
+      try {
+        const { data, error: updateError } = await supabase
+          .from('information_items')
           .update({ view_count: (viewCount || 0) + 1 })
           .eq('id', itemId)
           .select('view_count')
           .single()
 
-        if (data) {
+        if (!updateError && data) {
           setViewCount(data.view_count)
         }
+      } catch (updateErr) {
+        console.error('更新浏览次数失败:', updateErr)
       }
-    } catch (error) {
-      console.error('更新浏览次数失败:', error)
+    } else {
+      // RPC 成功，更新本地状态
+      setViewCount(prev => prev + 1)
     }
   }
 

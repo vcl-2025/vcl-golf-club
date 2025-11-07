@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { X, FileText, Upload, Image as ImageIcon, Pin, AlertCircle, Calendar, Clock } from 'lucide-react'
+import { X, FileText, Upload, Image as ImageIcon, Pin, AlertCircle, Calendar, Clock, CheckCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { InformationItem } from '../types'
+import { InformationItem, Event } from '../types'
 import TinyMCEEditor from './TinyMCEEditor'
 import { useAuth } from '../hooks/useAuth'
 import { useModal } from './ModalProvider'
+import { canRegister, getEventStatus } from '../utils/eventStatus'
 
 interface InformationCenterFormProps {
   item?: InformationItem | null
@@ -21,6 +22,11 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([])
   const [existingAttachments, setExistingAttachments] = useState<any[]>([])
   const [isInitializing, setIsInitializing] = useState(true)
+  // 批量报名相关状态
+  const [isRegistrationNotice, setIsRegistrationNotice] = useState(false)
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
+  const [availableEvents, setAvailableEvents] = useState<Event[]>([])
+  const [loadingEvents, setLoadingEvents] = useState(false)
 
   const [formData, setFormData] = useState({
     category: '公告' as '公告' | '通知' | '重要资料' | '规则章程',
@@ -72,6 +78,10 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
       if (item.attachments && item.attachments.length > 0) {
         setExistingAttachments(item.attachments)
       }
+      
+      // 加载批量报名相关数据
+      setIsRegistrationNotice(item.is_registration_notice || false)
+      setSelectedEventIds(item.linked_events || [])
     } else {
       setFormData({
         category: '公告',
@@ -88,6 +98,8 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
       })
       setImagePreview('')
       setExistingAttachments([])
+      setIsRegistrationNotice(false)
+      setSelectedEventIds([])
     }
     
     // 延迟一点确保表单数据已更新
@@ -97,6 +109,82 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
     
     return () => clearTimeout(timer)
   }, [item])
+
+  // 获取可用活动列表 - 仅当分类为"通知"且启用批量报名功能时
+  useEffect(() => {
+    if (formData.category === '通知' && isRegistrationNotice) {
+      fetchAvailableEvents()
+    } else {
+      // 如果分类不是"通知"或未启用批量报名，清空已选活动
+      setSelectedEventIds([])
+      setAvailableEvents([])
+    }
+  }, [isRegistrationNotice, formData.category])
+
+  const fetchAvailableEvents = async () => {
+    if (!supabase) return
+    setLoadingEvents(true)
+    try {
+      // 获取所有活动
+      const { data: allEvents, error } = await supabase
+        .from('events')
+        .select('id, title, start_time, end_time, location, fee, status, registration_deadline, max_participants')
+        .eq('status', 'active')
+        .order('start_time', { ascending: true })
+      
+      if (error) throw error
+      
+      // 获取每个活动的报名统计
+      const eventIds = (allEvents || []).map(e => e.id)
+      let eventStats: Record<string, { available_spots: number }> = {}
+      
+      if (eventIds.length > 0) {
+        try {
+          const { data: statsData } = await supabase.rpc('get_batch_event_stats')
+          if (statsData) {
+            statsData.forEach((stat: any) => {
+              eventStats[stat.event_id] = {
+                available_spots: stat.available_spots
+              }
+            })
+          }
+        } catch (err) {
+          console.warn('获取活动统计失败:', err)
+        }
+      }
+      
+      // 过滤出可以报名的活动（未满员、未截止、未结束）
+      const availableEvents = (allEvents || []).filter(event => {
+        // 检查是否可以报名（未过报名截止时间且状态是upcoming）
+        if (!canRegister(event)) {
+          return false
+        }
+        
+        // 检查是否满员
+        const stats = eventStats[event.id]
+        if (stats && stats.available_spots <= 0) {
+          return false
+        }
+        
+        return true
+      })
+      
+      setAvailableEvents(availableEvents)
+    } catch (error) {
+      console.error('获取活动列表失败:', error)
+      showError('获取活动列表失败')
+    } finally {
+      setLoadingEvents(false)
+    }
+  }
+
+  const toggleEventSelection = (eventId: string) => {
+    setSelectedEventIds(prev => 
+      prev.includes(eventId) 
+        ? prev.filter(id => id !== eventId)
+        : [...prev, eventId]
+    )
+  }
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -145,23 +233,22 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
     return publicUrl
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (status: 'draft' | 'published') => {
     if (!user) return
     
     // 验证必填字段
     if (!formData.title.trim()) {
       showError('请输入标题')
-      setIsSubmitting(false)
       return
     }
     
-    // 验证正文内容（去除HTML标签后检查是否为空）
-    const contentText = formData.content?.replace(/<[^>]*>/g, '').trim() || ''
-    if (!contentText) {
-      showError('请输入正文内容')
-      setIsSubmitting(false)
-      return
+    // 如果是发布，验证正文内容
+    if (status === 'published') {
+      const contentText = formData.content?.replace(/<[^>]*>/g, '').trim() || ''
+      if (!contentText) {
+        showError('请输入正文内容')
+        return
+      }
     }
     
     setIsSubmitting(true)
@@ -196,19 +283,26 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
         content: formData.content,
         featured_image_url: imageUrl || null,
         attachments: allAttachments.length > 0 ? allAttachments : null,
-        status: formData.status,
+        status: status,
         priority: formData.priority,
         is_pinned: formData.is_pinned,
         display_order: formData.display_order,
-        author_id: user.id
+        author_id: user.id,
+        is_registration_notice: formData.category === '通知' ? isRegistrationNotice : false,
+        linked_events: formData.category === '通知' && isRegistrationNotice && selectedEventIds.length > 0 ? selectedEventIds : null
       }
 
       // 处理发布时间
-      if (formData.published_at) {
-        itemData.published_at = new Date(formData.published_at).toISOString()
-      } else if (formData.status === 'published') {
-        // 如果状态是已发布但没有设置发布时间，自动设置为当前时间
-        itemData.published_at = new Date().toISOString()
+      if (status === 'published') {
+        if (formData.published_at) {
+          itemData.published_at = new Date(formData.published_at).toISOString()
+        } else {
+          // 如果状态是已发布但没有设置发布时间，自动设置为当前时间
+          itemData.published_at = new Date().toISOString()
+        }
+      } else {
+        // 草稿状态，不设置发布时间
+        itemData.published_at = formData.published_at ? new Date(formData.published_at).toISOString() : null
       }
 
       // 处理过期时间
@@ -236,7 +330,10 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
       }
 
       // 显示成功提示
-      showSuccess(item ? '信息更新成功' : '信息创建成功')
+      const successMessage = status === 'published' 
+        ? (item ? '信息已发布' : '信息创建并发布成功')
+        : (item ? '草稿已保存' : '草稿创建成功')
+      showSuccess(successMessage)
       
       // 延迟关闭，让用户看到成功提示
       setTimeout(() => {
@@ -252,23 +349,24 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70] overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-[1280px] w-full max-h-[90vh] overflow-y-auto shadow-xl">
-        {/* 头部 */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex items-center justify-between z-10">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {item ? '编辑信息' : '创建信息'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-[70] p-4 pt-20">
+      <div className="bg-white rounded-2xl max-w-[1280px] w-full max-h-[85vh] overflow-y-auto shadow-xl">
+        <div className="p-6">
+          {/* 头部 */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {item ? '编辑信息' : '创建信息'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
 
-        {/* 表单 */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* 表单 */}
+          <form onSubmit={(e) => { e.preventDefault() }} className="space-y-6">
           {/* 分类 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -412,40 +510,97 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
             )}
           </div>
 
-          {/* 状态和优先级 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                状态 *
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData(prevData => ({ ...prevData, status: e.target.value as any }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
-                required
-              >
-                <option value="draft">草稿</option>
-                <option value="published">已发布</option>
-                <option value="archived">已归档</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <AlertCircle className="w-4 h-4 inline mr-2" />
-                优先级
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData(prevData => ({ ...prevData, priority: parseInt(e.target.value) }))}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
-              >
-                <option value={0}>普通</option>
-                <option value={1}>重要</option>
-                <option value={2}>紧急</option>
-              </select>
-            </div>
+          {/* 优先级 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <AlertCircle className="w-4 h-4 inline mr-2" />
+              优先级
+            </label>
+            <select
+              value={formData.priority}
+              onChange={(e) => setFormData(prevData => ({ ...prevData, priority: parseInt(e.target.value) }))}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+            >
+              <option value={0}>普通</option>
+              <option value={1}>重要</option>
+              <option value={2}>紧急</option>
+            </select>
           </div>
+
+          {/* 批量报名功能 - 仅当分类为"通知"时显示 */}
+          {formData.category === '通知' && (
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-center mb-4">
+                <input
+                  type="checkbox"
+                  id="is_registration_notice"
+                  checked={isRegistrationNotice}
+                  onChange={(e) => setIsRegistrationNotice(e.target.checked)}
+                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                />
+                <label htmlFor="is_registration_notice" className="ml-2 text-sm font-medium text-gray-700 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  启用批量报名功能（会员可在此通知中统一报名多个活动）
+                </label>
+              </div>
+
+              {isRegistrationNotice && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  选择关联的活动（可多选）
+                </label>
+                {loadingEvents ? (
+                  <div className="text-center py-4 text-gray-500">加载活动列表中...</div>
+                ) : availableEvents.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">暂无可用活动</div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {availableEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        onClick={() => toggleEventSelection(event.id)}
+                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          selectedEventIds.includes(event.id)
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <input
+                                type="checkbox"
+                                checked={selectedEventIds.includes(event.id)}
+                                onChange={() => toggleEventSelection(event.id)}
+                                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <span className="font-medium text-gray-900">{event.title}</span>
+                            </div>
+                            <div className="ml-6 text-sm text-gray-600 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>{new Date(event.start_time).toLocaleDateString('zh-CN')}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-green-600">${event.fee}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {selectedEventIds.length > 0 && (
+                  <div className="mt-3 text-sm text-gray-600">
+                    已选择 {selectedEventIds.length} 个活动
+                  </div>
+                )}
+              </div>
+              )}
+            </div>
+          )}
 
           {/* 置顶和排序 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -515,14 +670,24 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
               取消
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={() => handleSubmit('draft')}
               disabled={isSubmitting}
-              className="px-6 py-2.5 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? '保存中...' : '保存'}
+              {isSubmitting ? '保存中...' : '存草稿'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSubmit('published')}
+              disabled={isSubmitting}
+              className="px-6 py-2.5 text-white bg-[#F15B98] rounded-lg hover:bg-[#F15B98]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? '发布中...' : '发布'}
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   )

@@ -1717,7 +1717,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       {/* 活动报名管理模态框 */}
       {selectedEventForRegistration && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-          <div className="bg-white rounded-2xl w-full max-w-[1440px] max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-[960px] max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-end mb-6">
                 <button
@@ -1731,6 +1731,10 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
               <EventRegistrationAdmin
                 eventId={selectedEventForRegistration.id}
                 eventTitle={selectedEventForRegistration.title}
+                onDataChange={() => {
+                  // 批准或取消报名后，刷新活动列表数据
+                  fetchAdminData()
+                }}
               />
             </div>
           </div>

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { X, Calendar, Eye, FileText, Download, Clock, User, Pin, AlertCircle, Share2, ChevronLeft } from 'lucide-react'
-import { InformationItem } from '../types'
+import { X, Calendar, Eye, FileText, Download, Clock, User, Pin, AlertCircle, Share2, ChevronLeft, ShoppingCart, MapPin, DollarSign } from 'lucide-react'
+import { InformationItem, Event } from '../types'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import ShareModal from './ShareModal'
+import BatchRegistrationCart from './BatchRegistrationCart'
+import { canRegister, getEventStatus, getEventStatusText } from '../utils/eventStatus'
 
 interface InformationCenterDetailProps {
   item: InformationItem
@@ -31,11 +33,119 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
   const [viewCount, setViewCount] = useState(item.view_count)
   const [copied, setCopied] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showBatchCart, setShowBatchCart] = useState(false)
+  const [linkedEvents, setLinkedEvents] = useState<Event[]>([])
+  const [loadingEvents, setLoadingEvents] = useState(false)
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
+  const [eventStats, setEventStats] = useState<Record<string, { available_spots: number }>>({})
+  const [isClosing, setIsClosing] = useState(false)
 
   useEffect(() => {
     incrementViewCount()
     markAsRead()
+    if (item.is_registration_notice && item.linked_events && item.linked_events.length > 0) {
+      fetchLinkedEvents()
+    }
   }, [item.id])
+
+  // 重置关闭状态，当模态框重新打开时
+  useEffect(() => {
+    setIsClosing(false)
+  }, [item.id])
+
+  const fetchLinkedEvents = async () => {
+    if (!supabase || !item.linked_events || item.linked_events.length === 0) return
+    
+    setLoadingEvents(true)
+    try {
+      if (!supabase) return
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .in('id', item.linked_events)
+        .order('start_time', { ascending: true })
+      
+      if (error) throw error
+      const events = data || []
+      setLinkedEvents(events)
+      // 默认不选中任何活动
+      setSelectedEventIds([])
+      
+      // 获取活动报名统计
+      if (events.length > 0) {
+        try {
+          const { data: statsData } = await supabase.rpc('get_batch_event_stats')
+          if (statsData) {
+            const statsMap: Record<string, { available_spots: number }> = {}
+            statsData.forEach((stat: any) => {
+              statsMap[stat.event_id] = {
+                available_spots: stat.available_spots
+              }
+            })
+            setEventStats(statsMap)
+          }
+        } catch (err) {
+          console.warn('获取活动统计失败:', err)
+        }
+      }
+    } catch (error) {
+      console.error('获取关联活动失败:', error)
+    } finally {
+      setLoadingEvents(false)
+    }
+  }
+
+  const isEventAvailable = (event: Event) => {
+    // 检查是否可以报名
+    if (!canRegister(event)) {
+      return false
+    }
+    
+    // 检查是否满员
+    const stats = eventStats[event.id]
+    if (stats && stats.available_spots <= 0) {
+      return false
+    }
+    
+    return true
+  }
+
+  const getEventUnavailableReason = (event: Event) => {
+    const status = getEventStatus(event)
+    const now = new Date()
+    const registrationDeadline = new Date(event.registration_deadline)
+    
+    // 活动已结束
+    if (status === 'completed') {
+      return '活动已结束'
+    }
+    
+    // 报名已截止
+    if (now >= registrationDeadline) {
+      return '报名已截止'
+    }
+    
+    // 活动已取消
+    if (status === 'cancelled') {
+      return '活动已取消'
+    }
+    
+    // 检查是否满员
+    const stats = eventStats[event.id]
+    if (stats && stats.available_spots <= 0) {
+      return '名额已满'
+    }
+    
+    return ''
+  }
+
+  const toggleEventSelection = (eventId: string) => {
+    setSelectedEventIds(prev => 
+      prev.includes(eventId) 
+        ? prev.filter(id => id !== eventId)
+        : [...prev, eventId]
+    )
+  }
 
   const markAsRead = async () => {
     if (!user || !supabase) return
@@ -81,27 +191,32 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
   }
 
   const incrementViewCount = async () => {
-    try {
-      // 增加浏览次数
-      const { error } = await supabase.rpc('increment_information_item_views', {
-        item_id: item.id
-      })
+    if (!supabase) return
+    
+    // 先尝试使用 RPC 函数
+    const { error: rpcError } = await supabase.rpc('increment_information_item_views', {
+      item_id: item.id
+    })
 
-      if (!error) {
-        setViewCount(prev => prev + 1)
-      }
-    } catch (error) {
-      // 如果RPC不存在，直接更新
-      const { data, error: updateError } = await supabase
-        .from('information_items')
-        .update({ view_count: item.view_count + 1 })
-        .eq('id', item.id)
-        .select('view_count')
-        .single()
+    // 如果 RPC 不存在（404）或其他错误，直接更新
+    if (rpcError) {
+      try {
+        const { data, error: updateError } = await supabase
+          .from('information_items')
+          .update({ view_count: (item.view_count || 0) + 1 })
+          .eq('id', item.id)
+          .select('view_count')
+          .single()
 
-      if (!updateError && data) {
-        setViewCount(data.view_count)
+        if (!updateError && data) {
+          setViewCount(data.view_count)
+        }
+      } catch (updateErr) {
+        console.error('更新浏览次数失败:', updateErr)
       }
+    } else {
+      // RPC 成功，更新本地状态
+      setViewCount(prev => prev + 1)
     }
   }
 
@@ -133,7 +248,9 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
   }
 
   const handleCloseModal = () => {
-    // 先更新 URL，移除 informationId 参数
+    // 先触发关闭动画
+    setIsClosing(true)
+    // 先更新 URL，但延迟关闭模态框，让动画完成
     const newParams = new URLSearchParams(searchParams)
     newParams.delete('informationId')
     if (newParams.toString()) {
@@ -141,8 +258,10 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
     } else {
       navigate('/dashboard?view=information', { replace: true })
     }
-    // 然后关闭模态框
-    onClose()
+    // 延迟关闭，让动画完成后再关闭，避免 Dashboard 的 useEffect 立即关闭导致闪烁
+    setTimeout(() => {
+      onClose()
+    }, 250)
   }
 
   const handleShare = async () => {
@@ -171,16 +290,20 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70] overflow-y-auto"
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70] overflow-y-auto transition-opacity duration-200 ${
+          isClosing ? 'opacity-0' : 'opacity-100'
+        }`}
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             handleCloseModal()
           }
         }}
       >
-        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-xl">
+        <div className={`bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-xl transition-transform duration-200 ${
+          isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
+        }`}>
           {/* 固定头部 */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 z-10 flex items-center justify-between px-6 py-4 rounded-t-2xl">
+          <div className="sticky top-0 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-6 py-4 rounded-t-2xl shadow-sm">
             <button
               onClick={handleCloseModal}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -274,6 +397,111 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                 )}
               </div>
 
+              {/* 关联活动（批量报名） */}
+              {item.is_registration_notice && item.linked_events && item.linked_events.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <ShoppingCart className="w-5 h-5 mr-2 text-[#F15B98]" />
+                    关联活动（可批量报名）
+                  </h3>
+                  {loadingEvents ? (
+                    <div className="text-center py-8 text-gray-500">加载活动列表中...</div>
+                  ) : linkedEvents.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">暂无可用活动</div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                      {linkedEvents.map((event) => {
+                        const isSelected = selectedEventIds.includes(event.id)
+                        const isAvailable = isEventAvailable(event)
+                        const unavailableReason = getEventUnavailableReason(event)
+                        
+                        return (
+                          <div
+                            key={event.id}
+                            onClick={() => {
+                              if (isAvailable) {
+                                toggleEventSelection(event.id)
+                              }
+                            }}
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              !isAvailable
+                                ? 'border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed'
+                                : isSelected
+                                ? 'border-[#F15B98] bg-pink-50 cursor-pointer'
+                                : 'border-gray-200 bg-gray-50 hover:border-gray-300 cursor-pointer'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!isAvailable}
+                                onChange={() => {
+                                  if (isAvailable) {
+                                    toggleEventSelection(event.id)
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className={`w-5 h-5 text-[#F15B98] border-gray-300 rounded focus:ring-[#F15B98] mt-0.5 flex-shrink-0 ${
+                                  !isAvailable ? 'cursor-not-allowed opacity-50' : ''
+                                }`}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <h4 className="font-semibold text-gray-900 line-clamp-2 flex-1">{event.title}</h4>
+                                  {!isAvailable && unavailableReason && (
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded text-nowrap">
+                                      {unavailableReason}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="space-y-1 text-sm text-gray-600">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="w-4 h-4 flex-shrink-0" />
+                                    <span className="truncate">{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 flex-shrink-0" />
+                                    <span className="truncate">{event.location}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <DollarSign className="w-4 h-4 flex-shrink-0" />
+                                    <span className="font-semibold text-green-600">${event.fee}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {linkedEvents.length > 0 && user && (
+                    <div className="space-y-3">
+                      {selectedEventIds.length > 0 && (
+                        <div className="text-sm text-gray-600 text-center">
+                          已选择 {selectedEventIds.length} 个活动
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (selectedEventIds.length === 0) {
+                            // 可以显示提示
+                            return
+                          }
+                          setShowBatchCart(true)
+                        }}
+                        disabled={selectedEventIds.length === 0}
+                        className="w-full px-6 py-3 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/90 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        批量报名 ({selectedEventIds.length} 个活动)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 附件列表 */}
               {item.attachments && item.attachments.length > 0 && (
                 <div className="mt-8 pt-6 border-t border-gray-200">
@@ -326,6 +554,19 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
         description={stripHtml(item.content || item.excerpt || '')}
         imageUrl={item.featured_image_url}
       />
+
+      {/* 批量报名购物车 */}
+      {showBatchCart && selectedEventIds.length > 0 && (
+        <BatchRegistrationCart
+          events={linkedEvents.filter(e => selectedEventIds.includes(e.id))}
+          noticeId={item.id}
+          onClose={() => setShowBatchCart(false)}
+          onSuccess={() => {
+            // 报名成功后可以刷新页面或更新状态
+            window.location.reload()
+          }}
+        />
+      )}
     </>
   )
 }

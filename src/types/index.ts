@@ -80,6 +80,7 @@ export interface EventRegistration {
   approved_by?: string
   approval_notes?: string
   payment_proof?: string // 支付证明图片URL
+  notice_id?: string // 来源通知ID（如果是通过通知批量报名创建的）
   user_profiles?: {
     full_name: string
     email: string
@@ -119,10 +120,15 @@ export interface InformationItem {
   like_count: number
   created_at: string
   updated_at: string
+  // 批量报名相关字段
+  linked_events?: string[] // 关联的活动ID数组
+  is_registration_notice?: boolean // 是否为报名通知
   // 关联查询字段
   author?: {
     full_name?: string
     email?: string
   }
   is_read?: boolean // 当前用户是否已读
+  // 关联的活动详情（查询时填充）
+  linked_events_details?: Event[]
 }

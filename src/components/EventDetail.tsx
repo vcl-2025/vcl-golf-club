@@ -30,6 +30,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   const [showShareModal, setShowShareModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isFullscreenEditing, setIsFullscreenEditing] = useState(false)
+  const [isClosing, setIsClosing] = useState(false)
   const [articleContent, setArticleContent] = useState(event.article_content || '')
   const [articleExcerpt, setArticleExcerpt] = useState(event.article_excerpt || '')
   const [savingArticle, setSavingArticle] = useState(false)
@@ -42,6 +43,11 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   useEffect(() => {
     fetchEventData()
   }, [event.id, user])
+
+  // 重置关闭状态，当模态框重新打开时
+  useEffect(() => {
+    setIsClosing(false)
+  }, [event.id])
 
   // 防止背景滚动 - 更强力的方案（仅Modal模式）
   useEffect(() => {
@@ -661,7 +667,9 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   }
 
   const handleCloseModal = () => {
-    // 先更新 URL，移除 eventId 参数
+    // 先触发关闭动画
+    setIsClosing(true)
+    // 先更新 URL，但延迟关闭模态框，让动画完成
     const newParams = new URLSearchParams(searchParams)
     newParams.delete('eventId')
     if (newParams.toString()) {
@@ -669,8 +677,10 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
     } else {
       navigate('/dashboard?view=events', { replace: true })
     }
-    // 然后关闭模态框
-    onClose()
+    // 延迟关闭，让动画完成后再关闭，避免 Dashboard 的 useEffect 立即关闭导致闪烁
+    setTimeout(() => {
+      onClose()
+    }, 250)
   }
 
   const handleShare = async () => {
@@ -700,7 +710,9 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-hidden"
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-hidden transition-opacity duration-200 ${
+          isClosing ? 'opacity-0' : 'opacity-100'
+        }`}
         onTouchMove={(e) => e.preventDefault()}
         onWheel={(e) => e.preventDefault()}
         onClick={(e) => {
@@ -709,9 +721,11 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
           }
         }}
       >
-        <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] flex flex-col relative mx-auto">
+        <div className={`bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] flex flex-col relative mx-auto transition-transform duration-200 ${
+          isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
+        }`}>
           {/* 固定头部 */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 z-10 flex items-center justify-between px-6 py-4 rounded-t-2xl">
+          <div className="sticky top-0 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-6 py-4 rounded-t-2xl shadow-sm">
             <button
               onClick={handleCloseModal}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
