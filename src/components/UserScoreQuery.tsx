@@ -445,7 +445,7 @@ export default function UserScoreQuery() {
               >
                 {/* 活动卡片头部 */}
                 <div
-                  className="p-2 sm:p-6 cursor-pointer active:opacity-80 transition-opacity duration-100"
+                  className="p-2 sm:p-6 cursor-pointer active:opacity-80 transition-opacity duration-300"
                   onClick={() => toggleEventExpansion(group.event.id)}
                 >
                   <div className="flex items-center justify-between">
@@ -534,11 +534,9 @@ export default function UserScoreQuery() {
                     </div>
                     {/* 右侧展开/收起箭头 */}
                     <div className="flex-shrink-0 ml-2">
-                      {isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                      ) : (
+                      <div className={`transition-transform duration-500 ease-in-out ${isExpanded ? 'rotate-90' : 'rotate-0'}`}>
                         <ChevronRight className="w-5 h-5 text-gray-400" />
-                      )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center justify-end space-x-2 mt-2">
@@ -554,7 +552,9 @@ export default function UserScoreQuery() {
                 </div>
 
                 {/* 折叠内容 - 团体赛显示详细结果，个人赛显示分组信息 */}
-                {isExpanded && (
+                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                  isExpanded ? 'max-h-[10000px] opacity-100' : 'max-h-0 opacity-0'
+                }`}>
                   <div className="border-t border-gray-100 px-0 sm:px-6 pb-4 bg-white rounded-b-2xl">
                     {group.event.event_type === '团体赛' ? (
                       /* 团体赛结果 */
@@ -897,7 +897,16 @@ export default function UserScoreQuery() {
                               const color = teamColorMap.get(originalTeamName) || teamColors[0]
                               const score = totalScores.get(originalTeamName) ?? 0
                               return (
-                                <div key={originalTeamName} className="flex items-center justify-between bg-white rounded-xl p-2 sm:p-5 border border-gray-200 w-full sm:min-w-[200px] gap-2 sm:gap-4">
+                                <div 
+                                  key={originalTeamName} 
+                                  className="flex items-center justify-between bg-white rounded-xl p-2 sm:p-5 w-full sm:min-w-[200px] gap-2 sm:gap-4 transition-all duration-300"
+                                  style={{
+                                    borderColor: `${color.bg}40`,
+                                    borderWidth: '1px',
+                                    borderStyle: 'solid',
+                                    boxShadow: `0 2px 4px -1px ${color.bg}20, 0 1px 2px -1px ${color.bg}15`
+                                  }}
+                                >
                                   <div className="flex items-center space-x-3">
                                     <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
                                     <span className="font-medium text-gray-900">{displayName}</span>
@@ -1751,7 +1760,7 @@ export default function UserScoreQuery() {
                       })()
                     )}
                   </div>
-                )}
+                </div>
               </div>
             )
           })}
