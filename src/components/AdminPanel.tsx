@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Plus, Edit, Trash2, Users, DollarSign, Calendar, MapPin, ChevronDown, ChevronRight,
-  BarChart3, Settings, Eye, Download, Image as ImageIcon, Trophy, Receipt, Clock, Search, Filter, X, Pin, User
+  BarChart3, Settings, Eye, Download, Image as ImageIcon, Trophy, Receipt, Clock, Search, Filter, X, Pin, User, Menu, MoreVertical
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
@@ -98,7 +98,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
   const [scoreSearchTerm, setScoreSearchTerm] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState('')
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null)
   const [informationSearchTerm, setInformationSearchTerm] = useState('')
   const [informationStatusFilter, setInformationStatusFilter] = useState<string>('all')
   const [informationCategoryFilter, setInformationCategoryFilter] = useState<string>('all')
@@ -126,6 +128,26 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       window.removeEventListener('admin-navigate', handleAdminNavigate as EventListener)
     }
   }, [])
+
+  // 点击外部关闭操作菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openActionMenuId) {
+        const target = event.target as HTMLElement
+        if (!target.closest('.action-menu-container')) {
+          setOpenActionMenuId(null)
+        }
+      }
+    }
+
+    if (openActionMenuId) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [openActionMenuId])
 
   const toggleEventExpansion = (eventId: string) => {
     setExpandedEvents(prev => {
@@ -583,7 +605,18 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
               <p className="text-xs text-green-200 font-medium">系统管理中心</p>
             </div>
           </div>
-          <div className="flex space-x-3">
+          
+          {/* 手机端菜单按钮 */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center text-white/90 hover:bg-green-500/20 hover:text-white"
+          >
+            <Menu className="w-5 h-5 mr-2" />
+            <span>菜单</span>
+          </button>
+          
+          {/* 桌面端横向菜单 */}
+          <div className="hidden lg:flex space-x-3">
             <button
               onClick={() => setCurrentView('dashboard')}
               className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
@@ -617,18 +650,6 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
               <Calendar className="w-4 h-4 mr-2" />
               活动管理
             </button>
-            {/* 海报管理 - 已隐藏 */}
-            {/* <button
-              onClick={() => setCurrentView('posters')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'posters'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <ImageIcon className="w-4 h-4 mr-2" />
-              海报管理
-            </button> */}
             <button
               onClick={() => setCurrentView('scores')}
               className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
@@ -675,11 +696,136 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             </button>
           </div>
         </div>
+        
+        {/* 手机端下拉菜单 */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden mt-4 space-y-2">
+            <button
+              onClick={() => {
+                setCurrentView('dashboard')
+                setMobileMenuOpen(false)
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                currentView === 'dashboard' 
+                  ? 'bg-green-500/40 text-white shadow-lg' 
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <BarChart3 className="w-4 h-4 mr-2" />
+                数据统计
+              </div>
+              {currentView === 'dashboard' && <ChevronRight className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                setCurrentView('information')
+                setMobileMenuOpen(false)
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                currentView === 'information'
+                  ? 'bg-green-500/40 text-white shadow-lg'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <FileTextIcon className="w-4 h-4 mr-2" />
+                信息中心管理
+              </div>
+              {currentView === 'information' && <ChevronRight className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                setCurrentView('events')
+                setMobileMenuOpen(false)
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                currentView === 'events'
+                  ? 'bg-green-500/40 text-white shadow-lg'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <Calendar className="w-4 h-4 mr-2" />
+                活动管理
+              </div>
+              {currentView === 'events' && <ChevronRight className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                setCurrentView('scores')
+                setMobileMenuOpen(false)
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                currentView === 'scores'
+                  ? 'bg-green-500/40 text-white shadow-lg'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <Trophy className="w-4 h-4 mr-2" />
+                成绩管理
+              </div>
+              {currentView === 'scores' && <ChevronRight className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                setCurrentView('investments')
+                setMobileMenuOpen(false)
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                currentView === 'investments'
+                  ? 'bg-green-500/40 text-white shadow-lg'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <DollarSign className="w-4 h-4 mr-2" />
+                捐赠管理
+              </div>
+              {currentView === 'investments' && <ChevronRight className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                setCurrentView('expenses')
+                setMobileMenuOpen(false)
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                currentView === 'expenses'
+                  ? 'bg-green-500/40 text-white shadow-lg'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <Receipt className="w-4 h-4 mr-2" />
+                费用管理
+              </div>
+              {currentView === 'expenses' && <ChevronRight className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                setCurrentView('members')
+                setMobileMenuOpen(false)
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                currentView === 'members'
+                  ? 'bg-green-500/40 text-white shadow-lg'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <Users className="w-4 h-4 mr-2" />
+                会员管理
+              </div>
+              {currentView === 'members' && <ChevronRight className="w-4 h-4" />}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 数据统计 */}
       {currentView === 'dashboard' && (
-        <div>
+        <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
           <div className="flex items-center mb-6">
             <BarChart3 className="w-6 h-6 text-golf-600 mr-3" />
             <h2 className="text-xl font-bold text-gray-900">数据统计</h2>
@@ -690,7 +836,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
       {/* 活动管理 */}
       {currentView === 'events' && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
+        <div className="bg-white rounded-2xl p-[5px] lg:p-6 m-0.5 lg:m-0 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
             <h2 className="text-xl font-bold text-gray-900">活动管理</h2>
@@ -844,7 +990,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-24">操作</th>
+                  <th className="px-2 md:px-6 py-4 text-center text-base font-semibold text-gray-700 w-24 md:w-24 min-w-[50px]">操作</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -916,8 +1062,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium w-24">
-                      <div className="flex items-center justify-center space-x-2">
+                    <td className="px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium w-24 md:w-24 min-w-[50px]">
+                      {/* 桌面端：横向三个图标 */}
+                      <div className="hidden md:flex items-center justify-center space-x-2">
                         <button
                           onClick={() => {
                             setSelectedEventForRegistration(event)
@@ -944,6 +1091,57 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
+                      </div>
+                      
+                      {/* 手机端：三个点菜单 */}
+                      <div className="md:hidden relative action-menu-container flex items-center justify-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenActionMenuId(openActionMenuId === event.id ? null : event.id)
+                          }}
+                          className="text-gray-600 hover:text-gray-800 p-1.5 rounded hover:bg-gray-50"
+                          title="操作"
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                        
+                        {/* 下拉菜单 */}
+                        {openActionMenuId === event.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]">
+                            <button
+                              onClick={() => {
+                                setSelectedEventForRegistration(event)
+                                setOpenActionMenuId(null)
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center space-x-2"
+                            >
+                              <Users className="w-4 h-4" />
+                              <span>报名管理</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedEvent(event)
+                                setShowEventForm(true)
+                                setOpenActionMenuId(null)
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center space-x-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span>编辑</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleDeleteEvent(event.id)
+                                setOpenActionMenuId(null)
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span>删除</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -978,7 +1176,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
       {/* 海报管理 */}
       {currentView === 'posters' && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
+        <div className="bg-white rounded-2xl p-[5px] lg:p-6 m-0.5 lg:m-0 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">海报管理</h2>
             <button
@@ -1041,7 +1239,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       {/* 成绩管理 */}
       {currentView === 'scores' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="bg-white rounded-2xl shadow-sm p-[5px] lg:p-6 m-0.5 lg:m-0">
           <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center">
                 <Trophy className="w-7 h-7 text-yellow-500 mr-3" />
@@ -1435,28 +1633,28 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
       {/* 捐赠管理 */}
       {currentView === 'investments' && (
-        <div className="space-y-6">
+        <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
           <InvestmentAdmin />
         </div>
       )}
 
       {/* 费用管理 */}
       {currentView === 'expenses' && (
-        <div className="space-y-6">
+        <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
           <ExpenseAdmin />
         </div>
       )}
 
       {/* 会员管理 */}
       {currentView === 'members' && (
-        <div className="space-y-6">
+        <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
           <MemberAdmin />
         </div>
       )}
 
       {/* 信息中心管理 */}
       {currentView === 'information' && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
+        <div className="bg-white rounded-2xl p-[5px] lg:p-6 m-0.5 lg:m-0 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">信息中心管理</h2>
             <button

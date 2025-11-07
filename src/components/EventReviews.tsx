@@ -1339,7 +1339,7 @@ export default function EventReviews() {
         {events.map((event) => (
           <div
             key={event.id}
-            className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
+            className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
             onClick={() => {
               // 只更新 URL，让 useEffect 统一处理打开逻辑，避免重复打开
               const params = new URLSearchParams()
@@ -1388,7 +1388,7 @@ export default function EventReviews() {
                   <Clock className="w-3 h-3 mr-1" />
                   <span>发布于 {formatDate(event.article_published_at || '')}</span>
                 </div>
-                <div className="flex items-center text-[#F15B98]">
+                <div className="flex items-center bg-[#F15B98] text-white px-3 py-1.5 rounded-lg hover:bg-[#E0487A] transition-colors">
                   <span className="text-sm font-medium">查看回顾</span>
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>

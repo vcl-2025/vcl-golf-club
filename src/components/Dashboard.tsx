@@ -128,11 +128,11 @@ export default function Dashboard() {
       if (newParams.toString()) {
         setSearchParams(newParams, { replace: true })
       } else {
-        setSearchParams({}, { replace: true })
-      }
+      setSearchParams({}, { replace: true })
+    }
     }
   }, [viewParam, searchParams, setSearchParams])
-
+  
   const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
   const [showMoreActions, setShowMoreActions] = useState(false) // 控制显示更多快捷操作，默认收缩
 
@@ -1380,13 +1380,17 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-10 py-4 sm:py-6 lg:py-8 relative z-10">
+      <main className={`max-w-[1280px] mx-auto py-4 sm:py-6 lg:py-8 relative z-10 ${
+        currentView === 'admin' 
+          ? 'px-0.5 sm:px-0.5 lg:px-10' 
+          : 'px-4 sm:px-8 lg:px-10'
+      }`}>
         {currentView === 'dashboard' ? (
           <>
             {/* Welcome Banner - 高尔夫主题设计 */}
             <div 
               className="relative rounded-[20px] p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 text-white overflow-hidden transition-all duration-300 welcome-card group"
-              style={{
+              style={{ 
                 background: 'linear-gradient(to bottom, #E0487A, #F15B98)',
                 boxShadow: 'inset 0 0 8px rgba(255,255,255,0.4), 0 6px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.1)',
                 minHeight: '140px'
@@ -1513,16 +1517,16 @@ export default function Dashboard() {
               <div className="relative z-10" style={{ position: 'relative', zIndex: 10 }}>
                 <div className="mb-3 sm:mb-4">
                   <div className="mb-2">
-                    <h2 
+                  <h2 
                       className="text-2xl sm:text-3xl lg:text-3xl xl:text-4xl font-extrabold transition-all duration-300 group-hover:brightness-110"
-                      style={{ 
-                        letterSpacing: '0.02em',
-                        color: '#FFFFFF',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)'
-                      }}
-                    >
+                    style={{ 
+                      letterSpacing: '0.02em',
+                      color: '#FFFFFF',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)'
+                    }}
+                  >
                       欢迎回来，{userProfile?.full_name || '用户'}
-                    </h2>
+                  </h2>
                   </div>
                 </div>
                 <p 
@@ -1749,6 +1753,24 @@ export default function Dashboard() {
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(140, 191, 127, 0.2)'
+                    e.currentTarget.style.borderColor = '#6A9F5A'
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(140, 191, 127, 0.2)'
+                    e.currentTarget.style.borderColor = '#6A9F5A'
+                  }}
+                  onTouchEnd={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1810,6 +1832,24 @@ export default function Dashboard() {
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(140, 191, 127, 0.2)'
+                    e.currentTarget.style.borderColor = '#6A9F5A'
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(140, 191, 127, 0.2)'
+                    e.currentTarget.style.borderColor = '#6A9F5A'
+                  }}
+                  onTouchEnd={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1849,6 +1889,24 @@ export default function Dashboard() {
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(140, 191, 127, 0.2)'
+                    e.currentTarget.style.borderColor = '#6A9F5A'
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(140, 191, 127, 0.2)'
+                    e.currentTarget.style.borderColor = '#6A9F5A'
+                  }}
+                  onTouchEnd={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -1888,6 +1946,24 @@ export default function Dashboard() {
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.boxShadow = '0 2px 8px rgba(140, 191, 127, 0.3), 0 1px 2px rgba(0, 0, 0, 0.08)'
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(140, 191, 127, 0.2)'
+                    e.currentTarget.style.borderColor = '#6A9F5A'
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
+                  }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(140, 191, 127, 0.2)'
+                    e.currentTarget.style.borderColor = '#6A9F5A'
+                  }}
+                  onTouchEnd={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(249, 246, 244, 0.4)'
+                    e.currentTarget.style.borderColor = '#8CBF7F'
                   }}
                 >
                   <div className="flex items-start justify-between">

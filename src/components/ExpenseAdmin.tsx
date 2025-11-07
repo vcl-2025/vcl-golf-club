@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, Upload, X, Check, FileImage, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, Upload, X, Check, FileImage, Search, Filter, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 
@@ -49,6 +49,9 @@ export default function ExpenseAdmin() {
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
   const [receiptUrls, setReceiptUrls] = useState<string[]>([])
   const [currentReceiptIndex, setCurrentReceiptIndex] = useState(0)
+  
+  // 操作菜单状态
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null)
 
   // 键盘事件处理（用于凭证modal中切换图片）
   useEffect(() => {
@@ -67,6 +70,26 @@ export default function ExpenseAdmin() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [receiptModalOpen, currentReceiptIndex, receiptUrls.length])
+
+  // 点击外部关闭操作菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openActionMenuId) {
+        const target = event.target as HTMLElement
+        if (!target.closest('.action-menu-container')) {
+          setOpenActionMenuId(null)
+        }
+      }
+    }
+
+    if (openActionMenuId) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [openActionMenuId])
   
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('')
@@ -578,7 +601,7 @@ export default function ExpenseAdmin() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-3xl p-6 shadow-sm">
+      <div className="bg-white rounded-3xl p-[5px] lg:p-6 m-0.5 lg:m-0 shadow-sm">
         {/* 页面标题和添加按钮 */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -630,8 +653,9 @@ export default function ExpenseAdmin() {
         </div>
 
         {/* 搜索和筛选 */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex-1 relative">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-6">
+          {/* 搜索框 */}
+          <div className="w-full md:flex-1 relative">
             <input
               type="text"
               placeholder="搜索费用标题或备注..."
@@ -642,13 +666,14 @@ export default function ExpenseAdmin() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
           
-          <div className="flex items-center space-x-2 flex-wrap">
+          {/* 筛选按钮 */}
+          <div className="grid grid-cols-2 md:flex md:items-center gap-2 md:gap-0 md:space-x-2">
             <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <select
                 value={transactionTypeFilter}
                 onChange={(e) => setTransactionTypeFilter(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
               >
                 <option value="all">所有交易类型</option>
                 <option value="income">收入</option>
@@ -660,7 +685,7 @@ export default function ExpenseAdmin() {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
               >
                 <option value="all">所有费用类型</option>
                 {transactionTypeFilter === 'income' || transactionTypeFilter === 'all' ? (
@@ -686,7 +711,7 @@ export default function ExpenseAdmin() {
               <select
                 value={yearFilter}
                 onChange={(e) => setYearFilter(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
               >
                 <option value="all">全部年份</option>
                 {availableYears.map(year => (
@@ -699,7 +724,7 @@ export default function ExpenseAdmin() {
               <select
                 value={monthFilter}
                 onChange={(e) => setMonthFilter(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white"
               >
                 <option value="all">全部月份</option>
                 <option value="1">1月</option>
@@ -717,9 +742,11 @@ export default function ExpenseAdmin() {
               </select>
             </div>
           </div>
-          
-          {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
-          {(searchTerm || transactionTypeFilter !== 'all' || typeFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
+        </div>
+        
+        {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
+        {(searchTerm || transactionTypeFilter !== 'all' || typeFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
+          <div className="mb-6">
             <button
               onClick={() => {
                 setSearchTerm('')
@@ -732,8 +759,8 @@ export default function ExpenseAdmin() {
             >
               清除所有筛选
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 费用列表 */}
         <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-200">
@@ -819,7 +846,7 @@ export default function ExpenseAdmin() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">操作</th>
+                <th className="px-2 md:px-6 py-4 text-left text-base font-semibold text-gray-700 min-w-[50px]">操作</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -869,8 +896,9 @@ export default function ExpenseAdmin() {
                       {expense.status === 'paid' ? '已支付' : '待支付'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
+                  <td className="px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium min-w-[50px]">
+                    {/* 桌面端：横向图标 */}
+                    <div className="hidden md:flex items-center space-x-2">
                       {expense.receipt_url && (() => {
                         const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
                         return (
@@ -901,6 +929,63 @@ export default function ExpenseAdmin() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                    </div>
+                    
+                    {/* 手机端：三个点菜单 */}
+                    <div className="md:hidden relative action-menu-container flex items-center justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOpenActionMenuId(openActionMenuId === expense.id ? null : expense.id)
+                        }}
+                        className="text-gray-600 hover:text-gray-800 p-1.5 rounded hover:bg-gray-50"
+                        title="操作"
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+                      
+                      {/* 下拉菜单 */}
+                      {openActionMenuId === expense.id && (
+                        <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]">
+                          {expense.receipt_url && (() => {
+                            const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
+                            return (
+                              <button
+                                onClick={() => {
+                                  setReceiptUrls(urls)
+                                  setCurrentReceiptIndex(0)
+                                  setReceiptModalOpen(true)
+                                  setOpenActionMenuId(null)
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center space-x-2"
+                              >
+                                <Receipt className="w-4 h-4" />
+                                <span>{urls.length > 1 ? `查看收据 (${urls.length}个)` : '查看收据'}</span>
+                              </button>
+                            )
+                          })()}
+                          <button
+                            onClick={() => {
+                              handleEdit(expense)
+                              setOpenActionMenuId(null)
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center space-x-2"
+                          >
+                            <Edit className="w-4 h-4" />
+                            <span>编辑</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleDelete(expense.id)
+                              setOpenActionMenuId(null)
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span>删除</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </td>
                 </tr>

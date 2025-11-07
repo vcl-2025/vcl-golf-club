@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, FileText, BookOpen, AlertCircle, Search, Filter, ChevronDown, ChevronUp, Pin, Eye, Calendar, Clock } from 'lucide-react'
+import { Bell, FileText, BookOpen, AlertCircle, Search, Filter, ChevronDown, ChevronUp, Pin, Eye, Calendar, Clock, Flame, Paperclip } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { InformationItem } from '../types'
 import { useAuth } from '../hooks/useAuth'
@@ -17,10 +17,10 @@ const categoryIcons = {
 }
 
 const categoryColors = {
-  '公告': 'bg-[#F15B98]/20 text-[#F15B98]',
-  '通知': 'bg-[#F15B98]/20 text-[#F15B98]',
-  '重要资料': 'bg-[#F15B98]/20 text-[#F15B98]',
-  '规则章程': 'bg-[#F15B98]/20 text-[#F15B98]'
+  '公告': 'bg-green-100 text-green-700 border border-green-200 shadow-sm',
+  '通知': 'bg-[#F15B98]/20 text-[#F15B98] border border-[#F15B98]/30 shadow-sm',
+  '重要资料': 'bg-[#F15B98]/20 text-[#F15B98] border border-[#F15B98]/30 shadow-sm',
+  '规则章程': 'bg-[#F15B98]/20 text-[#F15B98] border border-[#F15B98]/30 shadow-sm'
 }
 
 const categoryBackgroundColors = {
@@ -38,8 +38,14 @@ const priorityLabels = {
 
 const priorityColors = {
   0: '',
-  1: 'bg-[#F15B98]/30 text-[#F15B98]',
-  2: 'bg-[#F15B98]/40 text-[#F15B98]'
+  1: 'bg-[#F15B98]/30 text-[#F15B98] border border-[#F15B98]/40 shadow-sm',
+  2: 'bg-red-100 text-red-700 border border-red-200 shadow-sm'
+}
+
+const priorityIcons = {
+  0: null,
+  1: null,
+  2: Flame
 }
 
 export default function InformationCenterList({ onItemSelect }: InformationCenterListProps) {
@@ -383,22 +389,23 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
           </div>
         )}
 
-        <div className="mt-4 text-sm text-gray-600">
-          共找到 {filteredItems.length} 条信息
-        </div>
+        {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
+          <div className="mt-4 text-sm text-gray-600">
+            共找到 {filteredItems.length} 条信息
+          </div>
+        )}
       </div>
 
       {/* 信息列表 - 统一列表显示 */}
       <div className="space-y-4">
         {filteredItems.map((item) => {
-          const categoryBg = categoryBackgroundColors[item.category as keyof typeof categoryBackgroundColors] || 'bg-white'
-          const hoverBg = 'hover:bg-[#F15B98]/10'
+          const hoverBg = 'hover:bg-gray-50'
           
           return (
             <div
               key={item.id}
               onClick={() => handleItemClick(item)}
-              className={`${categoryBg} rounded-2xl shadow-sm p-4 sm:p-6 ${hoverBg} cursor-pointer transition-colors ${
+              className={`bg-white rounded-xl shadow-md px-5 py-4 sm:px-5 sm:py-6 ${hoverBg} cursor-pointer transition-colors ${
                 !item.is_read && (item.category === '通知' || item.category === '公告') ? 'ring-2 ring-[#F15B98]' : ''
               }`}
             >
@@ -409,24 +416,35 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
                     {item.is_pinned && (
                       <Pin className="w-4 h-4 text-[#F15B98] flex-shrink-0" />
                     )}
-                    <h3 className={`text-base sm:text-lg font-semibold text-gray-900 truncate ${
+                    <h3 className={`text-base sm:text-lg font-semibold text-gray-900 truncate flex items-center gap-2 ${
                       !item.is_read ? 'font-bold' : ''
                     }`}>
-                      {item.title}
+                      {!item.is_read && (item.category === '通知' || item.category === '公告') && (
+                        <span className="text-[#F15B98] flex-shrink-0 text-xs">●</span>
+                      )}
+                      <span>{item.title}</span>
                     </h3>
                     {/* 分类标签 */}
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                      categoryColors[item.category as keyof typeof categoryColors]
-                    }`}>
-                      {item.category}
-                    </span>
-                    {priorityLabels[item.priority as keyof typeof priorityLabels] && (
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                        priorityColors[item.priority as keyof typeof priorityColors]
-                      }`}>
-                        {priorityLabels[item.priority as keyof typeof priorityLabels]}
-                      </span>
-                    )}
+                    {(() => {
+                      const CategoryIcon = categoryIcons[item.category as keyof typeof categoryIcons]
+                      return (
+                        <span className={`px-2 py-1.5 rounded-full flex-shrink-0 flex items-center justify-center ${
+                          categoryColors[item.category as keyof typeof categoryColors]
+                        }`}>
+                          {CategoryIcon && <CategoryIcon className="w-3.5 h-3.5" />}
+                        </span>
+                      )
+                    })()}
+                    {priorityLabels[item.priority as keyof typeof priorityLabels] && (() => {
+                      const PriorityIcon = priorityIcons[item.priority as keyof typeof priorityIcons]
+                      return PriorityIcon ? (
+                        <span className={`px-2 py-1.5 rounded-full flex-shrink-0 flex items-center justify-center ${
+                          priorityColors[item.priority as keyof typeof priorityColors]
+                        }`}>
+                          <PriorityIcon className="w-3.5 h-3.5" />
+                        </span>
+                      ) : null
+                    })()}
                   </div>
 
                   {/* 摘要 */}
@@ -456,7 +474,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
                     </div>
                     {item.attachments && item.attachments.length > 0 && (
                       <div className="flex items-center text-[#F15B98]">
-                        <FileText className="w-3 h-3 mr-1" />
+                        <Paperclip className="w-3 h-3 mr-1" />
                         <span>{item.attachments.length} 个附件</span>
                       </div>
                     )}

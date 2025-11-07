@@ -220,7 +220,7 @@ export default function InvestmentAdmin() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-3xl shadow-sm p-6">
+      <div className="bg-white rounded-3xl shadow-sm p-[5px] lg:p-6 m-0.5 lg:m-0">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center">
             <Heart className="w-7 h-7 text-red-500 mr-3" />
