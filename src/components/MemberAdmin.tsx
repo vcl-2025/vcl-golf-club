@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   Users, Search, Filter, Edit, Trash2, Download, Mail, Phone, Calendar,
-  User, Crown, Star, CheckCircle, XCircle, UserCog, ToggleLeft, ToggleRight, Upload
+  User, Crown, Star, CheckCircle, XCircle, UserCog, ToggleLeft, ToggleRight, Upload, UserPlus, Eye, EyeOff
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
@@ -56,6 +56,17 @@ export default function MemberAdmin() {
     failed: number
     errors: string[]
   } | null>(null)
+
+  // 注册新会员状态
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [registerEmail, setRegisterEmail] = useState('')
+  const [registerGolfLifeName, setRegisterGolfLifeName] = useState('')
+  const [registerPassword, setRegisterPassword] = useState('12345678')
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState('12345678')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [registerLoading, setRegisterLoading] = useState(false)
+  const [registerError, setRegisterError] = useState('')
 
   // 获取可用年份
   const availableYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
@@ -167,10 +178,8 @@ export default function MemberAdmin() {
       // console.log('📋 会员详情:', response.data)
 
       // 处理会员数据
-      const membersWithStatus = response.data?.map((member: any) => ({
-        ...member,
-        is_active: !!member.last_sign_in_at
-      })) || []
+      // 直接使用数据库中的 is_active 字段
+      const membersWithStatus = response.data || []
 
       // console.log('🎯 处理后的会员数据:', membersWithStatus.length, '条记录')
       setMembers(membersWithStatus)
@@ -284,6 +293,175 @@ export default function MemberAdmin() {
     } catch (error) {
       console.error('更新会员状态失败:', error)
       modal.showError('更新失败，请重试')
+    }
+  }
+
+  // 注册新会员
+  const handleRegisterMember = async () => {
+    setRegisterError('')
+    
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!registerEmail || !emailRegex.test(registerEmail)) {
+      setRegisterError('请输入合法的邮箱地址')
+      return
+    }
+
+    // 验证密码
+    if (!registerPassword || registerPassword.length < 6) {
+      setRegisterError('密码长度至少为6位')
+      return
+    }
+
+    // 验证两次密码是否一致
+    if (registerPassword !== registerConfirmPassword) {
+      setRegisterError('两次输入的密码不一致')
+      return
+    }
+
+    try {
+      setRegisterLoading(true)
+      if (!supabase) {
+        throw new Error('Supabase客户端未初始化')
+      }
+
+      // 检查当前是否有管理员登录
+      const { data: currentSession } = await supabase.auth.getSession()
+      if (!currentSession?.session) {
+        throw new Error('请先登录管理员账户')
+      }
+
+      // 使用 Edge Function 注册用户，避免影响当前 session
+      // 如果没有填写 Golf Life 用户名，使用邮箱前缀作为昵称
+      const fullName = registerGolfLifeName || registerEmail.split('@')[0]
+      
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('register-user', {
+        body: {
+          email: registerEmail,
+          password: registerPassword,
+          full_name: fullName
+        }
+      })
+
+      if (functionError) {
+        // 如果 Edge Function 不存在或失败，使用直接注册方式（会创建session）
+        console.warn('Edge Function 注册失败，使用直接注册方式:', functionError)
+        
+        // 保存当前管理员的完整 session，以便注册后恢复
+        const adminSession = currentSession.session
+        
+        // 直接注册方式（会创建 session）
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: registerEmail,
+          password: registerPassword,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          }
+        })
+
+        if (authError) throw authError
+
+        if (!authData.user) {
+          throw new Error('注册失败，未返回用户信息')
+        }
+
+        // 更新 user_profiles 表的 full_name 和 email 字段
+        // 如果没有填写 Golf Life 用户名，使用邮箱前缀作为昵称
+        const fullName = registerGolfLifeName || registerEmail.split('@')[0]
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({ 
+            full_name: fullName,
+            email: registerEmail // 确保邮箱正确保存
+          })
+          .eq('id', authData.user.id)
+
+        if (updateError) {
+          console.warn('更新 full_name 失败:', updateError)
+          // 不影响注册流程
+        }
+
+        // 如果注册时自动创建了session，需要立即恢复管理员 session
+        if (authData.session) {
+          // 先登出新注册的用户
+          await supabase.auth.signOut()
+          
+          // 等待一小段时间确保登出完成
+          await new Promise(resolve => setTimeout(resolve, 200))
+          
+          // 恢复管理员的 session
+          const { error: setSessionError } = await supabase.auth.setSession({
+            access_token: adminSession.access_token,
+            refresh_token: adminSession.refresh_token
+          })
+          
+          if (setSessionError) {
+            console.error('恢复管理员 session 失败:', setSessionError)
+            throw new Error('注册成功，但需要重新登录管理员账户。请刷新页面后重新登录。')
+          }
+          
+          // 验证 session 是否恢复成功
+          const { data: verifySession } = await supabase.auth.getSession()
+          if (!verifySession?.session || verifySession.session.user.id !== adminSession.user.id) {
+            throw new Error('注册成功，但无法恢复管理员 session。请刷新页面后重新登录。')
+          }
+        }
+      } else {
+        // Edge Function 注册成功，不会影响当前 session
+        if (!functionData?.user) {
+          throw new Error('注册失败，未返回用户信息')
+        }
+      }
+
+      // 发送欢迎邮件
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-email', {
+          body: {
+            to: registerEmail,
+            subject: '欢迎加入溫哥華華人女子高爾夫俱樂部',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #F15B98;">欢迎加入溫哥華華人女子高爾夫俱樂部！</h2>
+                <p>您的账户已成功注册。</p>
+                <p><strong>登录地址：</strong> <a href="${window.location.origin}">${window.location.origin}</a></p>
+                <p><strong>初始密码：</strong> 12345678</p>
+                <p style="color: #666; margin-top: 20px;">为了您的账户安全，请登录后尽快修改密码。</p>
+                <p style="color: #666;">如有任何问题，请联系管理员。</p>
+              </div>
+            `
+          }
+        })
+
+        if (emailError) {
+          console.warn('发送邮件失败:', emailError)
+          // 邮件发送失败不影响注册成功
+        }
+      } catch (emailErr) {
+        console.warn('发送邮件时出错:', emailErr)
+      }
+
+      // 如果使用 Edge Function 注册成功，确保 full_name 已正确设置（golf life用户名或昵称）
+      // Edge Function 已经设置了 full_name，这里不需要再更新
+      // 但如果需要确保一致性，可以在这里再次更新
+
+      // 刷新会员列表
+      await fetchMembers()
+
+      // 关闭模态框并重置表单
+      setShowRegisterModal(false)
+      setRegisterEmail('')
+      setRegisterGolfLifeName('')
+      setRegisterPassword('12345678')
+      setRegisterConfirmPassword('12345678')
+      setShowPassword(false)
+      setShowConfirmPassword(false)
+
+      modal.showSuccess('会员注册成功！欢迎邮件已发送。')
+    } catch (error: any) {
+      console.error('注册失败:', error)
+      setRegisterError(error.message || '注册失败，请重试')
+    } finally {
+      setRegisterLoading(false)
     }
   }
 
@@ -455,6 +633,14 @@ export default function MemberAdmin() {
             )}
           </div>
           <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowRegisterModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-[#F15B98] text-white rounded-md hover:bg-[#E0487A] transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>注册新会员</span>
+            </button>
+            
             <button
               onClick={exportToCSV}
               className="flex items-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-md hover:bg-golf-700 transition-colors"
@@ -829,17 +1015,17 @@ export default function MemberAdmin() {
                             ? 'bg-green-100 text-green-700 hover:bg-green-200' 
                             : 'bg-red-100 text-red-700 hover:bg-red-200'
                         }`}
-                        title={member.is_active ? '点击禁用会员' : '点击启用会员'}
+                        title={member.is_active ? '当前已启用，点击禁用' : '当前已禁用，点击启用'}
                       >
                         {member.is_active ? (
                           <>
                             <ToggleRight className="w-4 h-4" />
-                            <span>启用</span>
+                            <span>已启用</span>
                           </>
                         ) : (
                           <>
                             <ToggleLeft className="w-4 h-4" />
-                            <span>禁用</span>
+                            <span>已禁用</span>
                           </>
                         )}
                       </button>
@@ -860,6 +1046,151 @@ export default function MemberAdmin() {
           </div>
         )}
       </div>
+
+      {/* 注册新会员模态框 */}
+      {showRegisterModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => !registerLoading && setShowRegisterModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">注册新会员</h3>
+            </div>
+            
+            <div className="px-6 py-4 space-y-4">
+              {/* 邮箱输入 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  邮箱 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  placeholder="请输入合法邮箱地址"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
+                  disabled={registerLoading}
+                />
+              </div>
+
+              {/* Golf Life 用户名输入 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Golf Life 用户名
+                  <span className="text-xs text-gray-500 ml-2">(用于导入数据)</span>
+                </label>
+                <input
+                  type="text"
+                  value={registerGolfLifeName}
+                  onChange={(e) => setRegisterGolfLifeName(e.target.value)}
+                  placeholder="请输入 Golf Life 用户名"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
+                  disabled={registerLoading}
+                />
+              </div>
+
+              {/* 密码输入 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  密码 <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="默认密码：12345678"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F15B98] focus:border-transparent pr-10"
+                    disabled={registerLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    disabled={registerLoading}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* 确认密码输入 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  确认密码 <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={registerConfirmPassword}
+                    onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                    placeholder="请再次输入密码"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#F15B98] focus:border-transparent pr-10"
+                    disabled={registerLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    disabled={registerLoading}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* 错误提示 */}
+              {registerError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+                  {registerError}
+                </div>
+              )}
+
+              {/* 提示信息 */}
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md text-sm">
+                <p>• 默认密码为：<strong>12345678</strong></p>
+                <p>• 注册成功后，系统将自动发送欢迎邮件给新会员</p>
+                <p>• 邮件中包含登录地址和初始密码</p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  if (!registerLoading) {
+                    setShowRegisterModal(false)
+                    setRegisterError('')
+                    setRegisterEmail('')
+                    setRegisterGolfLifeName('')
+                    setRegisterPassword('12345678')
+                    setRegisterConfirmPassword('12345678')
+                    setShowPassword(false)
+                    setShowConfirmPassword(false)
+                  }
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={registerLoading}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleRegisterMember}
+                disabled={registerLoading}
+                className="px-4 py-2 bg-[#F15B98] text-white rounded-md hover:bg-[#E0487A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {registerLoading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                <span>{registerLoading ? '注册中...' : '确认注册'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

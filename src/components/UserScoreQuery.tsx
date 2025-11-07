@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { 
   Trophy, Medal, Award, TrendingUp, Star, Clock,
-  ChevronDown, ChevronRight, User, BarChart
+  ChevronDown, ChevronRight, User, BarChart,
+  UserCheck
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -578,13 +579,20 @@ export default function UserScoreQuery() {
                                       </div>
                                       <div>
                                         <div className={`font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
-                                          {score.is_guest ? (score.player_name || '未知访客') : (score.user_profiles?.full_name || '未知')}
-                                          {score.is_guest && (
-                                            <span className="ml-2 text-xs text-gray-500">(访客)</span>
-                                          )}
-                                          {isCurrentUser && (
-                                            <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
-                                          )}
+                                          <div className="flex items-center gap-2">
+                                            <span>
+                                              {score.is_guest ? (score.player_name || '未知访客') : (score.user_profiles?.full_name || '未知')}
+                                            </span>
+                                            {!score.is_guest && (
+                                              <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                            )}
+                                            {score.is_guest && (
+                                              <span className="ml-2 text-xs text-gray-500">(非会员)</span>
+                                            )}
+                                            {isCurrentUser && (
+                                              <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
+                                            )}
+                                          </div>
                                         </div>
                                         <div className="text-sm text-gray-600">
                                           总杆数: {score.total_strokes} | 净杆数: {score.net_strokes || '-'} | 差点: {score.handicap}
@@ -627,7 +635,8 @@ export default function UserScoreQuery() {
                           totalStrokes: score.total_strokes || 0,
                           netStrokes: score.net_strokes || null,
                           groupNumber: score.group_number,
-                          teamName: score.team_name
+                          teamName: score.team_name,
+                          is_guest: score.is_guest || false
                         }
                       })
                       
@@ -651,7 +660,8 @@ export default function UserScoreQuery() {
                           avatarPositionY: player.avatarPositionY,
                           holeScores: player.holeScores,
                           totalStrokes: player.totalStrokes,
-                          netStrokes: player.netStrokes
+                          netStrokes: player.netStrokes,
+                          is_guest: player.is_guest || false
                         })
                       })
                       
@@ -1072,7 +1082,12 @@ export default function UserScoreQuery() {
                                                         </div>
                                                       </div>
                                                       <div className="flex flex-col">
-                                                        <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                          <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                          {!player.is_guest && (
+                                                            <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                                          )}
+                                                        </div>
                                                         <span className="text-xs text-gray-500">
                                                           {isTotalStrokesMode 
                                                             ? (player.netStrokes !== null && player.netStrokes !== undefined 
@@ -1168,7 +1183,12 @@ export default function UserScoreQuery() {
                                                   {team.players.map((player, idx) => (
                                                     <div key={idx} className="flex items-center gap-2 sm:gap-3 justify-end">
                                                       <div className="flex flex-col items-end">
-                                                        <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                          <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                          {!player.is_guest && (
+                                                            <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                                          )}
+                                                        </div>
                                                         <span className="text-xs text-gray-500">
                                                           {isTotalStrokesMode 
                                                             ? (player.netStrokes !== null && player.netStrokes !== undefined 
@@ -1360,7 +1380,24 @@ export default function UserScoreQuery() {
                                                         </div>
                                                       </div>
                                                       <div className="flex flex-col min-w-0">
-                                                        <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                                      <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
+                                                      {!player.is_guest && (
+                                                        <div className="flex items-center gap-0.5">
+                                                          <Crown className="w-2.5 h-2.5 text-yellow-500" title="Crown" />
+                                                          <Star className="w-2.5 h-2.5 text-yellow-500" title="Star" />
+                                                          <Badge className="w-2.5 h-2.5 text-blue-500" title="Badge" />
+                                                          <Award className="w-2.5 h-2.5 text-purple-500" title="Award" />
+                                                          <UserCheck className="w-2.5 h-2.5 text-green-500" title="UserCheck" />
+                                                          <UserCircle className="w-2.5 h-2.5 text-pink-500" title="UserCircle" />
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                          {!player.is_guest && (
+                                                            <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                                          )}
+                                                        </div>
                                                         <span className="text-xs text-gray-500">
                                                           {player.totalStrokes || 0}杆
                                                         </span>
@@ -1409,7 +1446,19 @@ export default function UserScoreQuery() {
                                                     </div>
                                                   </div>
                                                   <div className="flex flex-col min-w-0">
-                                                    <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                      <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
+                                                      {!player.is_guest && (
+                                                        <div className="flex items-center gap-0.5">
+                                                          <Crown className="w-2.5 h-2.5 text-yellow-500" title="Crown" />
+                                                          <Star className="w-2.5 h-2.5 text-yellow-500" title="Star" />
+                                                          <Badge className="w-2.5 h-2.5 text-blue-500" title="Badge" />
+                                                          <Award className="w-2.5 h-2.5 text-purple-500" title="Award" />
+                                                          <UserCheck className="w-2.5 h-2.5 text-green-500" title="UserCheck" />
+                                                          <UserCircle className="w-2.5 h-2.5 text-pink-500" title="UserCircle" />
+                                                        </div>
+                                                      )}
+                                                    </div>
                                                     <span className="text-xs text-gray-500">
                                                       {player.netStrokes !== null && player.netStrokes !== undefined 
                                                         ? `${player.netStrokes % 1 === 0 ? player.netStrokes.toString() : player.netStrokes.toFixed(1)}杆` 
@@ -1498,11 +1547,15 @@ export default function UserScoreQuery() {
                                         )}
                                         <div className="flex-1">
                                           <div className={`text-sm sm:text-base font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
-                                            {playerName}
-                                            {isCurrentUser && (
-                                              <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
-                                            )}
-                                            <span className="ml-2 text-xs text-gray-500">({playerType})</span>
+                                            <div className="flex items-center gap-2">
+                                              <span>{playerName}</span>
+                                              {!score.is_guest && (
+                                                <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                              )}
+                                              {isCurrentUser && (
+                                                <span className="ml-1 text-xs text-[#F15B98] font-semibold">(我)</span>
+                                              )}
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
@@ -1592,13 +1645,15 @@ export default function UserScoreQuery() {
                                               </div>
                                               <div className="flex flex-col flex-1 min-w-0">
                                                 <div className={`text-sm sm:text-base font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
-                                                  {playerName}
-                                                  {isCurrentUser && (
-                                                    <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
-                                                  )}
-                                                  {score.is_guest && (
-                                                    <span className="ml-2 text-xs text-gray-500">(访客)</span>
-                                                  )}
+                                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span>{playerName}</span>
+                                                    {!score.is_guest && (
+                                                      <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                                    )}
+                                                    {isCurrentUser && (
+                                                      <span className="ml-1 text-xs text-[#F15B98] font-semibold">(我)</span>
+                                                    )}
+                                                  </div>
                                                 </div>
                                                 <div className="text-xs sm:text-sm text-gray-600 mt-0.5">
                                                   {score.total_strokes}杆
@@ -1657,13 +1712,15 @@ export default function UserScoreQuery() {
                                               </div>
                                               <div className="flex flex-col flex-1 text-right min-w-0">
                                                 <div className={`text-sm sm:text-base font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
-                                                  {playerName}
-                                                  {isCurrentUser && (
-                                                    <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
-                                                  )}
-                                                  {score.is_guest && (
-                                                    <span className="ml-2 text-xs text-gray-500">(访客)</span>
-                                                  )}
+                                                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                    <span>{playerName}</span>
+                                                    {!score.is_guest && (
+                                                      <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                                    )}
+                                                    {isCurrentUser && (
+                                                      <span className="ml-1 text-xs text-[#F15B98] font-semibold">(我)</span>
+                                                    )}
+                                                  </div>
                                                 </div>
                                                 <div className="text-xs sm:text-sm text-gray-600 mt-0.5">
                                                   {score.total_strokes}杆

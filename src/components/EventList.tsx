@@ -404,7 +404,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                     ))}
                         {/* 显示"+更多"提示 */}
                         {stats && stats.total_registrations > 5 && (
-                          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-gray-200 bg-gray-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-xs sm:text-sm text-gray-600 font-medium">
                               +{stats.total_registrations - 5}
                             </span>

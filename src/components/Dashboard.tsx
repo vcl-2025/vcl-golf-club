@@ -878,10 +878,15 @@ export default function Dashboard() {
             background-position: center center !important;
           }
         }
-        @media (min-width: 641px) {
+        @media (min-width: 641px) and (max-width: 1023px) {
           .dashboard-background::before {
             background-size: 1600px auto !important;
             background-attachment: fixed !important;
+          }
+        }
+        @media (min-width: 1024px) {
+          .dashboard-background::before {
+            display: none !important;
           }
         }
       `}</style>
