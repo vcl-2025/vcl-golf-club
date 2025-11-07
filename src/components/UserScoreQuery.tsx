@@ -61,12 +61,96 @@ export default function UserScoreQuery() {
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
+  const [animatedStats, setAnimatedStats] = useState<UserStats>({
+    totalRounds: 0,
+    averageStrokes: 0,
+    bestScore: 0,
+    topThreeCount: 0
+  })
 
   useEffect(() => {
     if (user) {
       fetchUserScores()
     }
   }, [user])
+
+  // 数字计数动画效果
+  useEffect(() => {
+    // 如果数据还在加载中，不执行动画
+    if (loading) return
+
+    // 检查是否是首次加载（所有动画值都是0）
+    const isInitialLoad = animatedStats.totalRounds === 0 && 
+                         animatedStats.averageStrokes === 0 && 
+                         animatedStats.bestScore === 0 && 
+                         animatedStats.topThreeCount === 0
+
+    const duration = 1500 // 动画持续时间（毫秒）
+    const steps = 60 // 动画步数
+    const stepDuration = duration / steps
+    const timers: NodeJS.Timeout[] = []
+
+    const animateValue = (
+      start: number,
+      end: number,
+      callback: (value: number) => void,
+      isDecimal: boolean = false
+    ) => {
+      // 如果起始值和结束值相同，直接设置
+      if (start === end) {
+        callback(end)
+        return
+      }
+
+      const range = end - start
+      let currentStep = 0
+
+      const timer = setInterval(() => {
+        currentStep++
+        const progress = currentStep / steps
+        // 使用缓动函数（ease-out）
+        const easeOut = 1 - Math.pow(1 - progress, 3)
+        const currentValue = isDecimal 
+          ? start + range * easeOut
+          : Math.round(start + range * easeOut)
+        callback(currentValue)
+
+        if (currentStep >= steps) {
+          clearInterval(timer)
+          callback(end) // 确保最终值是准确的
+        }
+      }, stepDuration)
+      
+      timers.push(timer)
+    }
+
+    // 如果是首次加载，从0开始动画；否则从当前动画值开始
+    const startTotalRounds = isInitialLoad ? 0 : animatedStats.totalRounds
+    const startAverageStrokes = isInitialLoad ? 0 : animatedStats.averageStrokes
+    const startBestScore = isInitialLoad ? 0 : animatedStats.bestScore
+    const startTopThreeCount = isInitialLoad ? 0 : animatedStats.topThreeCount
+
+    animateValue(startTotalRounds, userStats.totalRounds, (value) => {
+      setAnimatedStats(prev => ({ ...prev, totalRounds: value }))
+    })
+
+    animateValue(startAverageStrokes, userStats.averageStrokes, (value) => {
+      setAnimatedStats(prev => ({ ...prev, averageStrokes: value }))
+    }, true)
+
+    animateValue(startBestScore, userStats.bestScore, (value) => {
+      setAnimatedStats(prev => ({ ...prev, bestScore: value }))
+    })
+
+    animateValue(startTopThreeCount, userStats.topThreeCount, (value) => {
+      setAnimatedStats(prev => ({ ...prev, topThreeCount: value }))
+    })
+
+    // 清理函数
+    return () => {
+      timers.forEach(timer => clearInterval(timer))
+    }
+  }, [userStats, loading])
 
   const fetchUserScores = async () => {
     if (!user) return
@@ -297,37 +381,77 @@ export default function UserScoreQuery() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* 个人统计 */}
-      <div className="bg-gradient-to-br from-[#F15B98]/10 to-[#F15B98]/5 rounded-2xl p-3 sm:p-4 border border-[#F15B98]/20">
-        <div className="flex items-center mb-3 sm:mb-4">
-          <BarChart className="w-6 h-6 sm:w-8 sm:h-8 text-golf-400 mr-2 sm:mr-3" style={{ fill: 'none' }} />
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">个人统计</h2>
+      <div className="bg-gradient-to-br from-[#F15B98]/10 to-[#F15B98]/5 rounded-2xl p-3 sm:p-4 border border-[#F15B98]/20 relative overflow-hidden">
+        {/* 背景装饰动画 */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#F15B98] rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-golf-400 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
-            <div className="text-xs sm:text-sm text-gray-600 mb-1">总轮次</div>
-            <div className="text-lg sm:text-xl font-bold text-gray-900">{userStats.totalRounds}</div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center mb-3 sm:mb-4">
+            <BarChart className="w-6 h-6 sm:w-8 sm:h-8 text-golf-400 mr-2 sm:mr-3 animate-bounce" style={{ fill: 'none', animationDuration: '2s', animationIterationCount: 'infinite' }} />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 animate-fade-in">个人统计</h2>
           </div>
 
-          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
-            <div className="text-xs sm:text-sm text-gray-600 mb-1">平均杆数</div>
-            <div className="text-lg sm:text-xl font-bold text-gray-900">{userStats.averageStrokes}</div>
-          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div 
+              className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
+              style={{ 
+                animation: 'slideUp 0.5s ease-out 0.1s both',
+                opacity: 0
+              }}
+            >
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">总轮次</div>
+              <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F15B98] to-golf-400">
+                {!loading ? animatedStats.totalRounds : userStats.totalRounds}
+              </div>
+            </div>
 
-          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
-            <div className="text-xs sm:text-sm text-gray-600 mb-1">最佳成绩</div>
-            <div className="text-lg sm:text-xl font-bold text-gray-900">{userStats.bestScore}</div>
-          </div>
+            <div 
+              className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
+              style={{ 
+                animation: 'slideUp 0.5s ease-out 0.2s both',
+                opacity: 0
+              }}
+            >
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">平均杆数</div>
+              <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-golf-400 to-[#F15B98]">
+                {!loading ? (animatedStats.averageStrokes > 0 ? animatedStats.averageStrokes.toFixed(1) : '0') : (userStats.averageStrokes > 0 ? userStats.averageStrokes.toFixed(1) : '0')}
+              </div>
+            </div>
 
-          <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
-            <div className="text-xs sm:text-sm text-gray-600 mb-1">前三名次</div>
-            <div className="text-lg sm:text-xl font-bold text-gray-900">{userStats.topThreeCount}</div>
+            <div 
+              className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
+              style={{ 
+                animation: 'slideUp 0.5s ease-out 0.3s both',
+                opacity: 0
+              }}
+            >
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">最佳成绩</div>
+              <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-orange-500">
+                {!loading ? animatedStats.bestScore : userStats.bestScore}
+              </div>
+            </div>
+
+            <div 
+              className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
+              style={{ 
+                animation: 'slideUp 0.5s ease-out 0.4s both',
+                opacity: 0
+              }}
+            >
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">前三名次</div>
+              <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
+                {!loading ? animatedStats.topThreeCount : userStats.topThreeCount}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* 成绩查询 */}
-      <div className="bg-white rounded-2xl shadow-2xl px-1 sm:px-6 pt-2 pb-2 sm:pt-6 sm:pb-6">
+      <div className="bg-white rounded-2xl shadow-xl px-1 sm:px-6 pt-2 pb-2 sm:pt-6 sm:pb-6">
 
         {/* 统一搜索组件 */}
         <div className="px-1 sm:px-0 mb-4 sm:mb-6">
@@ -451,7 +575,9 @@ export default function UserScoreQuery() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3 flex-1">
                       {/* 左侧图标容器 */}
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl flex items-center justify-center flex-shrink-0 transition-shadow duration-500 ease-in-out ${
+                        isExpanded ? 'shadow-2xl' : 'shadow-md'
+                      }`}>
                         <Trophy className="w-6 h-6 sm:w-7 sm:h-7 text-golf-400" style={{ fill: 'none' }} />
                       </div>
                       {/* 文本内容 */}
@@ -534,8 +660,8 @@ export default function UserScoreQuery() {
                     </div>
                     {/* 右侧展开/收起箭头 */}
                     <div className="flex-shrink-0 ml-2">
-                      <div className={`transition-transform duration-500 ease-in-out ${isExpanded ? 'rotate-90' : 'rotate-0'}`}>
-                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <div className={`transition-transform duration-500 ease-in-out ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
                       </div>
                     </div>
                   </div>
