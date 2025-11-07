@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -133,7 +133,8 @@ export default function Dashboard() {
     }
   }, [viewParam, searchParams, setSearchParams])
   
-  const [showDateAvatar, setShowDateAvatar] = useState(false) // false显示日期，true显示头像
+  const [showDateWeather, setShowDateWeather] = useState(false) // false显示日期，true显示天气
+  const [weather, setWeather] = useState<{ currentTemp: number; minTemp: number; maxTemp: number; condition: string; icon: 'sun' | 'cloud' | 'cloudRain' | 'cloudSun' } | null>(null)
   const [showMoreActions, setShowMoreActions] = useState(false) // 控制显示更多快捷操作，默认收缩
 
   // 监听用户菜单状态变化
@@ -802,10 +803,40 @@ export default function Dashboard() {
 
   const { year, season, lunarDate } = getCurrentDate()
 
-  // 日期卡片在日期和头像之间切换（每5秒）
+  // 获取天气信息
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        // 使用 OpenWeatherMap API 或类似的天气服务
+        // 这里先使用模拟数据，实际使用时需要替换为真实的天气 API
+        const mockWeather = {
+          currentTemp: 18,
+          minTemp: 12,
+          maxTemp: 22,
+          condition: '多云',
+          icon: 'cloudSun' as const
+        }
+        setWeather(mockWeather)
+      } catch (error) {
+        console.error('获取天气失败:', error)
+        // 使用默认天气
+        setWeather({
+          currentTemp: 20,
+          minTemp: 15,
+          maxTemp: 25,
+          condition: '晴朗',
+          icon: 'sun'
+        })
+      }
+    }
+    
+    fetchWeather()
+  }, [])
+
+  // 日期卡片在日期和天气之间切换（每5秒）
   useEffect(() => {
     const interval = setInterval(() => {
-      setShowDateAvatar(prev => !prev)
+      setShowDateWeather(prev => !prev)
     }, 5000) // 每5秒切换一次
 
     return () => clearInterval(interval)
@@ -1581,7 +1612,7 @@ export default function Dashboard() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    opacity: showDateAvatar ? 0 : 1,
+                    opacity: showDateWeather ? 0 : 1,
                     transition: 'opacity 1s ease-in-out',
                     position: 'absolute',
                     top: 0,
@@ -1589,7 +1620,7 @@ export default function Dashboard() {
                     right: 0,
                     bottom: 0,
                     padding: '14px 16px',
-                    pointerEvents: showDateAvatar ? 'none' : 'auto'
+                    pointerEvents: showDateWeather ? 'none' : 'auto'
                   }}
                 >
                   <div style={{ fontSize: '18px', fontWeight: '800', color: '#FFFFFF', marginBottom: '4px', letterSpacing: '0.5px' }}>{year}</div>
@@ -1628,48 +1659,54 @@ export default function Dashboard() {
                   <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 1)', fontWeight: '700', letterSpacing: '0.5px', marginTop: '1px' }}>{lunarDate}</div>
                 </div>
 
-                {/* 头像内容 */}
+                {/* 天气内容 */}
                 <div 
                   style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    opacity: showDateAvatar ? 1 : 0,
+                    opacity: showDateWeather ? 1 : 0,
                     transition: 'opacity 1s ease-in-out',
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    padding: '4px',
-                    borderRadius: '14px',
-                    overflow: 'hidden',
-                    pointerEvents: showDateAvatar ? 'auto' : 'none'
+                    padding: '14px 16px',
+                    pointerEvents: showDateWeather ? 'auto' : 'none'
                   }}
                 >
-                  {userProfile?.avatar_url ? (
-                    <img 
-                      src={userProfile.avatar_url} 
-                      alt={userProfile.full_name || '用户头像'}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        borderRadius: '14px',
-                        objectPosition: `${userProfile.avatar_position_x || 50}% ${userProfile.avatar_position_y || 50}%`
-                      }}
-                    />
+                  {weather ? (
+                    <>
+                      {/* 天气图标和文字（水平排列） */}
+                      <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        {weather.icon === 'sun' && <Sun className="w-8 h-8" style={{ color: '#FFFFFF', strokeWidth: 2.5 }} />}
+                        {weather.icon === 'cloud' && <Cloud className="w-8 h-8" style={{ color: '#FFFFFF', strokeWidth: 2.5 }} />}
+                        {weather.icon === 'cloudRain' && <CloudRain className="w-8 h-8" style={{ color: '#FFFFFF', strokeWidth: 2.5 }} />}
+                        {weather.icon === 'cloudSun' && <CloudSun className="w-8 h-8" style={{ color: '#FFFFFF', strokeWidth: 2.5 }} />}
+                        <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.95)', fontWeight: '600', letterSpacing: '0.2px' }}>
+                          {weather.condition}
+                        </div>
+                      </div>
+                      {/* 当前温度 */}
+                      <div style={{ fontSize: '18px', fontWeight: '800', color: '#FFFFFF', marginBottom: '4px', lineHeight: '1', letterSpacing: '-0.5px' }}>
+                        {weather.currentTemp}°
+                      </div>
+                      {/* 最高/最低温度 */}
+                      <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.95)', fontWeight: '600', letterSpacing: '0.3px' }}>
+                        {weather.maxTemp}° / {weather.minTemp}°
+                      </div>
+                    </>
                   ) : (
                     <div style={{
-                      width: '100%',
-                      height: '100%',
-                      backgroundColor: 'rgba(255, 255, 255, 0.3)',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '14px'
+                      justifyContent: 'center'
                     }}>
-                      <User className="w-8 h-8" style={{ color: 'rgba(255, 255, 255, 0.8)' }} />
+                      <CloudSun className="w-10 h-10" style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '8px' }} />
+                      <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>加载中...</div>
                     </div>
                   )}
                 </div>
