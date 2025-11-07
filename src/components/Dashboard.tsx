@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -2236,200 +2236,297 @@ export default function Dashboard() {
             {/* Main Content Sections */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-3">
               {/* 即将举行的活动 */}
-              <div className="p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)', borderRadius: '24px' }}>
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
-                    <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
-                    即将举行的活动
-                  </h3>
-                </div>
-                {loading ? (
-                  <div className="text-center py-6 sm:py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98] mx-auto"></div>
-                    <p className="text-gray-500 mt-2 text-sm">加载中...</p>
+              <div className="relative p-5 sm:p-7 bg-gradient-to-br from-white via-white to-gray-50/30 border border-gray-200/60 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+                {/* 装饰性背景元素 */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F15B98]/5 to-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-golf-400/5 to-transparent rounded-full blur-2xl -ml-12 -mb-12"></div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-5 sm:mb-7">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
+                      <div className="w-1.5 h-7 bg-gradient-to-b from-[#F15B98] to-[#F15B98]/70 rounded-full mr-3 shadow-sm"></div>
+                      <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">即将举行的活动</span>
+                    </h3>
                   </div>
-                ) : upcomingEvents.length > 0 ? (
-                  <div className="space-y-3">
-                    {upcomingEvents.map((event) => (
-                      <div 
-                        key={event.id} 
-                        className="flex items-start gap-3 p-3 bg-white border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
-                        style={{ borderRadius: '20px' }}
-                        onClick={() => navigate(`/event/${event.id}`)}
-                      >
-                        {/* 左侧小图 */}
-                        <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
-                          {event.image_url || event.article_featured_image_url ? (
-                            <img
-                              src={event.image_url || event.article_featured_image_url}
-                              alt={event.title}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Calendar className="w-8 h-8 text-gray-300" />
+                  {loading ? (
+                    <div className="text-center py-8 sm:py-10">
+                      <div className="animate-spin rounded-full h-10 w-10 border-3 border-[#F15B98] border-t-transparent mx-auto"></div>
+                      <p className="text-gray-500 mt-3 text-sm">加载中...</p>
+                    </div>
+                  ) : upcomingEvents.length > 0 ? (
+                    <div className="space-y-4">
+                      {upcomingEvents.map((event) => (
+                        <div 
+                          key={event.id} 
+                          className="group relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
+                          onClick={() => navigate(`/event/${event.id}`)}
+                          onMouseDown={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(to bottom right, rgba(240, 253, 244, 0.95), rgba(220, 252, 231, 0.85), rgba(187, 247, 208, 0.75))'
+                            e.currentTarget.style.borderColor = 'rgba(134, 239, 172, 0.4)'
+                          }}
+                          onMouseUp={(e) => {
+                            e.currentTarget.style.background = ''
+                            e.currentTarget.style.borderColor = ''
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = ''
+                            e.currentTarget.style.borderColor = ''
+                          }}
+                          onTouchStart={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(to bottom right, rgba(240, 253, 244, 0.95), rgba(220, 252, 231, 0.85), rgba(187, 247, 208, 0.75))'
+                            e.currentTarget.style.borderColor = 'rgba(134, 239, 172, 0.4)'
+                          }}
+                          onTouchEnd={(e) => {
+                            e.currentTarget.style.background = ''
+                            e.currentTarget.style.borderColor = ''
+                          }}
+                        >
+                          {/* 悬停时的背景渐变 */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#F15B98]/0 via-[#F15B98]/0 to-golf-400/0 group-hover:from-[#F15B98]/5 group-hover:via-transparent group-hover:to-golf-400/5 transition-all duration-300"></div>
+                          {/* 按压时的绿色渐变层 */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-golf-100/0 via-golf-200/0 to-golf-300/0 opacity-0 transition-opacity duration-200 pointer-events-none" id="press-gradient"></div>
+                          
+                          {/* 左侧图片容器 */}
+                          <div className="relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                            {event.image_url || event.article_featured_image_url ? (
+                              <>
+                                <img
+                                  src={event.image_url || event.article_featured_image_url}
+                                  alt={event.title}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                {/* 图片渐变遮罩 */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
+                                <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 group-hover:text-[#F15B98] transition-colors duration-300" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* 右侧内容 */}
+                          <div className="flex-1 min-w-0 relative z-10 pr-2">
+                            <div className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2 group-hover:text-[#F15B98] transition-colors duration-300 break-words">
+                              {event.title}
                             </div>
-                          )}
+                            <div className="space-y-1.5">
+                              <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-[#F15B98]/70" />
+                                <span className="whitespace-nowrap">{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-golf-500/70" />
+                                <span className="flex-1 min-w-0 break-words">{event.location || '地点未设置'}</span>
+                                <span className="text-[#F15B98] font-medium whitespace-nowrap">· {event.max_participants || 0}人</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* 右侧箭头指示器 */}
+                          <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-1">
+                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#F15B98] group-hover:translate-x-1 transition-transform duration-300" />
+                          </div>
                         </div>
-                        {/* 右侧文字 */}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 text-sm sm:text-base mb-1.5 line-clamp-2">
-                            {event.title}
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-600 mb-1 flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span>{event.location || '地点未设置'} · {event.max_participants || 0}人</span>
-                          </div>
-                        </div>
+                      ))}
+                      <div className="text-center pt-3">
+                        <button 
+                          onClick={() => setCurrentView('events')}
+                          className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 overflow-hidden"
+                        >
+                          <span className="relative z-10">查看更多活动</span>
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                        </button>
                       </div>
-                    ))}
-                    <div className="text-center pt-2">
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 sm:py-10">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+                        <Calendar className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 mb-4 text-sm sm:text-base">暂无即将举行的活动</p>
                       <button 
                         onClick={() => setCurrentView('events')}
-                        className="px-4 py-2 bg-[#F15B98] hover:bg-[#F15B98]/90 text-white font-bold text-sm rounded-lg transition-colors"
+                        className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm sm:text-base rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 overflow-hidden"
                       >
-                        查看更多活动
+                        <span className="relative z-10">查看更多活动</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6 sm:py-8">
-                    <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无即将举行的活动</p>
-                    <button 
-                      onClick={() => setCurrentView('events')}
-                      className="px-4 py-2 bg-[#F15B98] hover:bg-[#F15B98]/90 text-white font-bold text-sm sm:text-base rounded-lg transition-colors"
-                    >
-                      查看更多活动
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* 最新发布的成绩活动 */}
-              <div className="p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)', borderRadius: '24px' }}>
-                <div className="mb-4 sm:mb-6">
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
-                    <div className="w-1 h-6 bg-[#F15B98] mr-3"></div>
-                    最新发布的成绩活动
-                  </h3>
-                </div>
-                {loading ? (
-                  <div className="text-center py-6 sm:py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F15B98] mx-auto"></div>
-                    <p className="text-gray-500 mt-2 text-sm">加载中...</p>
+              <div className="relative p-5 sm:p-7 bg-gradient-to-br from-white via-white to-gray-50/30 border border-gray-200/60 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+                {/* 装饰性背景元素 */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F15B98]/5 to-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-golf-400/5 to-transparent rounded-full blur-2xl -ml-12 -mb-12"></div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-5 sm:mb-7">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
+                      <div className="w-1.5 h-7 bg-gradient-to-b from-[#F15B98] to-[#F15B98]/70 rounded-full mr-3 shadow-sm"></div>
+                      <span className="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">最新发布的成绩活动</span>
+                    </h3>
                   </div>
-                ) : recentScores.length > 0 ? (
-                  <div className="space-y-2 sm:space-y-3">
-                    {recentScores.map((result, index) => (
-                      <div key={index} className="bg-white p-3 border border-gray-200 flex gap-3 sm:gap-4" style={{ borderRadius: '20px' }}>
-                        {/* 左侧图片或图标 */}
-                        <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100">
-                          {result.image_url ? (
-                            <img
-                              src={result.image_url}
-                              alt={result.competition_name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-[#F15B98]" />
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* 右侧文字内容 */}
-                        <div className="flex-1 min-w-0">
-                          {/* 活动标题和日期 */}
-                          <div>
-                            <div className="font-semibold text-gray-900 text-base sm:text-lg mb-1.5 line-clamp-1">
-                              {result.competition_name}
-                            </div>
-                            <div className="text-xs sm:text-sm text-gray-600 mb-2.5 flex items-center gap-1.5">
-                              <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
-                              <span>{new Date(result.competition_date).toLocaleDateString('zh-CN')} {new Date(result.competition_date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
-                              {result.location && (
-                                <>
-                                  <span className="mx-1">·</span>
-                                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                                  <span>{result.location}</span>
-                                </>
-                              )}
-                            </div>
+                  {loading ? (
+                    <div className="text-center py-8 sm:py-10">
+                      <div className="animate-spin rounded-full h-10 w-10 border-3 border-[#F15B98] border-t-transparent mx-auto"></div>
+                      <p className="text-gray-500 mt-3 text-sm">加载中...</p>
+                    </div>
+                  ) : recentScores.length > 0 ? (
+                    <div className="space-y-4">
+                      {recentScores.map((result, index) => (
+                        <div 
+                          key={index} 
+                          className="group relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
+                          onClick={() => navigate(`/score-query`)}
+                          onMouseDown={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(to bottom right, rgba(240, 253, 244, 0.95), rgba(220, 252, 231, 0.85), rgba(187, 247, 208, 0.75))'
+                            e.currentTarget.style.borderColor = 'rgba(134, 239, 172, 0.4)'
+                          }}
+                          onMouseUp={(e) => {
+                            e.currentTarget.style.background = ''
+                            e.currentTarget.style.borderColor = ''
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = ''
+                            e.currentTarget.style.borderColor = ''
+                          }}
+                          onTouchStart={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(to bottom right, rgba(240, 253, 244, 0.95), rgba(220, 252, 231, 0.85), rgba(187, 247, 208, 0.75))'
+                            e.currentTarget.style.borderColor = 'rgba(134, 239, 172, 0.4)'
+                          }}
+                          onTouchEnd={(e) => {
+                            e.currentTarget.style.background = ''
+                            e.currentTarget.style.borderColor = ''
+                          }}
+                        >
+                          {/* 悬停时的背景渐变 */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#F15B98]/0 via-[#F15B98]/0 to-golf-400/0 group-hover:from-[#F15B98]/5 group-hover:via-transparent group-hover:to-golf-400/5 transition-all duration-300"></div>
+                          {/* 按压时的绿色渐变层 */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-golf-100/0 via-golf-200/0 to-golf-300/0 opacity-0 transition-opacity duration-200 pointer-events-none"></div>
+                          {/* 左侧图片容器 */}
+                          <div className="relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                            {result.image_url ? (
+                              <>
+                                <img
+                                  src={result.image_url}
+                                  alt={result.competition_name}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                {/* 图片渐变遮罩 */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
+                                <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-[#F15B98] group-hover:scale-110 transition-transform duration-300" />
+                              </div>
+                            )}
                           </div>
-
-                          {/* 成绩信息 - 一行显示 */}
-                          {result.event_type === '个人赛' && result.topThree && result.topThree.length > 0 && (
-                            <div className="flex items-center gap-2 text-xs sm:text-sm">
-                              {result.topThree.slice(0, 3).map((player, idx) => {
-                                const medalColors = [
-                                  { color: '#FFD700', name: 'gold' }, // 金色
-                                  { color: '#C0C0C0', name: 'silver' }, // 银色
-                                  { color: '#CD7F32', name: 'bronze' } // 铜色
-                                ]
-                                const medal = medalColors[player.rank - 1]
-                                return (
-                                  <span key={idx} className="text-gray-700 flex items-center gap-1.5">
-                                    {medal && (
-                                      <Medal className="w-5 h-5 flex-shrink-0" style={{ color: medal.color }} />
-                                    )}
-                                    <span className="font-medium">{player.name}</span>
-                                    {idx < Math.min(result.topThree.length, 3) - 1 && <span className="mx-1.5 text-gray-400">·</span>}
-                                  </span>
-                                )
-                              })}
+                          
+                          {/* 右侧内容 */}
+                          <div className="flex-1 min-w-0 relative z-10 pr-2">
+                            {/* 活动标题和日期 */}
+                            <div className="mb-2">
+                              <div className="font-bold text-gray-900 text-sm sm:text-base mb-1.5 line-clamp-2 group-hover:text-[#F15B98] transition-colors duration-300 break-words">
+                                {result.competition_name}
+                              </div>
+                              <div className="space-y-1.5">
+                                <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-[#F15B98]/70" />
+                                  <span className="whitespace-nowrap">{new Date(result.competition_date).toLocaleDateString('zh-CN')} {new Date(result.competition_date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                                </div>
+                                {result.location && (
+                                  <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2">
+                                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-golf-500/70" />
+                                    <span className="break-words">{result.location}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          )}
 
-                          {result.event_type === '团体赛' && result.teams && result.teams.length > 0 && (
-                            <div className="flex items-center gap-2 text-xs flex-wrap">
-                              {result.teams.slice(0, 4).map((team, idx) => {
-                                // 根据队伍名称查找颜色，team_colors的key可能是原始名称或显示名称
-                                const teamColors = result.team_colors || {}
-                                let teamColor = '#6B7280' // 默认灰色
-                                // 先尝试用team_name直接查找
-                                if (teamColors[team.team_name]) {
-                                  teamColor = teamColors[team.team_name]
-                                }
-                                return (
-                                  <span key={idx} className="text-gray-700 flex items-center gap-1.5">
-                                    <span 
-                                      className="w-3 h-3 rounded flex-shrink-0" 
-                                      style={{ backgroundColor: teamColor }}
-                                    />
-                                    {team.team_name} {Math.round(team.score)}分
-                                    {idx < Math.min(result.teams.length, 4) - 1 && <span className="mx-1 text-gray-400">·</span>}
-                                  </span>
-                                )
-                              })}
-                            </div>
-                          )}
+                            {/* 成绩信息 - 一行显示 */}
+                            {result.event_type === '个人赛' && result.topThree && result.topThree.length > 0 && (
+                              <div className="grid grid-cols-2 sm:flex sm:flex-row sm:items-center gap-2 text-xs sm:text-sm">
+                                {result.topThree.slice(0, 3).map((player, idx) => {
+                                  const medalColors = [
+                                    { color: '#FFD700', name: 'gold' }, // 金色
+                                    { color: '#C0C0C0', name: 'silver' }, // 银色
+                                    { color: '#CD7F32', name: 'bronze' } // 铜色
+                                  ]
+                                  const medal = medalColors[player.rank - 1]
+                                  return (
+                                    <span key={idx} className="text-gray-700 flex items-center gap-1.5">
+                                      {medal && (
+                                        <Medal className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" style={{ color: medal.color }} />
+                                      )}
+                                      <span className="font-medium">{player.name}</span>
+                                      {idx < Math.min(result.topThree.length, 3) - 1 && <span className="mx-1.5 text-gray-400 hidden sm:inline">·</span>}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            )}
+
+                            {result.event_type === '团体赛' && result.teams && result.teams.length > 0 && (
+                              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 text-xs sm:text-sm">
+                                {result.teams.slice(0, 4).map((team, idx) => {
+                                  // 根据队伍名称查找颜色，team_colors的key可能是原始名称或显示名称
+                                  const teamColors = result.team_colors || {}
+                                  let teamColor = '#6B7280' // 默认灰色
+                                  // 先尝试用team_name直接查找
+                                  if (teamColors[team.team_name]) {
+                                    teamColor = teamColors[team.team_name]
+                                  }
+                                  return (
+                                    <span key={idx} className="text-gray-700 flex items-center gap-1.5">
+                                      <span 
+                                        className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded flex-shrink-0" 
+                                        style={{ backgroundColor: teamColor }}
+                                      />
+                                      <span>{team.team_name} {Math.round(team.score)}分</span>
+                                      {idx < Math.min(result.teams.length, 4) - 1 && <span className="mx-1 text-gray-400 hidden sm:inline">·</span>}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* 右侧箭头指示器 */}
+                          <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-1">
+                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#F15B98] group-hover:translate-x-1 transition-transform duration-300" />
+                          </div>
                         </div>
-                      </div>
                     ))}
-                    <div className="text-center pt-2">
+                      <div className="text-center pt-3">
+                        <button 
+                          onClick={() => setCurrentView('scores')}
+                          className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 overflow-hidden"
+                        >
+                          <span className="relative z-10">查看完整成绩单</span>
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 sm:py-10">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+                        <Trophy className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-gray-500 mb-4 text-sm sm:text-base">暂无成绩记录</p>
                       <button 
                         onClick={() => setCurrentView('scores')}
-                        className="px-4 py-2 bg-[#F15B98] hover:bg-[#F15B98]/90 text-white font-bold text-sm rounded-lg transition-colors"
+                        className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm sm:text-base rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 overflow-hidden"
                       >
-                        查看完整成绩单
+                        <span className="relative z-10">查看成绩查询</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6 sm:py-8">
-                    <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无成绩记录</p>
-                    <button 
-                      onClick={() => setCurrentView('scores')}
-                      className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium text-sm sm:text-base"
-                    >
-                      查看成绩查询
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* 最新费用公示 */}
