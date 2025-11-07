@@ -57,6 +57,7 @@ interface CompetitionResult {
   competition_name: string
   competition_date: string
   event_type: '普通活动' | '个人赛' | '团体赛'
+  event_id?: string // 活动ID，用于跳转到详细成绩
   location?: string
   image_url?: string | null // 活动图片
   team_colors?: Record<string, string> // 队伍颜色配置：队伍名称 -> 颜色代码
@@ -180,9 +181,20 @@ export default function Dashboard() {
     }
   }
 
-  // 从 URL 参数读取 eventId 并自动打开模态框
+  // 从 URL 参数读取 eventId 并自动打开模态框（仅在 events 视图时）
   useEffect(() => {
     const eventId = searchParams.get('eventId')
+    const viewParam = searchParams.get('view')
+    
+    // 只有在 events 视图时才处理 eventId（用于打开活动详情）
+    // 在 scores 视图时，eventId 由 UserScoreQuery 组件处理
+    if (viewParam !== 'events') {
+      // 如果不是 events 视图，清除活动详情模态框
+      if (selectedEvent) {
+        setSelectedEvent(null)
+      }
+      return
+    }
     
     // 如果没有 eventId，且当前有打开的模态框，延迟关闭（让关闭动画完成）
     if (!eventId && selectedEvent) {
@@ -648,6 +660,7 @@ export default function Dashboard() {
               competition_name: competitionName,
               competition_date: competitionDate,
               event_type: eventType as '个人赛',
+              event_id: event?.id || key, // 保存活动ID
               location: event?.location,
               image_url: (event as any)?.image_url || (event as any)?.article_featured_image_url || null,
               topThree: sortedScores.length > 0 ? sortedScores : undefined
@@ -685,6 +698,7 @@ export default function Dashboard() {
               competition_name: competitionName,
               competition_date: competitionDate,
               event_type: eventType as '团体赛',
+              event_id: event?.id || key, // 保存活动ID
               location: event?.location,
               team_colors: (event as any)?.team_colors || {},
               image_url: (event as any)?.image_url || (event as any)?.article_featured_image_url || null,
@@ -2381,7 +2395,15 @@ export default function Dashboard() {
                         <div 
                           key={index} 
                           className="group relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
-                          onClick={() => navigate(`/score-query`)}
+                          onClick={() => {
+                            if (result.event_id) {
+                              // 切换到成绩查询视图并传递 eventId 参数
+                              setCurrentView('scores')
+                              navigate(`/dashboard?view=scores&eventId=${result.event_id}`, { replace: true })
+                            } else {
+                              setCurrentView('scores')
+                            }
+                          }}
                           onMouseDown={(e) => {
                             e.currentTarget.style.background = 'linear-gradient(to bottom right, rgba(240, 253, 244, 0.95), rgba(220, 252, 231, 0.85), rgba(187, 247, 208, 0.75))'
                             e.currentTarget.style.borderColor = 'rgba(134, 239, 172, 0.4)'

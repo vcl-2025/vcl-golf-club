@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { 
   Trophy, Medal, Award, TrendingUp, Star, Clock,
   ChevronDown, ChevronRight, User, BarChart,
   UserCheck
 } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import UnifiedSearch from './UnifiedSearch'
@@ -49,6 +50,7 @@ interface UserStats {
 
 export default function UserScoreQuery() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [scores, setScores] = useState<ScoreData[]>([])
   const [userStats, setUserStats] = useState<UserStats>({
     totalRounds: 0,
@@ -67,12 +69,40 @@ export default function UserScoreQuery() {
     bestScore: 0,
     topThreeCount: 0
   })
+  const eventRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   useEffect(() => {
     if (user) {
       fetchUserScores()
     }
   }, [user])
+
+  // 处理 URL 参数中的 eventId，自动展开对应活动
+  useEffect(() => {
+    const eventId = searchParams.get('eventId')
+    if (eventId && !loading && scores.length > 0 && !expandedEvents.has(eventId)) {
+      // 展开对应活动
+      setExpandedEvents(prev => new Set(prev).add(eventId))
+      
+      // 延迟滚动，确保 DOM 已更新
+      setTimeout(() => {
+        const element = eventRefs.current.get(eventId)
+        if (element) {
+          // 滚动到元素顶部，留出一些顶部间距
+          const elementTop = element.getBoundingClientRect().top + window.pageYOffset
+          const offset = 100 // 顶部留出100px间距
+          window.scrollTo({ 
+            top: elementTop - offset, 
+            behavior: 'smooth' 
+          })
+          // 清除 URL 参数，避免刷新时重复展开
+          const newParams = new URLSearchParams(searchParams)
+          newParams.delete('eventId')
+          setSearchParams(newParams, { replace: true })
+        }
+      }, 500) // 增加延迟时间，确保展开动画完成
+    }
+  }, [searchParams, scores, expandedEvents, loading, setSearchParams])
 
   // 数字计数动画效果
   useEffect(() => {
@@ -477,6 +507,13 @@ export default function UserScoreQuery() {
         <div className="space-y-2 -mx-1 sm:mx-0">
           {filteredGroups.map((group) => {
             const isExpanded = expandedEvents.has(group.event.id)
+            
+            // 设置 ref 用于滚动定位
+            const setEventRef = (element: HTMLDivElement | null) => {
+              if (element) {
+                eventRefs.current.set(group.event.id, element)
+              }
+            }
             const userScore = group.scores.find(s => s.user_id === user?.id)
             
             // 计算团队得分（莱德杯模式）
@@ -561,6 +598,7 @@ export default function UserScoreQuery() {
             return (
               <div
                 key={group.event.id}
+                ref={setEventRef}
                 className={`rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-500 ease-in-out border mx-1 sm:mx-0 ${
                   isExpanded 
                     ? 'bg-gradient-to-br from-[#F15B98]/10 to-golf-50 border-[#F15B98]/40' 
