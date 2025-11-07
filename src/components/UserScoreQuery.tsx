@@ -327,7 +327,7 @@ export default function UserScoreQuery() {
       </div>
 
       {/* 成绩查询 */}
-      <div className="bg-white rounded-2xl shadow-sm px-1 sm:px-6 pt-2 pb-2 sm:pt-6 sm:pb-6">
+      <div className="bg-white rounded-2xl shadow-2xl px-1 sm:px-6 pt-2 pb-2 sm:pt-6 sm:pb-6">
 
         {/* 统一搜索组件 */}
         <div className="px-1 sm:px-0 mb-4 sm:mb-6">
@@ -437,30 +437,33 @@ export default function UserScoreQuery() {
             return (
               <div
                 key={group.event.id}
-                className="bg-[#fffbf9]/80 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-lg transition-all border border-gray-100 hover:border-gray-200 mx-1 sm:mx-0"
+                className={`rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-500 ease-in-out border mx-1 sm:mx-0 ${
+                  isExpanded 
+                    ? 'bg-gradient-to-br from-[#F15B98]/10 to-golf-50 border-[#F15B98]/40' 
+                    : 'bg-[#fffbf9]/80 border-gray-100 hover:border-gray-200'
+                }`}
               >
                 {/* 活动卡片头部 */}
                 <div
-                  className="p-2 sm:p-6 cursor-pointer"
+                  className="p-2 sm:p-6 cursor-pointer active:opacity-80 transition-opacity duration-100"
                   onClick={() => toggleEventExpansion(group.event.id)}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      {isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-gray-400" />
-                      )}
-                      <div className="flex-1">
-                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
-                          <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-golf-400 mr-2" style={{ fill: 'none' }} />
+                    <div className="flex items-center space-x-3 flex-1">
+                      {/* 左侧图标容器 */}
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                        <Trophy className="w-6 h-6 sm:w-7 sm:h-7 text-golf-400" style={{ fill: 'none' }} />
+                      </div>
+                      {/* 文本内容 */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                           {group.event.title}
                         </h3>
                         
                         {/* 活动时间 */}
                         <div className="text-sm text-gray-500 mt-1 mb-2">
                           <div className="flex items-center">
-                            <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                            <Clock className="w-4 h-4 mr-2 text-golf-400" />
                             <span>
                               {new Date(group.event.start_time).toLocaleDateString('zh-CN', {
                                 year: 'numeric',
@@ -529,16 +532,24 @@ export default function UserScoreQuery() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {group.event.event_type && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
-                          {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
-                        </span>
+                    {/* 右侧展开/收起箭头 */}
+                    <div className="flex-shrink-0 ml-2">
+                      {isExpanded ? (
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
                       )}
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
-                        {group.scores.length}人参赛
-                      </span>
                     </div>
+                  </div>
+                  <div className="flex items-center justify-end space-x-2 mt-2">
+                    {group.event.event_type && (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
+                        {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
+                      </span>
+                    )}
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
+                      {group.scores.length}人参赛
+                    </span>
                   </div>
                 </div>
 
@@ -1025,7 +1036,7 @@ export default function UserScoreQuery() {
                               }
                               
                               return (
-                                <div key={group.group} className="bg-white rounded-2xl p-2 sm:p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+                                <div key={group.group} className="bg-white rounded-2xl p-2 sm:p-6 border border-gray-100 shadow-xl hover:shadow-2xl transition-shadow duration-300 overflow-hidden">
                                   <div className="mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
                                     <div className="flex items-center justify-start flex-wrap gap-2">
                                       <span className="px-2 sm:px-3 py-1 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg text-xs sm:text-sm font-semibold text-gray-700 border border-gray-200">
@@ -1515,7 +1526,7 @@ export default function UserScoreQuery() {
                         return (
                           <div className="space-y-4 mt-4">
                             {/* 排名列表 */}
-                            <div className="bg-white rounded-lg border border-gray-200 p-4">
+                            <div className="bg-white rounded-lg border border-gray-200 shadow-lg p-4">
                               <h4 className="text-lg font-semibold text-gray-900 mb-3">成绩排名</h4>
                               <div className="space-y-2">
                                 {allScoresSorted.map((score, index) => {
@@ -1591,7 +1602,7 @@ export default function UserScoreQuery() {
                               const rightPlayers = scoresWithGroupRank.slice(midIndex)
                               
                               return (
-                                <div key={groupNum} className="bg-white rounded-2xl p-2 sm:p-6 border border-gray-100 shadow-lg">
+                                <div key={groupNum} className="bg-white rounded-2xl p-2 sm:p-6 border border-gray-100 shadow-xl">
                                   <div className="mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-100">
                                     <h4 className="text-base sm:text-lg font-semibold text-gray-900">
                                       第{groupNum}组 ({scores.length}人)
