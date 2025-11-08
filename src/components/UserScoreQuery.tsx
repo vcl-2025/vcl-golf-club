@@ -419,12 +419,12 @@ export default function UserScoreQuery() {
         </div>
         
         <div className="relative z-10">
-          <div className="flex items-center mb-3 sm:mb-4">
+        <div className="flex items-center mb-3 sm:mb-4">
             <BarChart className="w-6 h-6 sm:w-8 sm:h-8 text-golf-400 mr-2 sm:mr-3 animate-bounce" style={{ fill: 'none', animationDuration: '2s', animationIterationCount: 'infinite' }} />
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 animate-fade-in">个人统计</h2>
-          </div>
+        </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
               style={{ 
@@ -432,11 +432,11 @@ export default function UserScoreQuery() {
                 opacity: 0
               }}
             >
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">总轮次</div>
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">总轮次</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F15B98] to-golf-400">
                 {!loading ? animatedStats.totalRounds : userStats.totalRounds}
               </div>
-            </div>
+          </div>
 
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
@@ -445,11 +445,11 @@ export default function UserScoreQuery() {
                 opacity: 0
               }}
             >
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">平均杆数</div>
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">平均杆数</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-golf-400 to-[#F15B98]">
                 {!loading ? (animatedStats.averageStrokes > 0 ? animatedStats.averageStrokes.toFixed(1) : '0') : (userStats.averageStrokes > 0 ? userStats.averageStrokes.toFixed(1) : '0')}
               </div>
-            </div>
+          </div>
 
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
@@ -458,11 +458,11 @@ export default function UserScoreQuery() {
                 opacity: 0
               }}
             >
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">最佳成绩</div>
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">最佳成绩</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-orange-500">
                 {!loading ? animatedStats.bestScore : userStats.bestScore}
               </div>
-            </div>
+          </div>
 
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
@@ -471,7 +471,7 @@ export default function UserScoreQuery() {
                 opacity: 0
               }}
             >
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">前三名次</div>
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">前三名次</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
                 {!loading ? animatedStats.topThreeCount : userStats.topThreeCount}
               </div>
@@ -704,14 +704,14 @@ export default function UserScoreQuery() {
                     </div>
                   </div>
                   <div className="flex items-center justify-end space-x-2 mt-2">
-                    {group.event.event_type && (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
-                        {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
+                      {group.event.event_type && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
+                          {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
+                        </span>
+                      )}
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
+                        {group.scores.length}人参赛
                       </span>
-                    )}
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
-                      {group.scores.length}人参赛
-                    </span>
                   </div>
                 </div>
 
@@ -756,17 +756,17 @@ export default function UserScoreQuery() {
                                         <div className={`font-medium ${isCurrentUser ? 'text-[#F15B98]' : 'text-gray-900'}`}>
                                           <div className="flex items-center gap-2">
                                             <span>
-                                              {score.is_guest ? (score.player_name || '未知访客') : (score.user_profiles?.full_name || '未知')}
+                                          {score.is_guest ? (score.player_name || '未知访客') : (score.user_profiles?.full_name || '未知')}
                                             </span>
                                             {!score.is_guest && (
                                               <UserCheck className="w-4 h-4 text-green-500" title="会员" />
                                             )}
-                                            {score.is_guest && (
+                                          {score.is_guest && (
                                               <span className="ml-2 text-xs text-gray-500">(非会员)</span>
-                                            )}
-                                            {isCurrentUser && (
-                                              <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
-                                            )}
+                                          )}
+                                          {isCurrentUser && (
+                                            <span className="ml-2 text-xs text-[#F15B98] font-semibold">(我)</span>
+                                          )}
                                           </div>
                                         </div>
                                         <div className="text-sm text-gray-600">
@@ -1267,7 +1267,7 @@ export default function UserScoreQuery() {
                                                       </div>
                                                       <div className="flex flex-col">
                                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                                          <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                        <span className="text-sm text-gray-800 font-medium">{player.name}</span>
                                                           {!player.is_guest && (
                                                             <UserCheck className="w-4 h-4 text-green-500" title="会员" />
                                                           )}
@@ -1368,7 +1368,7 @@ export default function UserScoreQuery() {
                                                     <div key={idx} className="flex items-center gap-2 sm:gap-3 justify-end">
                                                       <div className="flex flex-col items-end">
                                                         <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                                                          <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                                        <span className="text-sm text-gray-800 font-medium">{player.name}</span>
                                                           {!player.is_guest && (
                                                             <UserCheck className="w-4 h-4 text-green-500" title="会员" />
                                                           )}
@@ -1566,7 +1566,7 @@ export default function UserScoreQuery() {
                                                       <div className="flex flex-col min-w-0">
                                                         <div className="flex items-center gap-1.5 flex-wrap">
                                                           <div className="flex items-center gap-1.5 flex-wrap">
-                                                      <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
+                                                        <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
                                                       {!player.is_guest && (
                                                         <div className="flex items-center gap-0.5">
                                                           <Crown className="w-2.5 h-2.5 text-yellow-500" title="Crown" />
@@ -1631,7 +1631,7 @@ export default function UserScoreQuery() {
                                                   </div>
                                                   <div className="flex flex-col min-w-0">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                                      <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
+                                                    <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
                                                       {!player.is_guest && (
                                                         <div className="flex items-center gap-0.5">
                                                           <Crown className="w-2.5 h-2.5 text-yellow-500" title="Crown" />
@@ -1736,9 +1736,9 @@ export default function UserScoreQuery() {
                                               {!score.is_guest && (
                                                 <UserCheck className="w-4 h-4 text-green-500" title="会员" />
                                               )}
-                                              {isCurrentUser && (
+                                            {isCurrentUser && (
                                                 <span className="ml-1 text-xs text-[#F15B98] font-semibold">(我)</span>
-                                              )}
+                                            )}
                                             </div>
                                           </div>
                                         </div>
@@ -1834,9 +1834,9 @@ export default function UserScoreQuery() {
                                                     {!score.is_guest && (
                                                       <UserCheck className="w-4 h-4 text-green-500" title="会员" />
                                                     )}
-                                                    {isCurrentUser && (
+                                                  {isCurrentUser && (
                                                       <span className="ml-1 text-xs text-[#F15B98] font-semibold">(我)</span>
-                                                    )}
+                                                  )}
                                                   </div>
                                                 </div>
                                                 <div className="text-xs sm:text-sm text-gray-600 mt-0.5">
@@ -1901,9 +1901,9 @@ export default function UserScoreQuery() {
                                                     {!score.is_guest && (
                                                       <UserCheck className="w-4 h-4 text-green-500" title="会员" />
                                                     )}
-                                                    {isCurrentUser && (
+                                                  {isCurrentUser && (
                                                       <span className="ml-1 text-xs text-[#F15B98] font-semibold">(我)</span>
-                                                    )}
+                                                  )}
                                                   </div>
                                                 </div>
                                                 <div className="text-xs sm:text-sm text-gray-600 mt-0.5">
@@ -1937,8 +1937,8 @@ export default function UserScoreQuery() {
                           <ChevronUp className="w-4 h-4 group-hover:translate-y-[-2px] transition-transform duration-300" />
                           <span>收起</span>
                         </button>
-                      </div>
-                    )}
+                  </div>
+                )}
                   </div>
                 </div>
               </div>

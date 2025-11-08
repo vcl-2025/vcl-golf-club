@@ -206,10 +206,10 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
           .update({ view_count: (item.view_count || 0) + 1 })
           .eq('id', item.id)
           .select('view_count')
-          .single()
+        .single()
 
-        if (!updateError && data) {
-          setViewCount(data.view_count)
+      if (!updateError && data) {
+        setViewCount(data.view_count)
         }
       } catch (updateErr) {
         console.error('更新浏览次数失败:', updateErr)
@@ -372,30 +372,30 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                     <span>{item.author.full_name || item.author.email}</span>
                   </div>
                 )}
-              </div>
+        </div>
 
-              {/* 封面图 */}
-              {item.featured_image_url && (
-                <div className="mb-6">
-                  <img
-                    src={item.featured_image_url}
-                    alt={item.title}
-                    className="w-full h-auto rounded-xl shadow-md"
-                  />
-                </div>
-              )}
+          {/* 封面图 */}
+          {item.featured_image_url && (
+            <div className="mb-6">
+              <img
+                src={item.featured_image_url}
+                alt={item.title}
+                className="w-full h-auto rounded-xl shadow-md"
+              />
+            </div>
+          )}
 
-              {/* 正文内容 */}
-              <div className="prose max-w-none mb-6">
-                {item.content ? (
-                  <div 
-                    className="text-gray-700 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: item.content }}
-                  />
-                ) : (
-                  <p className="text-gray-600">{item.excerpt}</p>
-                )}
-              </div>
+          {/* 正文内容 */}
+          <div className="prose max-w-none mb-6">
+            {item.content ? (
+              <div 
+                className="text-gray-700 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: item.content }}
+              />
+            ) : (
+              <p className="text-gray-600">{item.excerpt}</p>
+            )}
+          </div>
 
               {/* 关联活动（批量报名） */}
               {item.is_registration_notice && item.linked_events && item.linked_events.length > 0 && (
@@ -502,45 +502,45 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                 </div>
               )}
 
-              {/* 附件列表 */}
-              {item.attachments && item.attachments.length > 0 && (
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <FileText className="w-5 h-5 mr-2" />
-                    附件下载
-                  </h3>
-                  <div className="space-y-2">
-                    {item.attachments.map((attachment, index) => (
-                      <a
-                        key={index}
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
-                      >
-                        <div className="flex items-center flex-1 min-w-0">
-                          <div className="w-10 h-10 bg-[#F15B98]/20 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                            <FileText className="w-5 h-5 text-[#F15B98]" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {attachment.name}
-                            </p>
-                            {attachment.size && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {formatFileSize(attachment.size)}
-                                {attachment.type && ` • ${attachment.type}`}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <Download className="w-5 h-5 text-gray-400 group-hover:text-[#F15B98] transition-colors ml-4 flex-shrink-0" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {/* 附件列表 */}
+          {item.attachments && item.attachments.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <FileText className="w-5 h-5 mr-2" />
+                附件下载
+              </h3>
+              <div className="space-y-2">
+                {item.attachments.map((attachment, index) => (
+                  <a
+                    key={index}
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
+                  >
+                    <div className="flex items-center flex-1 min-w-0">
+                      <div className="w-10 h-10 bg-[#F15B98]/20 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                        <FileText className="w-5 h-5 text-[#F15B98]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {attachment.name}
+                        </p>
+                        {attachment.size && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatFileSize(attachment.size)}
+                            {attachment.type && ` • ${attachment.type}`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Download className="w-5 h-5 text-gray-400 group-hover:text-[#F15B98] transition-colors ml-4 flex-shrink-0" />
+                  </a>
+                ))}
+              </div>
             </div>
+          )}
+        </div>
           </div>
         </div>
       </div>

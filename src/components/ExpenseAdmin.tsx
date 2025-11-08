@@ -741,11 +741,11 @@ export default function ExpenseAdmin() {
                 <option value="12">12月</option>
               </select>
             </div>
+            </div>
           </div>
-        </div>
-        
-        {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
-        {(searchTerm || transactionTypeFilter !== 'all' || typeFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
+          
+          {/* 清除筛选按钮 - 只在有筛选条件时显示 */}
+          {(searchTerm || transactionTypeFilter !== 'all' || typeFilter !== 'all' || yearFilter !== 'all' || monthFilter !== 'all') && (
           <div className="mb-6">
             <button
               onClick={() => {
@@ -759,7 +759,7 @@ export default function ExpenseAdmin() {
             >
               清除所有筛选
             </button>
-          </div>
+        </div>
         )}
 
         {/* 费用列表 */}

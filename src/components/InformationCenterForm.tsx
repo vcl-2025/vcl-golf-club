@@ -244,10 +244,10 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
     
     // 如果是发布，验证正文内容
     if (status === 'published') {
-      const contentText = formData.content?.replace(/<[^>]*>/g, '').trim() || ''
-      if (!contentText) {
-        showError('请输入正文内容')
-        return
+    const contentText = formData.content?.replace(/<[^>]*>/g, '').trim() || ''
+    if (!contentText) {
+      showError('请输入正文内容')
+      return
       }
     }
     
@@ -294,11 +294,11 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
 
       // 处理发布时间
       if (status === 'published') {
-        if (formData.published_at) {
-          itemData.published_at = new Date(formData.published_at).toISOString()
+      if (formData.published_at) {
+        itemData.published_at = new Date(formData.published_at).toISOString()
         } else {
-          // 如果状态是已发布但没有设置发布时间，自动设置为当前时间
-          itemData.published_at = new Date().toISOString()
+        // 如果状态是已发布但没有设置发布时间，自动设置为当前时间
+        itemData.published_at = new Date().toISOString()
         }
       } else {
         // 草稿状态，不设置发布时间
@@ -352,20 +352,20 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-[70] p-4 pt-20">
       <div className="bg-white rounded-2xl max-w-[1280px] w-full max-h-[85vh] overflow-y-auto shadow-xl">
         <div className="p-6">
-          {/* 头部 */}
+        {/* 头部 */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {item ? '编辑信息' : '创建信息'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {item ? '编辑信息' : '创建信息'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-          {/* 表单 */}
+        {/* 表单 */}
           <form onSubmit={(e) => { e.preventDefault() }} className="space-y-6">
           {/* 分类 */}
           <div>
@@ -511,21 +511,21 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
           </div>
 
           {/* 优先级 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <AlertCircle className="w-4 h-4 inline mr-2" />
-              优先级
-            </label>
-            <select
-              value={formData.priority}
-              onChange={(e) => setFormData(prevData => ({ ...prevData, priority: parseInt(e.target.value) }))}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
-            >
-              <option value={0}>普通</option>
-              <option value={1}>重要</option>
-              <option value={2}>紧急</option>
-            </select>
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <AlertCircle className="w-4 h-4 inline mr-2" />
+                优先级
+              </label>
+              <select
+                value={formData.priority}
+                onChange={(e) => setFormData(prevData => ({ ...prevData, priority: parseInt(e.target.value) }))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-transparent"
+              >
+                <option value={0}>普通</option>
+                <option value={1}>重要</option>
+                <option value={2}>紧急</option>
+              </select>
+            </div>
 
           {/* 批量报名功能 - 仅当分类为"通知"时显示 */}
           {formData.category === '通知' && (
@@ -542,7 +542,7 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
                   <CheckCircle className="w-4 h-4 mr-1" />
                   启用批量报名功能（会员可在此通知中统一报名多个活动）
                 </label>
-              </div>
+          </div>
 
               {isRegistrationNotice && (
               <div className="mt-4 p-4 bg-blue-50 rounded-lg">

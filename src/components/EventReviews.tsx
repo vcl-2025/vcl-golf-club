@@ -1440,264 +1440,264 @@ export default function EventReviews() {
                 {/* 标题 */}
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">{selectedEvent.title}</h2>
                 
-                {/* 活动信息 */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <div className="flex items-center text-gray-600">
-                    <Calendar className="w-5 h-5 mr-3 text-golf-500" />
-                    <div>
-                      <div className="font-medium">活动日期</div>
-                      <div className="text-sm">{formatDate(selectedEvent.start_time)}</div>
-                    </div>
+              {/* 活动信息 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="flex items-center text-gray-600">
+                  <Calendar className="w-5 h-5 mr-3 text-golf-500" />
+                  <div>
+                    <div className="font-medium">活动日期</div>
+                    <div className="text-sm">{formatDate(selectedEvent.start_time)}</div>
                   </div>
-                  <div className="flex items-center text-gray-600">
-                    <MapPin className="w-5 h-5 mr-3 text-golf-500" />
-                    <div>
-                      <div className="font-medium">活动地点</div>
-                      <div className="text-sm">{selectedEvent.location}</div>
-                    </div>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <MapPin className="w-5 h-5 mr-3 text-golf-500" />
+                  <div>
+                    <div className="font-medium">活动地点</div>
+                    <div className="text-sm">{selectedEvent.location}</div>
                   </div>
-                  <div className="flex items-center text-gray-600">
-                    <Users className="w-5 h-5 mr-3 text-golf-500" />
-                    <div>
-                      <div className="font-medium">参与人数</div>
-                      <div className="text-sm">最多 {selectedEvent.max_participants} 人</div>
-                    </div>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <Users className="w-5 h-5 mr-3 text-golf-500" />
+                  <div>
+                    <div className="font-medium">参与人数</div>
+                    <div className="text-sm">最多 {selectedEvent.max_participants} 人</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 文章内容 */}
+              <div className="prose max-w-none">
+                <TinyMCEViewer content={selectedEvent.article_content || ''} />
+              </div>
+
+              {/* 发布时间 */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="flex items-center text-sm text-gray-500">
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span>发布于 {formatDate(selectedEvent.article_published_at || '')}</span>
+                </div>
+              </div>
+
+              {/* 回复区域 */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <MessageCircle className="w-5 h-5 mr-2 text-[#F15B98]" />
+                    <h3 className="text-lg font-semibold text-gray-900">回复</h3>
+                  </div>
+                  {/* 统计显示 */}
+                  <div className="text-sm">
+                    <span className="text-red-500 font-semibold">{countAllReplies(replies)}</span>
+                    <span className="text-gray-600 ml-1">条评论</span>
+                    <span className="text-gray-600 mx-1">/</span>
+                    <span className="text-red-500 font-semibold">
+                      {getAllUserIds(replies).size}
+                    </span>
+                    <span className="text-gray-600 ml-1">人参与</span>
                   </div>
                 </div>
 
-                {/* 文章内容 */}
-                <div className="prose max-w-none">
-                  <TinyMCEViewer content={selectedEvent.article_content || ''} />
-                </div>
-
-                {/* 发布时间 */}
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Clock className="w-4 h-4 mr-2" />
-                    <span>发布于 {formatDate(selectedEvent.article_published_at || '')}</span>
+                {/* 回复列表 */}
+                {loadingReplies ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F15B98] mx-auto"></div>
+                    <p className="text-gray-500 mt-2 text-sm">加载回复中...</p>
                   </div>
-                </div>
-
-                {/* 回复区域 */}
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <MessageCircle className="w-5 h-5 mr-2 text-[#F15B98]" />
-                      <h3 className="text-lg font-semibold text-gray-900">回复</h3>
-                    </div>
-                    {/* 统计显示 */}
-                    <div className="text-sm">
-                      <span className="text-red-500 font-semibold">{countAllReplies(replies)}</span>
-                      <span className="text-gray-600 ml-1">条评论</span>
-                      <span className="text-gray-600 mx-1">/</span>
-                      <span className="text-red-500 font-semibold">
-                        {getAllUserIds(replies).size}
-                      </span>
-                      <span className="text-gray-600 ml-1">人参与</span>
-                    </div>
+                ) : replies.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm">暂无回复，快来发表第一条回复吧！</p>
                   </div>
+                ) : (
+                  <div className="space-y-4 mb-6">
+                    {replies.map((reply) => (
+                      <ReplyItem
+                        key={reply.id}
+                        reply={reply}
+                        user={user}
+                        userProfile={userProfile}
+                        onStartEditing={handleStartEditing}
+                        onDelete={handleDeleteReply}
+                        onStartReplying={handleStartReplying}
+                        formatDate={formatDate}
+                      />
+                    ))}
+                  </div>
+                )}
 
-                  {/* 回复列表 */}
-                  {loadingReplies ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#F15B98] mx-auto"></div>
-                      <p className="text-gray-500 mt-2 text-sm">加载回复中...</p>
-                    </div>
-                  ) : replies.length === 0 ? (
-                    <div className="text-center py-8 bg-gray-50 rounded-lg">
-                      <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">暂无回复，快来发表第一条回复吧！</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4 mb-6">
-                      {replies.map((reply) => (
-                        <ReplyItem
-                          key={reply.id}
-                          reply={reply}
-                          user={user}
-                          userProfile={userProfile}
-                          onStartEditing={handleStartEditing}
-                          onDelete={handleDeleteReply}
-                          onStartReplying={handleStartReplying}
-                          formatDate={formatDate}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 回复输入框（仅会员可见） */}
-                  {user && userProfile && userProfile.role !== 'guest' ? (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        {/* 用户头像 - 手机端隐藏 */}
-                        <div className="hidden sm:flex flex-shrink-0">
-                          {userProfile.avatar_url ? (
-                            <img
-                              src={userProfile.avatar_url}
-                              alt={userProfile.full_name}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold">
-                              {(userProfile.full_name || '用户').charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* 输入框 */}
-                        <div className="flex-1 relative">
-                          <textarea
-                            ref={mainReplyTextareaRef}
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="写下你的回复..."
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] resize-none"
-                            rows={3}
+                {/* 回复输入框（仅会员可见） */}
+                {user && userProfile && userProfile.role !== 'guest' ? (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      {/* 用户头像 - 手机端隐藏 */}
+                      <div className="hidden sm:flex flex-shrink-0">
+                        {userProfile.avatar_url ? (
+                          <img
+                            src={userProfile.avatar_url}
+                            alt={userProfile.full_name}
+                            className="w-10 h-10 rounded-full object-cover"
                           />
-                          {/* 底部回复也添加图片和emoji支持 */}
-                          <div className="flex items-center gap-2 mt-2">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0]
-                                if (!file) return
-                                try {
-                                  validateImageFile(file)
-                                  const result = await uploadImageToSupabase(file, 'golf-club-images', 'event-replies')
-                                  if (result.success && result.url) {
-                                    setMainReplyImages(prev => [...prev, result.url!])
-                                  }
-                                } catch (error: any) {
-                                  alert(error.message || '图片上传失败')
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold">
+                            {(userProfile.full_name || '用户').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* 输入框 */}
+                      <div className="flex-1 relative">
+                        <textarea
+                          ref={mainReplyTextareaRef}
+                          value={replyContent}
+                          onChange={(e) => setReplyContent(e.target.value)}
+                          placeholder="写下你的回复..."
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] resize-none"
+                          rows={3}
+                        />
+                        {/* 底部回复也添加图片和emoji支持 */}
+                        <div className="flex items-center gap-2 mt-2">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              try {
+                                validateImageFile(file)
+                                const result = await uploadImageToSupabase(file, 'golf-club-images', 'event-replies')
+                                if (result.success && result.url) {
+                                  setMainReplyImages(prev => [...prev, result.url!])
                                 }
-                              }}
-                              className="hidden"
-                              id="main-reply-image-input"
-                            />
+                              } catch (error: any) {
+                                alert(error.message || '图片上传失败')
+                              }
+                            }}
+                            className="hidden"
+                            id="main-reply-image-input"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById('main-reply-image-input')?.click()}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                          >
+                            <ImageIcon className="w-3 h-3" />
+                            <span>图片</span>
+                          </button>
+                          
+                          <div className="relative" ref={mainEmojiPickerRef}>
                             <button
                               type="button"
-                              onClick={() => document.getElementById('main-reply-image-input')?.click()}
+                              onClick={() => setShowMainEmojiPicker(!showMainEmojiPicker)}
                               className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                             >
-                              <ImageIcon className="w-3 h-3" />
-                              <span>图片</span>
+                              <Smile className="w-3 h-3" />
+                              <span>表情</span>
                             </button>
                             
-                            <div className="relative" ref={mainEmojiPickerRef}>
-                              <button
-                                type="button"
-                                onClick={() => setShowMainEmojiPicker(!showMainEmojiPicker)}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            {showMainEmojiPicker && (
+                              <div className="absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3 w-screen max-w-sm sm:w-80 max-h-64 overflow-y-auto z-[100]"
+                                style={{
+                                  maxHeight: '16rem',
+                                  left: '50%',
+                                  transform: 'translateX(-50%) translateY(0)'
+                                }}
                               >
-                                <Smile className="w-3 h-3" />
-                                <span>表情</span>
-                              </button>
-                              
-                              {showMainEmojiPicker && (
-                                <div className="absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3 w-screen max-w-sm sm:w-80 max-h-64 overflow-y-auto z-[100]"
-                                  style={{
-                                    maxHeight: '16rem',
-                                    left: '50%',
-                                    transform: 'translateX(-50%) translateY(0)'
-                                  }}
+                                <div className="grid grid-cols-8 gap-2">
+                                  {COMMON_EMOJIS.map((emoji, index) => (
+                                    <button
+                                      key={index}
+                                      type="button"
+                                      onClick={() => {
+                                        const textarea = mainReplyTextareaRef.current
+                                        if (textarea) {
+                                          const start = textarea.selectionStart
+                                          const end = textarea.selectionEnd
+                                          const newContent = replyContent.substring(0, start) + emoji + replyContent.substring(end)
+                                          setReplyContent(newContent)
+                                          setTimeout(() => {
+                                            textarea.focus()
+                                            textarea.setSelectionRange(start + emoji.length, start + emoji.length)
+                                          }, 0)
+                                        }
+                                        setShowMainEmojiPicker(false)
+                                      }}
+                                      className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* 已上传的图片预览 */}
+                        {mainReplyImages.length > 0 && (
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            {mainReplyImages.map((url, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={url}
+                                  alt={`上传的图片 ${index + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setMainReplyImages(prev => prev.filter((_, i) => i !== index))}
+                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
-                                  <div className="grid grid-cols-8 gap-2">
-                                    {COMMON_EMOJIS.map((emoji, index) => (
-                                      <button
-                                        key={index}
-                                        type="button"
-                                        onClick={() => {
-                                          const textarea = mainReplyTextareaRef.current
-                                          if (textarea) {
-                                            const start = textarea.selectionStart
-                                            const end = textarea.selectionEnd
-                                            const newContent = replyContent.substring(0, start) + emoji + replyContent.substring(end)
-                                            setReplyContent(newContent)
-                                            setTimeout(() => {
-                                              textarea.focus()
-                                              textarea.setSelectionRange(start + emoji.length, start + emoji.length)
-                                            }, 0)
-                                          }
-                                          setShowMainEmojiPicker(false)
-                                        }}
-                                        className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
-                                      >
-                                        {emoji}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
                           </div>
-                          
-                          {/* 已上传的图片预览 */}
-                          {mainReplyImages.length > 0 && (
-                            <div className="mt-3 grid grid-cols-3 gap-2">
-                              {mainReplyImages.map((url, index) => (
-                                <div key={index} className="relative group">
-                                  <img
-                                    src={url}
-                                    alt={`上传的图片 ${index + 1}`}
-                                    className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => setMainReplyImages(prev => prev.filter((_, i) => i !== index))}
-                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {/* 提交按钮 */}
-                          <div className="flex items-center justify-end gap-2 mt-2">
-                            <button
-                              onClick={() => {
-                                // 组合文本和图片，图片放在文字前面
-                                let finalContent = replyContent.trim()
-                                if (mainReplyImages.length > 0) {
-                                  const imageTags = mainReplyImages.map(url => `[IMAGE:${url}]`).join('')
-                                  finalContent = imageTags + (finalContent ? ' ' + finalContent : '')
-                                }
-                                handleSubmitReply(null, finalContent)
-                                setReplyContent('')
-                                setMainReplyImages([])
-                              }}
-                              disabled={(!replyContent.trim() && mainReplyImages.length === 0) || submittingReply}
-                              className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                              {submittingReply ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                  <span>提交中...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="w-4 h-4 mr-2" />
-                                  <span>发表回复</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
+                        )}
+                        
+                        {/* 提交按钮 */}
+                        <div className="flex items-center justify-end gap-2 mt-2">
+                          <button
+                            onClick={() => {
+                              // 组合文本和图片，图片放在文字前面
+                              let finalContent = replyContent.trim()
+                              if (mainReplyImages.length > 0) {
+                                const imageTags = mainReplyImages.map(url => `[IMAGE:${url}]`).join('')
+                                finalContent = imageTags + (finalContent ? ' ' + finalContent : '')
+                              }
+                              handleSubmitReply(null, finalContent)
+                              setReplyContent('')
+                              setMainReplyImages([])
+                            }}
+                            disabled={(!replyContent.trim() && mainReplyImages.length === 0) || submittingReply}
+                            className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {submittingReply ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                <span>提交中...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-4 h-4 mr-2" />
+                                <span>发表回复</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-gray-50 rounded-lg p-4 text-center">
-                      <p className="text-gray-500 text-sm">
-                        {user ? '只有会员可以回复' : '请登录后回复'}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-4 text-center">
+                    <p className="text-gray-500 text-sm">
+                      {user ? '只有会员可以回复' : '请登录后回复'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+        </div>
         </div>,
         document.body
       )}
@@ -1809,7 +1809,7 @@ export default function EventReviews() {
             <div className="flex items-center justify-center mb-4">
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
-              </div>
+        </div>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">确认删除</h3>
             <p className="text-gray-600 text-center mb-6">确定要删除这条回复吗？</p>

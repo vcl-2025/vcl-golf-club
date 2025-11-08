@@ -97,8 +97,8 @@ export default function InformationCenterDetailPage() {
     
     // 先尝试使用 RPC 函数
     const { error: rpcError } = await supabase.rpc('increment_information_item_views', {
-      item_id: itemId
-    })
+        item_id: itemId
+      })
 
     // 如果 RPC 不存在（404）或其他错误，直接更新
     if (rpcError) {

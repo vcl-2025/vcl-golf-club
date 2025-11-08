@@ -144,14 +144,14 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
           }
         }
       `}</style>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="bg-gradient-to-br from-[#F15B98]/10 to-[#F15B98]/5 rounded-2xl p-3 sm:p-4 border border-[#F15B98]/20 relative overflow-hidden">
         {/* 背景装饰动画 */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#F15B98] rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-golf-400 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
-        
+
         <div className="relative z-10">
           <div className="flex items-center mb-3 sm:mb-4">
             <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-golf-400 mr-2 sm:mr-3 animate-bounce" style={{ fill: 'none', animationDuration: '2s', animationIterationCount: 'infinite' }} />
@@ -178,11 +178,11 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                 opacity: 0
               }}
             >
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">支持项目</div>
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">支持项目</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-golf-400 to-[#F15B98]">
                 {investments.length}
               </div>
-            </div>
+          </div>
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
               style={{ 
@@ -190,11 +190,11 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                 opacity: 0
               }}
             >
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">待确认</div>
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">待确认</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-orange-500">
                 {getStatusCount('pending')}
               </div>
-            </div>
+          </div>
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
               style={{ 
@@ -202,7 +202,7 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                 opacity: 0
               }}
             >
-              <div className="text-xs sm:text-sm text-gray-600 mb-1">已确认</div>
+            <div className="text-xs sm:text-sm text-gray-600 mb-1">已确认</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
                 {getStatusCount('confirmed')}
               </div>
@@ -307,7 +307,7 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
           <p className="text-gray-600 mb-6">开始支持您喜欢的项目，为俱乐部的发展贡献力量</p>
         </div>
       )}
-      </div>
+    </div>
     </>
   )
 }

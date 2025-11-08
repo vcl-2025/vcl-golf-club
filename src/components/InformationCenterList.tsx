@@ -211,18 +211,18 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
 
       // 增加浏览次数
       if (currentItemFull) {
-        // 先尝试使用 RPC 函数
+          // 先尝试使用 RPC 函数
         const { error: rpcError } = await supabase.rpc('increment_information_item_views', {
-          item_id: itemId
-        })
+            item_id: itemId
+          })
         
         // 如果 RPC 不存在（404）或其他错误，直接更新
         if (rpcError) {
           try {
-            await supabase
-              .from('information_items')
+          await supabase
+            .from('information_items')
               .update({ view_count: (currentItemFull.view_count || 0) + 1 })
-              .eq('id', itemId)
+            .eq('id', itemId)
           } catch (updateErr) {
             console.error('更新浏览次数失败:', updateErr)
           }
@@ -286,127 +286,127 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-golf-400/5 to-transparent rounded-full blur-2xl -ml-12 -mb-12"></div>
       
       <div className="relative z-10">
-        {/* 筛选器 */}
+      {/* 筛选器 */}
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm p-3 sm:p-6 mb-4 sm:mb-6">
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="flex items-center">
-              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2" />
+        <div className="flex items-center justify-between mb-2 sm:mb-4">
+          <div className="flex items-center">
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2" />
               <h4 className="text-base sm:text-lg font-semibold text-gray-900">筛选条件</h4>
-              {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
-                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
-                  已筛选
-                </span>
-              )}
-            </div>
-            
-            {/* 移动端折叠按钮 */}
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="md:hidden flex items-center text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              {isExpanded ? (
-                <>
-                  <span className="text-xs mr-1">收起</span>
-                  <ChevronUp className="w-3 h-3" />
-                </>
-              ) : (
-                <>
-                  <span className="text-xs mr-1">展开</span>
-                  <ChevronDown className="w-3 h-3" />
-                </>
-              )}
-            </button>
+            {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
+              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
+                已筛选
+              </span>
+            )}
           </div>
           
-          {/* 桌面端始终显示，移动端根据状态显示 */}
-          <div className={`flex flex-col gap-3 sm:gap-4 ${isExpanded ? 'flex' : 'hidden md:flex'}`}>
-            {/* 标题搜索 - 独占一行 */}
-            <div className="w-full">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                搜索
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="搜索标题、内容..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+          {/* 移动端折叠按钮 */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="md:hidden flex items-center text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            {isExpanded ? (
+              <>
+                <span className="text-xs mr-1">收起</span>
+                <ChevronUp className="w-3 h-3" />
+              </>
+            ) : (
+              <>
+                <span className="text-xs mr-1">展开</span>
+                <ChevronDown className="w-3 h-3" />
+              </>
+            )}
+          </button>
+        </div>
+        
+        {/* 桌面端始终显示，移动端根据状态显示 */}
+        <div className={`flex flex-col gap-3 sm:gap-4 ${isExpanded ? 'flex' : 'hidden md:flex'}`}>
+          {/* 标题搜索 - 独占一行 */}
+          <div className="w-full">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+              搜索
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="搜索标题、内容..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] text-sm bg-white"
-                />
-              </div>
-            </div>
-
-            {/* 分类和优先级 - 放在一行 */}
-            <div className="flex flex-row gap-3 sm:gap-4">
-              {/* 分类筛选 */}
-              <div className="w-32 sm:w-40">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                  分类
-                </label>
-                <div className="relative">
-                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
-                  >
-                    <option value="all">全部分类</option>
-                    <option value="公告">公告</option>
-                    <option value="通知">通知</option>
-                    <option value="重要资料">重要资料</option>
-                    <option value="规则章程">规则章程</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* 优先级筛选 */}
-              <div className="w-32 sm:w-40">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                  优先级
-                </label>
-                <div className="relative">
-                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <select
-                    value={priorityFilter}
-                    onChange={(e) => setPriorityFilter(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
-                  >
-                    <option value="all">全部</option>
-                    <option value="0">普通</option>
-                    <option value="1">重要</option>
-                    <option value="2">紧急</option>
-                  </select>
-                </div>
-              </div>
+              />
             </div>
           </div>
 
-          {/* 清除过滤器按钮 */}
-          {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
-            <div className="mt-2 sm:mt-4 flex justify-end">
-              <button
-                onClick={() => {
-                  setSearchTerm('')
-                  setCategoryFilter('all')
-                  setPriorityFilter('all')
-                }}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
-              >
-                清除所有筛选
-              </button>
+          {/* 分类和优先级 - 放在一行 */}
+          <div className="flex flex-row gap-3 sm:gap-4">
+            {/* 分类筛选 */}
+            <div className="w-32 sm:w-40">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                分类
+              </label>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
+                >
+                  <option value="all">全部分类</option>
+                  <option value="公告">公告</option>
+                  <option value="通知">通知</option>
+                  <option value="重要资料">重要资料</option>
+                  <option value="规则章程">规则章程</option>
+                </select>
+              </div>
             </div>
-          )}
 
-          {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
-            <div className="mt-4 text-sm text-gray-600">
-              共找到 {filteredItems.length} 条信息
+            {/* 优先级筛选 */}
+            <div className="w-32 sm:w-40">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                优先级
+              </label>
+              <div className="relative">
+                <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
+                >
+                  <option value="all">全部</option>
+                  <option value="0">普通</option>
+                  <option value="1">重要</option>
+                  <option value="2">紧急</option>
+                </select>
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* 信息列表 - 统一列表显示 */}
-        <div className="space-y-4">
+        {/* 清除过滤器按钮 */}
+        {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
+          <div className="mt-2 sm:mt-4 flex justify-end">
+            <button
+              onClick={() => {
+                setSearchTerm('')
+                setCategoryFilter('all')
+                setPriorityFilter('all')
+              }}
+                className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
+            >
+              清除所有筛选
+            </button>
+          </div>
+        )}
+
+          {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
+        <div className="mt-4 text-sm text-gray-600">
+          共找到 {filteredItems.length} 条信息
+        </div>
+          )}
+      </div>
+
+      {/* 信息列表 - 统一列表显示 */}
+      <div className="space-y-4">
         {filteredItems.map((item) => {
           return (
             <div
@@ -437,15 +437,15 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
               {/* 内容区域 */}
               <div className="relative z-10">
                 <div className="flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* 标题行 */}
+                <div className="flex-1 min-w-0">
+                  {/* 标题行 */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      {item.is_pinned && (
+                    {item.is_pinned && (
                         <Pin className="w-4 h-4 text-[#F15B98] flex-shrink-0 group-hover:scale-110 transition-transform duration-300" />
-                      )}
+                    )}
                       <h3 className={`text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2 ${
-                        !item.is_read ? 'font-bold' : ''
-                      }`}>
+                      !item.is_read ? 'font-bold' : ''
+                    }`}>
                         {!item.is_read && (item.category === '通知' || item.category === '公告') && (
                           <span className="text-[#F15B98] flex-shrink-0 text-xs animate-pulse">●</span>
                         )}
@@ -476,55 +476,55 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
                           ) : null
                         })()}
                       </h3>
-                    </div>
+                  </div>
 
-                    {/* 摘要 */}
-                    {item.excerpt && (
+                  {/* 摘要 */}
+                  {item.excerpt && (
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2 group-hover:text-gray-700 transition-colors duration-300">
-                        {item.excerpt}
-                      </p>
-                    )}
+                      {item.excerpt}
+                    </p>
+                  )}
 
-                    {/* 元信息 */}
+                  {/* 元信息 */}
                     <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
-                      {item.published_at && (
+                    {item.published_at && (
                         <div className="flex items-center group-hover:text-gray-700 transition-colors duration-300">
                           <Calendar className="w-3 h-3 mr-1 text-[#F15B98]" />
-                          <span>{formatDate(item.published_at)}</span>
-                        </div>
-                      )}
-                      {item.expires_at && (
-                        <div className="flex items-center text-[#F15B98]">
-                          <Clock className="w-3 h-3 mr-1" />
-                          <span>有效期至 {formatDate(item.expires_at)}</span>
-                        </div>
-                      )}
+                        <span>{formatDate(item.published_at)}</span>
+                      </div>
+                    )}
+                    {item.expires_at && (
+                      <div className="flex items-center text-[#F15B98]">
+                        <Clock className="w-3 h-3 mr-1" />
+                        <span>有效期至 {formatDate(item.expires_at)}</span>
+                      </div>
+                    )}
                       <div className="flex items-center group-hover:text-gray-700 transition-colors duration-300">
                         <Eye className="w-3 h-3 mr-1 text-gray-400" />
-                        <span>{item.view_count} 次阅读</span>
-                      </div>
-                      {item.attachments && item.attachments.length > 0 && (
-                        <div className="flex items-center text-[#F15B98]">
-                          <Paperclip className="w-3 h-3 mr-1" />
-                          <span>{item.attachments.length} 个附件</span>
-                        </div>
-                      )}
+                      <span>{item.view_count} 次阅读</span>
                     </div>
+                    {item.attachments && item.attachments.length > 0 && (
+                      <div className="flex items-center text-[#F15B98]">
+                          <Paperclip className="w-3 h-3 mr-1" />
+                        <span>{item.attachments.length} 个附件</span>
+                      </div>
+                    )}
                   </div>
+                </div>
 
                   {/* 右侧区域：图片和箭头 */}
                   <div className="relative flex-shrink-0">
-                    {/* 封面图 */}
-                    {item.featured_image_url && (
+                {/* 封面图 */}
+                {item.featured_image_url && (
                       <div className="relative">
-                        <img
-                          src={item.featured_image_url}
-                          alt={item.title}
+                  <img
+                    src={item.featured_image_url}
+                    alt={item.title}
                           className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg transition-all duration-300 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </div>
-                    )}
+                )}
                   </div>
                 </div>
               </div>
@@ -536,15 +536,15 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
             </div>
           )
         })}
-        </div>
+      </div>
 
-        {/* 无数据提示 */}
-        {filteredItems.length === 0 && (
-          <div className="text-center py-12">
-            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">暂无信息</p>
-          </div>
-        )}
+      {/* 无数据提示 */}
+      {filteredItems.length === 0 && (
+        <div className="text-center py-12">
+          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">暂无信息</p>
+        </div>
+      )}
       </div>
     </div>
   )

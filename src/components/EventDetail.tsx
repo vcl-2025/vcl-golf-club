@@ -709,30 +709,30 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   // Modal模式（原有代码）
   return (
     <>
-      <div 
+    <div 
         className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-0 sm:p-4 overflow-hidden transition-opacity duration-200 ${
           isClosing ? 'opacity-0' : 'opacity-100'
         }`}
-        onTouchMove={(e) => e.preventDefault()}
-        onWheel={(e) => e.preventDefault()}
+      onTouchMove={(e) => e.preventDefault()}
+      onWheel={(e) => e.preventDefault()}
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             handleCloseModal()
           }
         }}
-      >
+    >
         <div className={`bg-white rounded-none sm:rounded-2xl w-full h-full sm:h-auto max-w-6xl sm:max-h-[90vh] flex flex-col relative mx-auto transition-transform duration-200 ${
           isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
         }`}>
           {/* 固定头部 */}
           <div className="sticky top-0 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-4 sm:px-6 py-4 shadow-sm">
-            <button
+          <button
               onClick={handleCloseModal}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-            >
+          >
               <ChevronLeft className="w-5 h-5 mr-1" />
               <span className="text-base font-medium">返回列表</span>
-            </button>
+          </button>
             <button
               onClick={handleShare}
               className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
@@ -740,7 +740,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
               <Share2 className="w-4 h-4 mr-2" />
               分享
             </button>
-          </div>
+        </div>
 
           {/* 可滚动内容 */}
           <div className="flex-1 overflow-y-auto">
@@ -915,7 +915,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                 )}
               </div>
             </div>
-          </div>
+              </div>
             </div>
           </div>
         </div>
