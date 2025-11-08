@@ -911,7 +911,7 @@ export default function Dashboard() {
         }
       `}</style>
       {/* Header */}
-      <header className="shadow-sm border-b sticky top-0 z-50" style={{ backgroundColor: '#000000', borderColor: 'rgba(255,255,255,0.1)' }}>
+      <header className="shadow-sm border-b sticky top-0 z-50" style={{ backgroundColor: '#68A85A', borderColor: 'rgba(255,255,255,0.2)' }}>
         <div className="max-w-[1280px] mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
           <div className="flex justify-between items-center">
             {/* Logo and Brand */}

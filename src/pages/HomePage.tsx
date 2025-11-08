@@ -1,182 +1,150 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
-  Trophy, Calendar, MapPin, Users, ArrowRight, LogIn,
-  ChevronRight, Clock, Star, ChevronDown,
-  Phone, Mail, Shield, BarChart3, Zap, MessageCircle, Send,
-  Image as ImageIcon, Smile, X
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Users, Trophy, Calendar, Star, LogIn, Menu, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
-import TinyMCEViewer from '../components/TinyMCEViewer'
-import { uploadImageToSupabase, validateImageFile } from '../utils/imageUpload'
-import { useAuth } from '../hooks/useAuth'
-
-// 常用emoji列表
-const COMMON_EMOJIS = [
-  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
-  '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙',
-  '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '👏', '🙌', '👐',
-  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
-  '💯', '🔥', '⭐', '🌟', '✨', '🎉', '🎊', '🎈', '🎁', '🏆',
-  '⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸',
-  '⛳', '🏌️', '🏌️‍♂️', '🏌️‍♀️', '🏌', '🏌‍♂️', '🏌‍♀️', '⛳', '🏌', '🏌‍♂️',
-  '🎯', '🎲', '🎮', '🎰', '🎨', '🎭', '🎪', '🎬', '🎤', '🎧',
-  '🍕', '🍔', '🍟', '🌭', '🍿', '🧂', '🥓', '🥚', '🍳', '🥞',
-  '☕', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃'
-]
-
-// 辅助函数：解析内容中的图片
-const parseContent = (content: string) => {
-  const parts: Array<{ type: 'text' | 'image'; content: string }> = []
-  const imageRegex = /\[IMAGE:(https?:\/\/[^\]]+)\]/g
-  let lastIndex = 0
-  let match
-
-  while ((match = imageRegex.exec(content)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push({ type: 'text', content: content.substring(lastIndex, match.index) })
-    }
-    parts.push({ type: 'image', content: match[1] })
-    lastIndex = match.index + match[0].length
-  }
-
-  if (lastIndex < content.length) {
-    parts.push({ type: 'text', content: content.substring(lastIndex) })
-  }
-
-  return parts.length > 0 ? parts : [{ type: 'text', content }]
-}
-
-interface Reply {
-  id: string
-  event_id: string
-  user_id: string
-  content: string
-  created_at: string
-  updated_at: string
-  parent_reply_id?: string | null
-  user_profile?: {
-    full_name: string
-    avatar_url?: string
-  }
-  child_replies?: Reply[]
-}
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const [navScrolled, setNavScrolled] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [carouselIndex, setCarouselIndex] = useState(0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
+  const carouselTrackRef = useRef<HTMLDivElement>(null)
+  const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [replies, setReplies] = useState<Reply[]>([])
-  const [loadingReplies, setLoadingReplies] = useState(false)
-  const [replyContent, setReplyContent] = useState('')
-  const [submittingReply, setSubmittingReply] = useState(false)
-  const [userProfile, setUserProfile] = useState<any>(null)
-  const [mainReplyImages, setMainReplyImages] = useState<string[]>([])
-  const [showMainEmojiPicker, setShowMainEmojiPicker] = useState(false)
-  const mainReplyTextareaRef = useRef<HTMLTextAreaElement>(null)
-  const mainEmojiPickerRef = useRef<HTMLDivElement>(null)
-  const [imageViewerOpen, setImageViewerOpen] = useState(false)
-  const [imageViewerImages, setImageViewerImages] = useState<string[]>([])
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  
+  // 滚动动画 refs
+  const aboutTextRef = useRef<HTMLDivElement>(null)
+  const aboutImageRef = useRef<HTMLDivElement>(null)
+  const activitiesTitleRef = useRef<HTMLDivElement>(null)
+  const galleryTitleRef = useRef<HTMLDivElement>(null)
+  const [visibleElements, setVisibleElements] = useState<Set<string>>(new Set())
+
+  // 活动回顾图片数据
+  const activityImages = [
+    {
+      src: 'https://images.unsplash.com/photo-1592919505780-303950717480?q=80&w=2070',
+      date: 'March 15, 2025',
+      title: '春季女子錦標賽',
+      location: 'Mayfair Lakes',
+      participants: '48 Players'
+    },
+    {
+      src: 'https://images.unsplash.com/photo-1530028828-25e8270d5d0a?q=80&w=2070',
+      date: 'February 20, 2025',
+      title: '專業技術培訓課程',
+      location: 'Richmond',
+      participants: '32 Members'
+    },
+    {
+      src: 'https://images.unsplash.com/photo-1596727362302-b8d891c42ab8?q=80&w=2070',
+      date: 'January 18, 2025',
+      title: '新年慈善友誼賽',
+      location: 'Quilchena',
+      participants: '60 Participants'
+    }
+  ]
+
+  // 会员风采图片
+  const galleryImages = [
+    'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?q=80&w=2070',
+    'https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?q=80&w=2070',
+    'https://images.unsplash.com/photo-1592919505780-303950717480?q=80&w=2070',
+    'https://images.unsplash.com/photo-1530028828-25e8270d5d0a?q=80&w=2070',
+    'https://images.unsplash.com/photo-1596727362302-b8d891c42ab8?q=80&w=2070',
+    'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2070'
+  ]
 
   useEffect(() => {
     fetchPublishedArticles()
-    if (user) {
-      fetchUserProfile()
-    }
     
-    // 检测视频是否存在，如果存在则显示视频，否则显示图片
-    const video = document.getElementById('hero-video') as HTMLVideoElement
-    const image = document.getElementById('hero-image') as HTMLElement
-    
-    if (video && image) {
-      // 默认显示图片
-      image.classList.remove('hidden')
-      
-      // 尝试加载视频
-      video.addEventListener('loadeddata', () => {
-        // 视频加载成功，显示视频并隐藏图片
-        video.classList.remove('hidden')
-        video.classList.add('block')
-        image.classList.add('hidden')
-      })
-      
-      video.addEventListener('error', () => {
-        // 视频加载失败，保持显示图片
-        video.classList.add('hidden')
-        image.classList.remove('hidden')
-      })
-      
-      // 尝试加载视频
-      video.load()
-    }
-  }, [user])
-
-  useEffect(() => {
-    if (selectedEvent) {
-      fetchReplies(selectedEvent.id)
-      // 禁止背景滚动
-      document.body.style.overflow = 'hidden'
-    } else {
-      setReplies([])
-      // 恢复背景滚动
-      document.body.style.overflow = ''
-    }
-    
-    // 清理函数
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [selectedEvent])
-
-  // 点击外部关闭主回复的emoji选择器
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (mainEmojiPickerRef.current && !mainEmojiPickerRef.current.contains(event.target as Node)) {
-        setShowMainEmojiPicker(false)
+    // Navbar scroll effect
+    const handleScroll = () => {
+      if (window.scrollY > 100) {
+        setNavScrolled(true)
+      } else {
+        setNavScrolled(false)
       }
     }
-    if (showMainEmojiPicker) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showMainEmojiPicker])
 
-  // 当图片查看器打开时，禁止背景滚动
-  useEffect(() => {
-    if (imageViewerOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
+    // Window resize handler
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
     }
-    
+
+    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('resize', handleResize)
     return () => {
-      document.body.style.overflow = ''
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleResize)
     }
-  }, [imageViewerOpen])
+  }, [])
+
+  // Intersection Observer for scroll animations
+  useEffect(() => {
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const elementId = entry.target.getAttribute('data-animate-id')
+          if (elementId) {
+            setVisibleElements((prev) => new Set([...prev, elementId]))
+          }
+        }
+      })
+    }, observerOptions)
+
+    // Wait for DOM to update before observing
+    const timeoutId = setTimeout(() => {
+      const elements = document.querySelectorAll('[data-animate-id]')
+      elements.forEach((el) => observer.observe(el))
+    }, 100)
+
+    return () => {
+      clearTimeout(timeoutId)
+      const elements = document.querySelectorAll('[data-animate-id]')
+      elements.forEach((el) => observer.unobserve(el))
+    }
+  }, [events, loading])
+
+  useEffect(() => {
+    // Carousel auto scroll
+    const startAutoScroll = () => {
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current)
+      }
+      autoScrollIntervalRef.current = setInterval(() => {
+        nextSlide()
+      }, 3000)
+    }
+
+    startAutoScroll()
+    return () => {
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current)
+      }
+    }
+  }, [carouselIndex])
 
   const fetchPublishedArticles = async () => {
     try {
       setLoading(true)
+      if (!supabase) return
       
-      if (!supabase) {
-        console.error('Supabase 未初始化')
-        return
-      }
-      
-      // 获取已发布且公开的活动回顾（所有人可见，不需要认证）
       const { data, error } = await supabase
         .from('events')
         .select('*')
         .eq('article_published', true)
         .eq('is_public', true)
         .order('article_published_at', { ascending: false })
-        .limit(6) // 只显示最近6条
+        .limit(3)
 
       if (error) throw error
       setEvents(data || [])
@@ -187,1017 +155,910 @@ export default function HomePage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+  const getItemsPerPage = () => {
+    if (windowWidth <= 768) return 1
+    if (windowWidth <= 1024) return 2
+    return 3
   }
 
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    })
-  }
+  const maxIndex = Math.max(0, galleryImages.length - getItemsPerPage())
 
-  const fetchUserProfile = async () => {
-    if (!user) return
+  const updateCarousel = (newIndex: number) => {
+    if (isTransitioning) return
+    setIsTransitioning(true)
+    setCarouselIndex(newIndex)
     
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle()
-    
-    setUserProfile(data)
-  }
-
-  const fetchReplies = async (eventId: string) => {
-    try {
-      setLoadingReplies(true)
-      
-      const { data, error } = await supabase
-        .from('event_replies')
-        .select(`
-          *,
-          user_profiles!inner (
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq('event_id', eventId)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-      
-      // 处理数据格式，将user_profiles映射为user_profile
-      const allReplies = (data || []).map((reply: any) => ({
-        ...reply,
-        user_profile: reply.user_profiles,
-        child_replies: []
-      }))
-      
-      // 组织成树形结构
-      const rootReplies: Reply[] = []
-      const replyMap = new Map<string, Reply>()
-      
-      // 先创建所有回复的映射
-      allReplies.forEach(reply => {
-        replyMap.set(reply.id, reply)
-      })
-      
-      // 构建树形结构
-      allReplies.forEach(reply => {
-        if (!reply.parent_reply_id) {
-          rootReplies.push(reply)
-        } else {
-          const parent = replyMap.get(reply.parent_reply_id)
-          if (parent) {
-            if (!parent.child_replies) {
-              parent.child_replies = []
-            }
-            parent.child_replies.push(reply)
-          }
-        }
-      })
-      
-      setReplies(rootReplies)
-    } catch (error) {
-      console.error('获取回复失败:', error)
-    } finally {
-      setLoadingReplies(false)
-    }
-  }
-
-  // 递归计算所有回复数量（包括嵌套回复）
-  const countAllReplies = (replies: Reply[]): number => {
-    return replies.reduce((count, reply) => {
-      return count + 1 + (reply.child_replies ? countAllReplies(reply.child_replies) : 0)
-    }, 0)
-  }
-
-  // 递归获取所有用户ID（包括嵌套回复）
-  const getAllUserIds = (replies: Reply[]): Set<string> => {
-    const userIds = new Set<string>()
-    replies.forEach(reply => {
-      if (reply.user_id) {
-        userIds.add(reply.user_id)
-      }
-      if (reply.child_replies) {
-        getAllUserIds(reply.child_replies).forEach(id => userIds.add(id))
-      }
-    })
-    return userIds
-  }
-
-  const handleSubmitReply = async (parentId: string | null, content: string) => {
-    if (!selectedEvent || !user || !content.trim()) return
-    
-    // 检查是否是会员
-    if (!userProfile || userProfile.role === 'guest') {
-      alert('只有会员可以回复')
-      return
+    if (carouselTrackRef.current) {
+      const itemWidth = carouselTrackRef.current.children[0]?.clientWidth || 0
+      const gap = 30
+      const offset = -(newIndex * (itemWidth + gap))
+      carouselTrackRef.current.style.transform = `translateX(${offset}px)`
     }
 
-    try {
-      setSubmittingReply(true)
-      
-      const { data, error } = await supabase
-        .from('event_replies')
-        .insert({
-          event_id: selectedEvent.id,
-          user_id: user.id,
-          content: content.trim(),
-          parent_reply_id: parentId || null
-        })
-        .select(`
-          *,
-          user_profiles!inner (
-            full_name,
-            avatar_url
-          )
-        `)
-        .single()
-
-      if (error) throw error
-      
-      // 重新获取所有回复
-      await fetchReplies(selectedEvent.id)
-      
-      // 清空输入框和关闭 modal
-      if (parentId) {
-        // 如果是回复别人的回复，不需要清空主回复框
-      } else {
-        setReplyContent('')
-        setMainReplyImages([])
-      }
-    } catch (error) {
-      console.error('提交回复失败:', error)
-      alert('提交回复失败，请重试')
-    } finally {
-      setSubmittingReply(false)
-    }
+    setTimeout(() => {
+      setIsTransitioning(false)
+    }, 600)
   }
 
-  const formatReplyDate = useCallback((dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    
-    if (days === 0) {
-      const hours = Math.floor(diff / (1000 * 60 * 60))
-      if (hours === 0) {
-        const minutes = Math.floor(diff / (1000 * 60))
-        return minutes <= 0 ? '刚刚' : `${minutes}分钟前`
-      }
-      return `${hours}小时前`
-    } else if (days === 1) {
-      return '昨天'
-    } else if (days < 7) {
-      return `${days}天前`
-    } else {
-      return date.toLocaleDateString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      })
+  const nextSlide = () => {
+    const newIndex = carouselIndex >= maxIndex ? 0 : carouselIndex + 1
+    updateCarousel(newIndex)
+  }
+
+  const prevSlide = () => {
+    const newIndex = carouselIndex <= 0 ? maxIndex : carouselIndex - 1
+    updateCarousel(newIndex)
+  }
+
+  const goToIndex = (index: number) => {
+    updateCarousel(index)
+  }
+
+  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+    e.preventDefault()
+    const element = document.getElementById(targetId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
-  }, [])
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-golf-50 via-white to-golf-100">
-      {/* 顶部导航栏 */}
-      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-2 sm:py-2.5 lg:py-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 bg-white p-1 border-2 border-golf-700">
-                <img src="/logo-192x192.png" alt="溫哥華華人女子高爾夫俱樂部" className="w-full h-full object-cover" />
+    <div className="min-h-screen" style={{ fontFamily: '"Montserrat", sans-serif', background: '#1a1a1a', color: '#fff' }}>
+      <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+          --primary: #43a047;
+          --accent: #ec407a;
+          --pink: #f06292;
+          --dark: #1a1a1a;
+          --light: #f8f6f3;
+        }
+
+        @keyframes fadeInUp {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+        }
+
+        @keyframes float {
+          0%, 100% {
+            transform: translateX(-50%) translateY(0);
+          }
+          50% {
+            transform: translateX(-50%) translateY(-15px);
+          }
+        }
+
+        .animate-fade-in {
+          animation: fadeInUp 1s 0.3s forwards;
+        }
+
+        .animate-fade-in-delay {
+          animation: fadeInUp 1s 0.5s forwards;
+        }
+
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        /* Scroll animations */
+        @keyframes slideInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .scroll-animate {
+          opacity: 0;
+          transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .scroll-animate-left {
+          opacity: 0;
+          transform: translateX(-50px);
+          transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .scroll-animate-right {
+          opacity: 0;
+          transform: translateX(50px);
+          transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .scroll-animate-up {
+          opacity: 0;
+          transform: translateY(50px);
+          transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .scroll-animate-visible {
+          opacity: 1 !important;
+          transform: translateX(0) translateY(0) !important;
+        }
+
+        .nav-link {
+          position: relative;
+        }
+
+        .nav-link::after {
+          content: "";
+          position: absolute;
+          bottom: -5px;
+          left: 0;
+          width: 0;
+          height: 1px;
+          background: var(--accent);
+          transition: width 0.3s;
+        }
+
+        .nav-link:hover::after {
+          width: 100%;
+        }
+
+        .activity-card {
+          position: relative;
+        }
+
+        .activity-card .activity-overlay {
+          transition: background 0.4s;
+        }
+
+        .activity-card:hover .activity-overlay {
+          background: linear-gradient(to top, rgba(236, 64, 122, 0.9), transparent 60%) !important;
+        }
+
+        .activity-card img {
+          transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .activity-card:hover img {
+          transform: scale(1.05);
+        }
+
+        /* 粉色云朵流动动画 */
+        @keyframes cloudMove1 {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.4;
+          }
+          25% {
+            transform: translate(50%, -30%) scale(1.3);
+            opacity: 0.7;
+          }
+          50% {
+            transform: translate(80%, 15%) scale(0.8);
+            opacity: 0.6;
+          }
+          75% {
+            transform: translate(50%, 30%) scale(1.2);
+            opacity: 0.65;
+          }
+        }
+
+        @keyframes cloudMove2 {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.3;
+          }
+          33% {
+            transform: translate(-40%, 25%) scale(1.25);
+            opacity: 0.6;
+          }
+          66% {
+            transform: translate(-70%, -20%) scale(0.85);
+            opacity: 0.5;
+          }
+        }
+
+        @keyframes cloudMove3 {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.35;
+          }
+          20% {
+            transform: translate(35%, -25%) scale(1.2);
+            opacity: 0.6;
+          }
+          40% {
+            transform: translate(60%, 30%) scale(0.85);
+            opacity: 0.5;
+          }
+          60% {
+            transform: translate(35%, 20%) scale(1.15);
+            opacity: 0.55;
+          }
+          80% {
+            transform: translate(-15%, -10%) scale(1.0);
+            opacity: 0.45;
+          }
+        }
+
+        @keyframes cloudMove4 {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.4;
+          }
+          30% {
+            transform: translate(-35%, 35%) scale(1.3);
+            opacity: 0.7;
+          }
+          60% {
+            transform: translate(-60%, -25%) scale(0.8);
+            opacity: 0.4;
+          }
+        }
+
+        @keyframes cloudMove5 {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.3;
+          }
+          25% {
+            transform: translate(25%, -35%) scale(1.25);
+            opacity: 0.6;
+          }
+          50% {
+            transform: translate(50%, 30%) scale(0.85);
+            opacity: 0.5;
+          }
+          75% {
+            transform: translate(25%, 15%) scale(1.15);
+            opacity: 0.55;
+          }
+        }
+
+      `}</style>
+
+      {/* Navigation */}
+      <nav 
+        className={`fixed top-0 left-0 right-0 z-[1000] flex justify-between items-center transition-all duration-[400ms] ${
+          navScrolled 
+            ? 'bg-[rgba(30,60,35,0.95)] backdrop-blur-[20px] py-3 sm:py-5 px-4 sm:px-[60px] shadow-[0_10px_40px_rgba(0,0,0,0.3)]' 
+            : 'bg-transparent py-4 sm:py-[30px] px-4 sm:px-[60px]'
+        }`}
+        style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+      >
+        <div className="flex items-center gap-2 sm:gap-[15px]" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '16px sm:text-[20px]', fontWeight: 700, letterSpacing: '1px', color: 'var(--light)' }}>
+          <img src="/vcl_sample/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain" />
+          <div className="flex flex-col gap-[1px] sm:gap-[2px]">
+            <span className="text-lg sm:text-[22px] font-semibold leading-tight" style={{ color: 'var(--light)', letterSpacing: '1px' }}>溫哥華華人女子高爾夫俱樂部</span>
+            <span className="text-[10px] sm:text-[11px] uppercase leading-tight" style={{ color: 'var(--accent)', letterSpacing: '1.5px', fontWeight: 400 }}>Vancouver Chinese Women's Golf Club</span>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">溫哥華華人女子高爾夫俱樂部</h1>
-                <p className="text-xs text-gray-500">Vancouver Chinese Women's Golf Club</p>
               </div>
-            </div>
+        
+        {/* Desktop Navigation */}
+        <ul className="hidden lg:flex gap-[50px] list-none">
+          <li>
+            <a 
+              href="#hero" 
+              onClick={(e) => handleSmoothScroll(e, 'hero')}
+              className="nav-link text-[14px] font-medium uppercase transition-colors duration-300 hover:text-[var(--accent)]"
+              style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1.5px', textDecoration: 'none' }}
+            >
+              Home
+            </a>
+          </li>
+          <li>
+            <a 
+              href="#about" 
+              onClick={(e) => handleSmoothScroll(e, 'about')}
+              className="nav-link text-[14px] font-medium uppercase transition-colors duration-300 hover:text-[var(--accent)]"
+              style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1.5px', textDecoration: 'none' }}
+            >
+              About Us
+            </a>
+          </li>
+          <li>
+            <a 
+              href="#activities" 
+              onClick={(e) => handleSmoothScroll(e, 'activities')}
+              className="nav-link text-[14px] font-medium uppercase transition-colors duration-300 hover:text-[var(--accent)]"
+              style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1.5px', textDecoration: 'none' }}
+            >
+              精彩回顾
+            </a>
+          </li>
+        </ul>
+
+        {/* Mobile Menu Button & Login */}
+        <div className="flex items-center gap-2 sm:gap-4">
             <button
               onClick={() => navigate('/login')}
-              className="flex items-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors font-medium"
+            className="flex items-center gap-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-xs sm:text-sm"
             >
-              <LogIn className="w-4 h-4" />
-              <span>会员登录</span>
+            <LogIn className="w-5 h-5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">会员登录</span>
             </button>
-          </div>
+          
+          {/* Mobile Menu Toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden text-white p-2"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-[rgba(30,60,35,0.98)] backdrop-blur-[20px] border-t border-white/10 lg:hidden">
+            <div className="flex flex-col py-4 px-4">
+              <a 
+                href="#hero" 
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'hero')
+                  setMobileMenuOpen(false)
+                }}
+                className="text-white py-3 px-4 hover:bg-white/10 rounded-lg transition-colors uppercase text-sm"
+                style={{ letterSpacing: '1.5px' }}
+              >
+                Home
+              </a>
+              <a 
+                href="#about" 
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'about')
+                  setMobileMenuOpen(false)
+                }}
+                className="text-white py-3 px-4 hover:bg-white/10 rounded-lg transition-colors uppercase text-sm"
+                style={{ letterSpacing: '1.5px' }}
+              >
+                About Us
+              </a>
+              <a 
+                href="#activities" 
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'activities')
+                  setMobileMenuOpen(false)
+                }}
+                className="text-white py-3 px-4 hover:bg-white/10 rounded-lg transition-colors text-sm"
+              >
+                精彩回顾
+              </a>
+                <button
+                  onClick={() => {
+                  navigate('/login')
+                  setMobileMenuOpen(false)
+                  }}
+                className="flex items-center justify-center gap-2 mt-2 px-4 py-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-sm"
+                >
+                <LogIn className="w-4 h-4" />
+                <span>会员登录</span>
+                </button>
+              </div>
+            </div>
+        )}
       </nav>
 
-      {/* 英雄区域 - 视频/图片背景 */}
-      <section className="relative h-[85vh] sm:h-[90vh] overflow-hidden">
-        <div className="relative w-full h-full">
-          {/* 视频背景 - 如果存在视频文件则显示视频，否则显示图片 */}
-          <video
-            className="absolute inset-0 w-full h-full object-cover hidden"
-            id="hero-video"
-            autoPlay
-            loop
-            muted
-            playsInline
-          >
-            <source src="/hero-video.mp4" type="video/mp4" />
-            <source src="/hero-video.webm" type="video/webm" />
-          </video>
-          
-          {/* 背景图片（视频不存在或加载失败时的备用） */}
-          <div 
-            className="absolute inset-0 w-full h-full bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/homepage_image.jpg)'
-            }}
-            id="hero-image"
-          />
-
-          {/* 渐变遮罩 */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70"></div>
-          
-          {/* 内容层 */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-              <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 drop-shadow-2xl animate-fade-in">
-                欢迎来到溫哥華華人女子高爾夫俱樂部
-              </h2>
-              <p className="text-xl sm:text-2xl lg:text-3xl text-white/95 mb-12 leading-relaxed drop-shadow-lg animate-fade-in-delay">
-                专业的高尔夫体验，精彩纷呈的比赛活动
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-delay-2">
-                <button
-                  onClick={() => {
-                    const element = document.getElementById('about')
-                    element?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="inline-flex items-center justify-center px-8 py-4 bg-golf-600 text-white rounded-xl hover:bg-golf-700 transition-all transform hover:scale-105 font-semibold text-lg shadow-2xl backdrop-blur-sm"
-                >
-                  关于我们
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </button>
-                <button
-                  onClick={() => {
-                    const element = document.getElementById('reviews')
-                    element?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="inline-flex items-center justify-center px-8 py-4 bg-white/10 backdrop-blur-md text-white border-2 border-white/30 rounded-xl hover:bg-white/20 transition-all transform hover:scale-105 font-semibold text-lg"
-                >
-                  查看活动回顾
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 滚动提示 */}
-          <div className="absolute bottom-12 sm:bottom-16 left-1/2 -translate-x-1/2 z-20 animate-bounce hidden sm:block">
-            <ChevronDown className="w-6 h-6 text-white/80" />
-          </div>
-        </div>
-      </section>
-
-      {/* 关于我们 - 参考 Northview 设计：文字在上方，背景图片在下方 */}
-      <section id="about" className="relative min-h-[900px] sm:min-h-[1000px] overflow-hidden">
-        {/* 背景图片 - 全景风景（山川湖泊） */}
+      {/* Hero Section */}
+      <section id="hero" className="relative h-screen flex items-center overflow-hidden pt-16 sm:pt-0">
         <div 
-          className="absolute inset-0 w-full h-full bg-cover"
-          style={{
-            backgroundImage: 'url(https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=1920)',
-            backgroundPosition: 'center 20%'
-          }}
-        />
-        
-        {/* 文字内容区域 - 温暖的米白色背景，浮在图片上方 */}
-        <div className="relative z-10 pt-20 sm:pt-32 pb-56 sm:pb-72">
-          {/* 渐变过渡层 - 从米白色渐变到透明，与图片自然融合 */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#f7f6f3] via-[#f7f6f3] to-transparent pointer-events-none"></div>
-          
-          <div className="relative z-10 max-w-[1280px] mx-auto px-6 sm:px-8 lg:px-12">
-            {/* 文字内容 - 简洁专业的两列布局 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16 items-start mb-20 sm:mb-24">
-              {/* 左列 */}
-              <div className="space-y-6">
-                <p 
-                  className="text-base sm:text-lg text-[#2d2d2d] leading-[1.85] font-serif"
-                  style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-                >
-                  溫哥華華人女子高爾夫俱樂部成立于<strong className="font-semibold text-[#1a1a1a]">2015年</strong>，是一家致力于为会员提供优质高尔夫体验的专业俱乐部。
-                  经过近<strong className="font-semibold text-[#1a1a1a]">10年</strong>的发展，我们已建立完善的管理体系和服务标准，为会员营造温馨和谐的俱乐部氛围。
-                </p>
-              </div>
-              
-              {/* 右列 */}
-              <div className="space-y-6">
-                <p 
-                  className="text-base sm:text-lg text-[#2d2d2d] leading-[1.85] font-serif"
-                  style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-                >
-                  我们相信每个人都能享受专业的高尔夫体验，这就是为什么我们致力于为每一位会员提供最优质的服务和活动。
-                  无论是追求高尔夫的激情，享受精彩比赛，还是建立深厚的会员友谊，加入我们，让溫哥華華人女子高爾夫俱樂部成为您美好回忆的背景。
-                </p>
-                <p 
-                  className="text-base sm:text-lg text-[#2d2d2d] leading-[1.85] font-serif"
-                  style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-                >
-                  为会员营造温馨和谐的俱乐部氛围，共同打造高品质、高标准的俱乐部服务体系，所有服务都带有独特的本土特色。
-                </p>
-              </div>
-            </div>
-
-            {/* 核心优势 - 专业简洁的三列布局 */}
-            <div className="max-w-[1280px] mx-auto mt-24 sm:mt-32">
-              <h3 className="text-2xl sm:text-3xl font-bold text-[#1e40af] mb-12 sm:mb-16 text-left">核心优势</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-                {/* 专业赛事体系 */}
-                <div>
-                  <div className="w-12 h-12 mb-5 flex items-center justify-center">
-                    <div className="w-10 h-10 border-2 border-blue-600 rounded-lg flex items-center justify-center">
-                      <Trophy className="w-5 h-5 text-blue-600" />
-                    </div>
-                  </div>
-                  <h4 className="text-lg font-bold text-[#1e40af] mb-3">专业赛事体系</h4>
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    定期举办个人赛、团体赛等多样化比赛活动，为会员提供展示技能和竞技交流的平台，持续提升会员的专业水平。
-                  </p>
-                </div>
-
-                {/* 和谐会员文化 */}
-                <div>
-                  <div className="w-12 h-12 mb-5 flex items-center justify-center">
-                    <div className="w-10 h-10 border-2 border-blue-600 rounded-lg flex items-center justify-center">
-                      <Users className="w-5 h-5 text-blue-600" />
-                    </div>
-                  </div>
-                  <h4 className="text-lg font-bold text-[#1e40af] mb-3">和谐会员文化</h4>
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    会员之间互帮互助，共同营造温馨和谐的俱乐部氛围，建立深厚的会员友谊和社区凝聚力。
-                  </p>
-                </div>
-
-                {/* 数字化管理 */}
-                <div>
-                  <div className="w-12 h-12 mb-5 flex items-center justify-center">
-                    <div className="w-10 h-10 border-2 border-blue-600 rounded-lg flex items-center justify-center">
-                      <BarChart3 className="w-5 h-5 text-blue-600" />
-                    </div>
-                  </div>
-                  <h4 className="text-lg font-bold text-[#1e40af] mb-3">数字化管理</h4>
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    采用先进的会员管理系统，提供便捷的在线活动报名、成绩查询、信息查看等功能，提升服务效率。
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 活动回顾 */}
-      <section id="reviews" className="py-16 bg-gradient-to-br from-gray-50 to-white">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">活动精彩回顾</h3>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              回顾俱乐部精彩活动，重温美好时光
-            </p>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-golf-600 mx-auto"></div>
-              <p className="text-gray-500 mt-4">加载中...</p>
-            </div>
-          ) : events.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-gray-900 mb-2">暂无活动回顾</h4>
-              <p className="text-gray-500">还没有发布任何活动精彩回顾</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border border-gray-100"
-                  onClick={() => navigate(`/event/${event.id}`)}
-                >
-                  {/* 活动图片 */}
-                  <div className="aspect-[16/11] bg-gradient-to-br from-golf-200 to-golf-300 overflow-hidden">
-                    {event.article_featured_image_url || event.image_url ? (
-                      <img
-                        src={event.article_featured_image_url || event.image_url || ''}
-                        alt={event.title}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Trophy className="w-16 h-16 text-golf-400 opacity-50" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 活动信息 */}
-                  <div className="p-5 lg:p-6">
-                    <h4 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 line-clamp-2">
-                      {event.title}
-                    </h4>
-                    
-                    {/* 活动日期和地点 */}
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="w-4 h-4 mr-2 text-golf-600 flex-shrink-0" />
-                        <span>{formatEventDate(event.start_time)}</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="w-4 h-4 mr-2 text-golf-600 flex-shrink-0" />
-                        <span className="truncate">{event.location}</span>
-                      </div>
-                    </div>
-
-                    {/* 文章摘要 */}
-                    {event.article_excerpt && (
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-3 leading-relaxed">
-                        {event.article_excerpt}
-                      </p>
-                    )}
-
-                    {/* 查看按钮 */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                      <div className="flex items-center text-xs text-gray-500">
-                        <Clock className="w-3 h-3 mr-1" />
-                        <span>发布于 {formatDate(event.article_published_at || '')}</span>
-                      </div>
-                      <div className="flex items-center text-golf-600 font-semibold">
-                        <span className="text-sm">查看详情</span>
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-        </div>
-      </section>
-
-      {/* 底部 */}
-      <footer className="bg-gray-900 text-white">
-        {/* 主要信息区域 */}
-        <div className="bg-golf-800 py-12">
-          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* 左侧：Logo */}
-              <div className="flex items-start">
-                <div className="w-16 h-16 rounded-full mr-4 overflow-hidden flex-shrink-0 bg-white p-1 border-2 border-golf-700">
-                  <img src="/logo-192x192.png" alt="溫哥華華人女子高爾夫俱樂部" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <h5 className="text-lg font-semibold mb-2">溫哥華華人女子高爾夫俱樂部</h5>
-                  <p className="text-gray-300 text-sm">Vancouver Chinese Women's Golf Club</p>
-                </div>
-              </div>
-
-              {/* 中间：地址信息 */}
-              <div className="flex items-start">
-                <MapPin className="w-5 h-5 text-white mr-3 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="font-medium mb-1">溫哥華華人女子高爾夫俱樂部</p>
-                  <p className="text-gray-300 text-sm">地址信息</p>
-                  <p className="text-gray-300 text-sm">城市，邮编</p>
-                </div>
-              </div>
-
-              {/* 右侧：联系方式 */}
-              <div>
-                <div className="flex items-start mb-3">
-                  <Phone className="w-5 h-5 text-white mr-3 mt-1 flex-shrink-0" />
-                  <div>
-                    <p className="text-gray-300 text-sm mb-1">办公室: <a href="tel:" className="hover:text-white">电话</a></p>
-                    <p className="text-gray-300 text-sm">会所: <a href="tel:" className="hover:text-white">电话</a></p>
-                  </div>
-                </div>
-                
-                {/* 社交媒体图标 */}
-                <div className="flex items-center gap-3 mt-4">
-                  <a href="#" className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
-                    <span className="text-xs font-bold">f</span>
-                  </a>
-                  <a href="#" className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                    </svg>
-                  </a>
-                  <a href="#" className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                    </svg>
-                  </a>
-                  <a href="#" className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 版权信息区域 */}
-        <div className="bg-gray-950 py-6 border-t border-gray-800">
-          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-gray-400">
-              <p>©2025 溫哥華華人女子高爾夫俱樂部. 保留所有权利.</p>
-              <p>Powered by 溫哥華華人女子高爾夫俱樂部系统</p>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* 文章详情模态框 */}
-      {selectedEvent && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-y-auto"
-          onClick={() => setSelectedEvent(null)}
+          className="absolute inset-0 w-full h-full bg-cover bg-center"
+          style={{ backgroundImage: 'url(/vcl_sample/hero_photo.jpg)' }}
         >
           <div 
-            className="bg-white rounded-2xl w-full max-w-[1080px] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative mx-auto"
-            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0"
+          style={{
+              background: 'linear-gradient(to right, rgba(26, 26, 26, 0.85) 0%, rgba(26, 26, 26, 0.6) 50%, rgba(26, 26, 26, 0.3) 100%)'
+            }}
+          />
+              </div>
+              
+        <div className="relative z-[2] max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-[60px] w-full flex flex-col items-start">
+          <div className="text-xs sm:text-base uppercase mb-4 sm:mb-[30px] font-medium opacity-0 animate-fade-in" style={{ letterSpacing: '4px', color: 'var(--accent)' }}>
+            Vancouver Chinese Ladies' Golf Club
+          </div>
+          <h1 
+            className="font-light leading-[1.3] mb-6 sm:mb-10 opacity-0 animate-fade-in-delay max-w-[900px]"
+            style={{ 
+              fontFamily: '"Cormorant Garamond", serif', 
+              fontSize: 'clamp(28px, 6vw, 60px)',
+              color: '#fff'
+            }}
           >
-            {/* 头部 */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
-              <h2 className="text-2xl font-bold text-gray-900">{selectedEvent.title}</h2>
-              <button
-                onClick={() => setSelectedEvent(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+            歡迎來到<br />
+            <strong className="font-bold block" style={{ background: 'linear-gradient(135deg, var(--accent), var(--pink))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              溫哥華華人女子高爾夫俱樂部
+            </strong>
+          </h1>
+          <p 
+            className="text-sm sm:text-base lg:text-xl leading-[1.8] max-w-[600px] mb-6 sm:mb-[50px] font-light opacity-0 animate-fade-in-delay"
+            style={{ color: 'rgba(255,255,255,0.9)' }}
+          >
+            汇聚温哥华优雅女性，在世界级球场挥洒激情，<br className="hidden sm:block" />
+            享受高尔夫运动的至臻体验
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-[25px] w-full sm:w-auto opacity-0 animate-fade-in-delay">
+            <a 
+              href="#about" 
+              onClick={(e) => handleSmoothScroll(e, 'about')}
+              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-xs sm:text-sm font-semibold uppercase transition-all duration-[400ms] relative overflow-hidden text-center"
+              style={{ 
+                background: 'linear-gradient(135deg, var(--accent), var(--pink))',
+                color: 'white',
+                textDecoration: 'none',
+                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              <span className="relative z-[1]">About Us</span>
+            </a>
+            <a 
+              href="#activities" 
+              onClick={(e) => handleSmoothScroll(e, 'activities')}
+              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-xs sm:text-sm font-semibold uppercase transition-all duration-[400ms] text-center"
+              style={{ 
+                background: 'transparent',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.3)',
+                textDecoration: 'none'
+              }}
+            >
+              <span>精彩回顧</span>
+            </a>
+              </div>
             </div>
 
-            {/* 内容 */}
-            <div className="p-6">
-              {/* 活动信息 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="flex items-center text-gray-600">
-                  <Calendar className="w-5 h-5 mr-3 text-golf-600 flex-shrink-0" />
-                  <div>
-                    <div className="font-medium">活动日期</div>
-                    <div className="text-sm">{formatDate(selectedEvent.start_time)}</div>
+        <div className="absolute bottom-8 sm:bottom-[60px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 sm:gap-[15px] text-[10px] sm:text-xs uppercase animate-float hidden sm:flex" style={{ color: 'rgba(255,255,255,0.5)', letterSpacing: '2px' }}>
+          <span>Scroll</span>
+          <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+      </section>
+
+      {/* About Section */}
+      <section id="about" className="relative" style={{ background: 'var(--light)', color: 'var(--dark)', padding: '100px 20px sm:100px 30px lg:180px 60px' }}>
+        <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-[100px] items-center">
+          <div 
+            ref={aboutTextRef}
+            data-animate-id="about-text"
+            className={`pr-0 md:pr-[60px] py-32 sm:py-40 lg:py-48 scroll-animate-left ${visibleElements.has('about-text') ? 'scroll-animate-visible' : ''}`}
+          >
+            <div className="text-xs sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
+              About VCL Golf Club
+                    </div>
+            <h2 
+              className="font-light leading-[1.2] mb-6 sm:mb-10 text-3xl sm:text-5xl lg:text-[64px]"
+              style={{ fontFamily: '"Cormorant Garamond", serif' }}
+            >
+              煥發女性 <strong className="font-bold" style={{ color: 'var(--primary)' }}>高爾夫</strong><br />的优雅与激情
+            </h2>
+            <p className="text-sm sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
+              溫哥華華人女子高爾夫俱樂部，致力於為熱愛高爾夫的女性打造專屬平台。我們不僅提供世界級的球場資源，更創造了一個充滿活力、優雅精緻的社交圈層。
+            </p>
+            <p className="text-sm sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
+              無論您是初學者還是資深球手，在這裡都能找到志同道合的夥伴，在綠茵場上揮灑激情，在交流中收穫友誼與成長。
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-[35px] mt-8 sm:mt-[50px]">
+              {[
+                { icon: Trophy, title: 'Professional Training', desc: '頂級教練團隊，量身定制訓練計劃' },
+                { icon: Users, title: 'Exclusive Community', desc: '匯聚精英女性，建立高端社交網絡' },
+                { icon: Calendar, title: 'Regular Events', desc: '精彩賽事活動，展現優雅球技' },
+                { icon: Star, title: 'Premium Benefits', desc: '專享會員福利，尊享貴賓體驗' }
+              ].map((feature, idx) => (
+                <div key={idx} className="flex items-start gap-5">
+                  <div className="text-[32px] flex-shrink-0" style={{ color: 'var(--primary)', width: '60px' }}>
+                    <feature.icon className="w-8 h-8" />
+                    </div>
+                <div>
+                    <h4 className="text-lg mb-2 font-semibold">{feature.title}</h4>
+                    <p className="text-[15px] text-[#888] leading-[1.6]">{feature.desc}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <MapPin className="w-5 h-5 mr-3 text-golf-600 flex-shrink-0" />
-                  <div>
-                    <div className="font-medium">活动地点</div>
-                    <div className="text-sm">{selectedEvent.location}</div>
-                  </div>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Users className="w-5 h-5 mr-3 text-golf-600 flex-shrink-0" />
-                  <div>
-                    <div className="font-medium">参与人数</div>
-                    <div className="text-sm">最多 {selectedEvent.max_participants} 人</div>
-                  </div>
+              ))}
                 </div>
               </div>
 
-              {/* 文章内容 */}
-              <div className="prose max-w-none mb-8">
-                <TinyMCEViewer content={selectedEvent.article_content || ''} />
-              </div>
+          <div 
+            ref={aboutImageRef}
+            data-animate-id="about-image"
+            className={`relative h-[400px] sm:h-[500px] lg:h-[700px] mt-8 md:mt-0 scroll-animate-right ${visibleElements.has('about-image') ? 'scroll-animate-visible' : ''}`}
+          >
+            <img
+              src="https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?q=80&w=2070"
+              alt="Golf Course"
+              className="w-full h-full object-cover rounded-lg"
+            />
+          </div>
+        </div>
+      </section>
 
-              {/* 发布时间 */}
-              <div className="pt-6 border-t border-gray-200 mb-8">
-                <div className="flex items-center text-sm text-gray-500">
-                  <Clock className="w-4 h-4 mr-2" />
-                  <span>发布于 {formatDate(selectedEvent.article_published_at || '')}</span>
-                </div>
-              </div>
+      {/* Activities Section */}
+      <section id="activities" className="relative py-24 sm:py-32 lg:py-40 px-5 sm:px-8 lg:px-[60px] overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(25, 55, 30, 0.95) 0%, rgba(50, 100, 60, 0.95) 50%, rgba(30, 60, 35, 0.95) 100%)' }}>
+        {/* 背景装饰图案 */}
+        <div className="absolute inset-0 opacity-5 pointer-events-none">
+          {/* 高尔夫球图案 */}
+          <div className="absolute top-10 left-10 w-20 h-20 rounded-full border-2 border-white/20"></div>
+          <div className="absolute top-32 right-20 w-16 h-16 rounded-full border-2 border-white/20"></div>
+          <div className="absolute bottom-20 left-1/4 w-24 h-24 rounded-full border-2 border-white/20"></div>
+          <div className="absolute top-1/2 right-1/3 w-16 h-16 rounded-full border-2 border-white/20"></div>
+          
+          {/* 球洞图案 */}
+          <div className="absolute top-20 right-1/4 w-8 h-8 rounded-full bg-white/10"></div>
+          <div className="absolute bottom-32 left-1/3 w-6 h-6 rounded-full bg-white/10"></div>
+          <div className="absolute top-2/3 right-10 w-10 h-10 rounded-full bg-white/10"></div>
+          
+          {/* 装饰线条 */}
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+        </div>
+        <div 
+          ref={activitiesTitleRef}
+          data-animate-id="activities-title"
+          className={`relative z-10 max-w-[1400px] mx-auto mb-12 sm:mb-20 text-center scroll-animate-up ${visibleElements.has('activities-title') ? 'scroll-animate-visible' : ''}`}
+        >
+          <div className="text-xs sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
+            Recent Highlights
+          </div>
+          <h2 
+            className="font-light leading-[1.2] mb-6 sm:mb-10 text-white text-3xl sm:text-5xl lg:text-[64px]"
+            style={{ fontFamily: '"Cormorant Garamond", serif' }}
+          >
+            精彩<strong className="font-bold" style={{ color: 'var(--accent)' }}>活動回顧</strong>
+          </h2>
+          </div>
 
-              {/* 回复区域 */}
-              <div className="border-t border-gray-200 pt-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <MessageCircle className="w-5 h-5 text-gray-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">回复</h3>
-                  {replies.length > 0 && (
-                    <span className="text-sm text-gray-500">
-                      ({countAllReplies(replies)} 条评论 / {getAllUserIds(replies).size} 人参与)
-                    </span>
-                  )}
-                </div>
-
-                {loadingReplies ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-golf-600 mx-auto"></div>
-                    <p className="text-gray-500 mt-2 text-sm">加载回复中...</p>
+        <div className="relative z-10 max-w-[1400px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
+          {loading ? (
+            <div className="col-span-3 text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
+            </div>
+          ) : events.length > 0 ? (
+            events.map((event, idx) => (
+                <div
+                  key={event.id}
+                  data-animate-id={`activity-${event.id}`}
+                  className={`activity-card relative overflow-hidden rounded-lg cursor-pointer scroll-animate-up ${visibleElements.has(`activity-${event.id}`) ? 'scroll-animate-visible' : ''}`}
+                  style={{ aspectRatio: '4/5', transitionDelay: `${idx * 0.1}s` }}
+                  onClick={() => navigate(`/review/${event.id}`)}
+                >
+                      <img
+                  src={event.article_featured_image_url || event.image_url || activityImages[idx]?.src}
+                        alt={event.title}
+                  className="w-full h-full object-cover"
+                />
+                <div 
+                  className="activity-overlay absolute inset-0 flex flex-col justify-end transition-all duration-400"
+                  style={{
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent 60%)',
+                    padding: '40px'
+                  }}
+                >
+                  <div>
+                    <div className="text-[13px] uppercase mb-[15px]" style={{ letterSpacing: '2px', color: 'var(--pink)', fontWeight: 500 }}>
+                      {new Date(event.start_time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </div>
+                    <h3 
+                      className="mb-3 leading-[1.3] text-white"
+                      style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '24px', fontWeight: 600 }}
+                    >
+                      {event.title}
+                    </h3>
+                    <div className="flex gap-[25px] text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      <span className="flex items-center">
+                        <i className="fas fa-map-marker-alt mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
+                        {event.location}
+                      </span>
+                      <span className="flex items-center">
+                        <i className="fas fa-users mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
+                        {event.max_participants}
+                      </span>
+                    </div>
                   </div>
-                ) : replies.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">暂无回复，快来发表第一条回复吧！</p>
+                </div>
+                      </div>
+            ))
+          ) : (
+            activityImages.map((activity, idx) => (
+              <div
+                key={idx}
+                className="activity-card relative overflow-hidden rounded-lg cursor-pointer group"
+                style={{ aspectRatio: '4/5' }}
+              >
+                <img
+                  src={activity.src}
+                  alt={activity.title}
+                  className="w-full h-full object-cover"
+                />
+                <div 
+                  className="activity-overlay absolute inset-0 flex flex-col justify-end transition-all duration-400"
+                  style={{
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent 60%)',
+                    padding: '40px'
+                  }}
+                >
+                  <div>
+                    <div className="text-[13px] uppercase mb-[15px]" style={{ letterSpacing: '2px', color: 'var(--pink)', fontWeight: 500 }}>
+                      {activity.date}
+                    </div>
+                    <h3 
+                      className="mb-3 leading-[1.3] text-white"
+                      style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '24px', fontWeight: 600 }}
+                    >
+                      {activity.title}
+                    </h3>
+                    <div className="flex gap-[25px] text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      <span className="flex items-center">
+                        <i className="fas fa-map-marker-alt mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
+                        {activity.location}
+                      </span>
+                      <span className="flex items-center">
+                        <i className="fas fa-users mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
+                        {activity.participants.replace(' Participants', '').replace(' Members', '').replace(' Players', '')}
+                      </span>
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-4 mb-6">
-                    {replies.map((reply) => (
-                      <div key={reply.id} className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          {/* 用户头像 */}
-                          <div className="flex-shrink-0">
-                            {reply.user_profile?.avatar_url ? (
-                              <img
-                                src={reply.user_profile.avatar_url}
-                                alt={reply.user_profile.full_name}
-                                className="w-8 h-8 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold text-xs">
-                                {(reply.user_profile?.full_name || '用户').charAt(0).toUpperCase()}
+                </div>
                               </div>
+            ))
                             )}
                           </div>
                           
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="font-semibold text-gray-900 text-sm">
-                                {reply.user_profile?.full_name || '匿名用户'}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {formatReplyDate(reply.created_at)}
-                                {reply.updated_at !== reply.created_at && (
-                                  <span className="ml-1">(已编辑)</span>
-                                )}
-                              </span>
-                            </div>
-
-                            {/* 回复内容 */}
-                            <div className="text-gray-700 text-sm whitespace-pre-wrap break-words mb-2">
-                              {parseContent(reply.content).map((part, index) => (
-                                <React.Fragment key={index}>
-                                  {part.type === 'text' ? (
-                                    <span>{part.content}</span>
-                                  ) : null}
-                                </React.Fragment>
-                              ))}
-                            </div>
-                            
-                            {/* 图片缩略图 */}
-                            {(() => {
-                              const images = parseContent(reply.content).filter(p => p.type === 'image').map(p => p.content)
-                              if (images.length === 0) return null
-                              
-                              return (
-                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                  {images.map((imageUrl, idx) => (
-                                    <div
-                                      key={idx}
-                                      onClick={() => {
-                                        setImageViewerImages(images)
-                                        setCurrentImageIndex(idx)
-                                        setImageViewerOpen(true)
-                                      }}
-                                      className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
-                                    >
-                                      <img
-                                        src={imageUrl}
-                                        alt={`图片 ${idx + 1}`}
-                                        className="w-full h-full object-cover"
-                                      />
+        <div className="text-center mt-12 sm:mt-20 hidden">
+          <button
+            onClick={() => navigate('/login')}
+            className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-xs sm:text-sm font-semibold uppercase transition-all duration-[400ms]"
+            style={{ 
+              background: 'transparent',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.3)',
+              textDecoration: 'none'
+            }}
+          >
+            <span>View All Events</span>
+          </button>
                                     </div>
-                                  ))}
-                                </div>
-                              )
-                            })()}
+      </section>
 
-                            {/* 嵌套回复 */}
-                            {reply.child_replies && reply.child_replies.length > 0 && (
-                              <div className="mt-3 space-y-3 ml-4 pl-4 border-l-2 border-[#F15B98]">
-                                {reply.child_replies.map((childReply) => (
-                                  <div key={childReply.id} className="bg-white rounded-lg p-3">
-                                    <div className="flex items-start gap-2">
-                                      <div className="flex-shrink-0">
-                                        {childReply.user_profile?.avatar_url ? (
-                                          <img
-                                            src={childReply.user_profile.avatar_url}
-                                            alt={childReply.user_profile.full_name}
-                                            className="w-6 h-6 rounded-full object-cover"
-                                          />
-                                        ) : (
-                                          <div className="w-6 h-6 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold text-xs">
-                                            {(childReply.user_profile?.full_name || '用户').charAt(0).toUpperCase()}
+      {/* Members Gallery Section */}
+      <section className="relative overflow-hidden py-24 sm:py-32 lg:py-40 px-5 sm:px-8 lg:px-[60px]" style={{ background: 'linear-gradient(135deg, #fef5f8 0%, #fef9f5 50%, #fff5f8 100%)' }}>
+        {/* 粉色云朵流动动画背景 */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* 云朵1 */}
+          <div className="absolute rounded-full" style={{
+            width: '400px',
+            height: '300px',
+            background: 'radial-gradient(ellipse, rgba(236, 64, 122, 0.3) 0%, rgba(236, 64, 122, 0.1) 50%, transparent 100%)',
+            filter: 'blur(60px)',
+            top: '10%',
+            left: '-10%',
+            animation: 'cloudMove1 8s ease-in-out infinite'
+          }}></div>
+          {/* 云朵2 */}
+          <div className="absolute rounded-full" style={{
+            width: '500px',
+            height: '400px',
+            background: 'radial-gradient(ellipse, rgba(255, 80, 158, 0.25) 0%, rgba(255, 80, 158, 0.1) 50%, transparent 100%)',
+            filter: 'blur(80px)',
+            top: '30%',
+            right: '-15%',
+            animation: 'cloudMove2 10s ease-in-out infinite 1s'
+          }}></div>
+          {/* 云朵3 */}
+          <div className="absolute rounded-full" style={{
+            width: '450px',
+            height: '350px',
+            background: 'radial-gradient(ellipse, rgba(236, 64, 122, 0.2) 0%, rgba(236, 64, 122, 0.05) 50%, transparent 100%)',
+            filter: 'blur(70px)',
+            bottom: '20%',
+            left: '20%',
+            animation: 'cloudMove3 9s ease-in-out infinite 2s'
+          }}></div>
+          {/* 云朵4 */}
+          <div className="absolute rounded-full" style={{
+            width: '380px',
+            height: '320px',
+            background: 'radial-gradient(ellipse, rgba(255, 80, 158, 0.2) 0%, rgba(255, 80, 158, 0.08) 50%, transparent 100%)',
+            filter: 'blur(65px)',
+            top: '50%',
+            right: '10%',
+            animation: 'cloudMove4 7s ease-in-out infinite 0.5s'
+          }}></div>
+          {/* 云朵5 */}
+          <div className="absolute rounded-full" style={{
+            width: '420px',
+            height: '380px',
+            background: 'radial-gradient(ellipse, rgba(236, 64, 122, 0.15) 0%, rgba(236, 64, 122, 0.05) 50%, transparent 100%)',
+            filter: 'blur(75px)',
+            bottom: '10%',
+            right: '30%',
+            animation: 'cloudMove5 9s ease-in-out infinite 1.5s'
+          }}></div>
+        </div>
+        
+        <div className="relative z-10 max-w-[1400px] mx-auto">
+          <div 
+            ref={galleryTitleRef}
+            data-animate-id="gallery-title"
+            className={`text-center mb-12 sm:mb-20 scroll-animate-up ${visibleElements.has('gallery-title') ? 'scroll-animate-visible' : ''}`}
+          >
+            <div className="text-xs sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
+              Members Moments
                                           </div>
-                                        )}
+            <h2 
+              className="font-light leading-[1.2] mb-6 sm:mb-10 text-3xl sm:text-5xl lg:text-[64px]"
+              style={{ fontFamily: '"Cormorant Garamond", serif', color: 'var(--dark)' }}
+            >
+              會員<strong className="font-bold" style={{ color: 'var(--primary)' }}>風采</strong>
+            </h2>
+            <p className="text-sm sm:text-base lg:text-lg text-[#666] px-4">
+              記錄每一個精彩瞬間，分享高爾夫的快樂時光
+            </p>
                                       </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <span className="font-semibold text-gray-900 text-xs">
-                                            {childReply.user_profile?.full_name || '匿名用户'}
-                                          </span>
-                                          <span className="text-xs text-gray-500">
-                                            {formatReplyDate(childReply.created_at)}
-                                          </span>
-                                        </div>
-                                        <div className="text-gray-700 text-xs whitespace-pre-wrap break-words">
-                                          {parseContent(childReply.content).map((part, index) => (
-                                            <React.Fragment key={index}>
-                                              {part.type === 'text' ? (
-                                                <span>{part.content}</span>
-                                              ) : null}
-                                            </React.Fragment>
-                                          ))}
-                                        </div>
-                                        {/* 嵌套回复的图片 */}
-                                        {(() => {
-                                          const images = parseContent(childReply.content).filter(p => p.type === 'image').map(p => p.content)
-                                          if (images.length === 0) return null
-                                          
-                                          return (
-                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                              {images.map((imageUrl, idx) => (
+
+          <div className="relative overflow-hidden" style={{ padding: '20px 0 sm:40px 0' }}>
+            <div 
+              ref={carouselTrackRef}
+              className="flex gap-4 sm:gap-[30px] transition-transform duration-[600ms]"
+              style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+            >
+              {galleryImages.map((img, idx) => (
                                                 <div
                                                   key={idx}
-                                                  onClick={() => {
-                                                    setImageViewerImages(images)
-                                                    setCurrentImageIndex(idx)
-                                                    setImageViewerOpen(true)
+                                                  data-animate-id={`gallery-${idx}`}
+                                                  className={`flex-shrink-0 rounded-2xl overflow-hidden relative cursor-pointer transition-all duration-[400ms] hover:-translate-y-4 w-full sm:w-[calc((100%-30px)/2)] lg:w-[calc((100%-60px)/3)] scroll-animate-up ${visibleElements.has(`gallery-${idx}`) ? 'scroll-animate-visible' : ''}`}
+                                                  style={{ 
+                                                    height: windowWidth <= 768 ? '300px' : windowWidth <= 1024 ? '400px' : '500px',
+                                                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+                                                    transitionDelay: `${idx * 0.15}s`
                                                   }}
-                                                  className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
                                                 >
                                                   <img
-                                                    src={imageUrl}
-                                                    alt={`图片 ${idx + 1}`}
-                                                    className="w-full h-full object-cover"
+                    src={img}
+                    alt="Golf moment"
+                    className="w-full h-full object-cover object-center transition-transform duration-[600ms] hover:scale-110"
                                                   />
                                                 </div>
                                               ))}
                                             </div>
-                                          )
-                                        })()}
                                       </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
-                {/* 回复输入框（仅会员可见） */}
-                {user && userProfile && userProfile.role !== 'guest' ? (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      {/* 用户头像 - 手机端隐藏 */}
-                      <div className="hidden sm:flex flex-shrink-0">
-                        {userProfile.avatar_url ? (
-                          <img
-                            src={userProfile.avatar_url}
-                            alt={userProfile.full_name}
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-[#F15B98] flex items-center justify-center text-white font-semibold">
-                            {(userProfile.full_name || '用户').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* 输入框 */}
-                      <div className="flex-1 relative">
-                        <textarea
-                          ref={mainReplyTextareaRef}
-                          value={replyContent}
-                          onChange={(e) => setReplyContent(e.target.value)}
-                          placeholder="写下你的回复..."
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] resize-none"
-                          rows={3}
-                        />
-                        {/* 工具栏 */}
-                        <div className="flex items-center gap-2 mt-2">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0]
-                              if (!file) return
-                              try {
-                                validateImageFile(file)
-                                const result = await uploadImageToSupabase(file, 'golf-club-images', 'event-replies')
-                                if (result.success && result.url) {
-                                  setMainReplyImages(prev => [...prev, result.url!])
-                                }
-                              } catch (error: any) {
-                                alert(error.message || '图片上传失败')
-                              }
-                            }}
-                            className="hidden"
-                            id="homepage-reply-image-input"
-                          />
+          <div className="flex justify-center gap-4 sm:gap-5 mt-8 sm:mt-15">
                           <button
-                            type="button"
-                            onClick={() => document.getElementById('homepage-reply-image-input')?.click()}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                          >
-                            <ImageIcon className="w-3 h-3" />
-                            <span>图片</span>
+              onClick={prevSlide}
+              className="w-12 h-12 sm:w-[60px] sm:h-[60px] rounded-full bg-white border-2 border-[#e0e0e0] text-[var(--dark)] cursor-pointer transition-all duration-300 flex items-center justify-center text-lg sm:text-xl hover:bg-[var(--accent)] hover:border-[var(--accent)] hover:text-white hover:scale-110"
+              style={{ boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)' }}
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                           </button>
-                          
-                          <div className="relative" ref={mainEmojiPickerRef}>
                             <button
-                              type="button"
-                              onClick={() => setShowMainEmojiPicker(!showMainEmojiPicker)}
-                              className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                              <Smile className="w-3 h-3" />
-                              <span>表情</span>
+              onClick={nextSlide}
+              className="w-12 h-12 sm:w-[60px] sm:h-[60px] rounded-full bg-white border-2 border-[#e0e0e0] text-[var(--dark)] cursor-pointer transition-all duration-300 flex items-center justify-center text-lg sm:text-xl hover:bg-[var(--accent)] hover:border-[var(--accent)] hover:text-white hover:scale-110"
+              style={{ boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)' }}
+            >
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
-                            
-                            {showMainEmojiPicker && (
-                              <div className="absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-xl p-3 w-screen max-w-sm sm:w-80 max-h-64 overflow-y-auto z-[100]"
-                                style={{
-                                  maxHeight: '16rem',
-                                  left: '50%',
-                                  transform: 'translateX(-50%) translateY(0)'
-                                }}
-                              >
-                                <div className="grid grid-cols-8 gap-2">
-                                  {COMMON_EMOJIS.map((emoji, index) => (
+          </div>
+
+          <div className="flex justify-center gap-2 sm:gap-[10px] mt-6 sm:mt-10">
+            {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
                                     <button
-                                      key={index}
-                                      type="button"
-                                      onClick={() => {
-                                        const textarea = mainReplyTextareaRef.current
-                                        if (textarea) {
-                                          const start = textarea.selectionStart
-                                          const end = textarea.selectionEnd
-                                          const newContent = replyContent.substring(0, start) + emoji + replyContent.substring(end)
-                                          setReplyContent(newContent)
-                                          setTimeout(() => {
-                                            textarea.focus()
-                                            textarea.setSelectionRange(start + emoji.length, start + emoji.length)
-                                          }, 0)
-                                        }
-                                        setShowMainEmojiPicker(false)
-                                      }}
-                                      className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
-                                    >
-                                      {emoji}
-                                    </button>
+                key={idx}
+                onClick={() => goToIndex(idx)}
+                className={`h-1 rounded transition-all duration-300 border-0 p-0 ${
+                  idx === carouselIndex ? 'w-12 sm:w-[60px] bg-[var(--accent)]' : 'w-8 sm:w-10 bg-[#e0e0e0]'
+                }`}
+              />
                                   ))}
                                 </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* 已上传的图片预览 */}
-                        {mainReplyImages.length > 0 && (
-                          <div className="mt-3 grid grid-cols-3 gap-2">
-                            {mainReplyImages.map((url, index) => (
-                              <div key={index} className="relative group">
-                                <img
-                                  src={url}
-                                  alt={`上传的图片 ${index + 1}`}
-                                  className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setMainReplyImages(prev => prev.filter((_, i) => i !== index))}
-                                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        
-                        {/* 提交按钮 */}
-                        <div className="flex items-center justify-end gap-2 mt-2">
-                          <button
-                            onClick={() => {
-                              // 组合文本和图片，图片放在文字前面
-                              let finalContent = replyContent.trim()
-                              if (mainReplyImages.length > 0) {
-                                const imageTags = mainReplyImages.map(url => `[IMAGE:${url}]`).join('')
-                                finalContent = imageTags + (finalContent ? ' ' + finalContent : '')
-                              }
-                              handleSubmitReply(null, finalContent)
-                              setReplyContent('')
-                              setMainReplyImages([])
-                            }}
-                            disabled={(!replyContent.trim() && mainReplyImages.length === 0) || submittingReply}
-                            className="flex items-center px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            {submittingReply ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                <span>提交中...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Send className="w-4 h-4 mr-2" />
-                                <span>发表回复</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative overflow-hidden" style={{ background: '#0f0f0f', color: 'rgba(255,255,255,0.7)' }}>
+        <div className="max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-[60px] pt-16 sm:pt-20 lg:pt-24 pb-6 sm:pb-8 lg:pb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 sm:gap-16 lg:gap-20 mb-12 sm:mb-16 lg:mb-20">
+            {/* Left Column - About */}
+            <div>
+              <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
+                <img src="/vcl_sample/logo.png" alt="VCL Logo" className="h-12 sm:h-14 w-auto" />
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm sm:text-base font-medium" style={{ color: 'var(--primary)' }}>溫哥華華人女子高爾夫俱樂部</span>
+                  <span className="text-[10px] sm:text-xs uppercase" style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1px' }}>Vancouver Chinese Women's Golf Club</span>
+                </div>
+              </div>
+              <p className="text-sm sm:text-[15px] leading-[1.8] mb-6 sm:mb-8" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                致力於為熱愛高爾夫的女性打造專屬平台，在優雅運動中建立終身友誼。
+              </p>
+              <div className="flex gap-3 sm:gap-4">
+                {[
+                  { name: 'WeChat', icon: 'fab fa-weixin', href: '#' },
+                  { name: 'Instagram', icon: 'fab fa-instagram', href: '#' },
+                  { name: 'Facebook', icon: 'fab fa-facebook-f', href: '#' },
+                  { name: 'YouTube', icon: 'fab fa-youtube', href: '#' }
+                ].map((social, idx) => (
+                  <a
+                    key={idx}
+                    href={social.href}
+                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-white/20 flex items-center justify-center transition-all duration-300 hover:border-[var(--accent)] hover:text-[var(--accent)] hover:-translate-y-1"
+                    style={{ color: 'rgba(255,255,255,0.8)' }}
+                    aria-label={social.name}
+                  >
+                    <i className={social.icon} style={{ fontSize: '18px' }}></i>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Column - Contact */}
+            <div>
+              <h4 className="text-base sm:text-lg font-semibold text-white mb-5 sm:mb-6 uppercase" style={{ letterSpacing: '1px' }}>聯繫我們</h4>
+              <div className="space-y-4 sm:space-y-5">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--primary)' }} />
+                  <div className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                    Vancouver, BC<br />Canada
                   </div>
-                ) : (
-                  <div className="bg-gray-50 rounded-lg p-4 text-center">
-                    <p className="text-gray-500 text-sm">
-                      {user ? '只有会员可以回复' : '请登录后回复'}
-                    </p>
-                  </div>
-                )}
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>@</span>
+                  <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>info@vclgolf.com</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>📞</span>
+                  <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>+1 (604) 123-4567</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* 图片查看器 Modal */}
-      {imageViewerOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[90]"
-          onClick={() => setImageViewerOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0
-          }}
-        >
-          <button
-            onClick={() => setImageViewerOpen(false)}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-          >
-            <X className="w-8 h-8" />
-          </button>
-          
-          {currentImageIndex > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setCurrentImageIndex(prev => prev - 1)
-              }}
-              className="absolute left-4 text-white hover:text-gray-300 z-10 bg-black/50 rounded-full p-2"
-            >
-              <ChevronRight className="w-6 h-6 rotate-180" />
-            </button>
-          )}
-          
-          {currentImageIndex < imageViewerImages.length - 1 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setCurrentImageIndex(prev => prev + 1)
-              }}
-              className="absolute right-4 text-white hover:text-gray-300 z-10 bg-black/50 rounded-full p-2"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          )}
-          
-          <div 
-            className="max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={imageViewerImages[currentImageIndex]}
-              alt={`图片 ${currentImageIndex + 1}`}
-              className="max-w-full max-h-full object-contain"
-            />
-          </div>
-          
-          {/* 图片指示器 */}
-          {imageViewerImages.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-black/50 rounded-full px-4 py-2">
-              <span className="text-white text-sm">
-                {currentImageIndex + 1} / {imageViewerImages.length}
-              </span>
+          {/* Bottom Section - Copyright and Legal */}
+          <div className="border-t border-white/10 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <p>&copy; 2025 VCL Golf Club. All rights reserved.</p>
+            <div className="flex gap-2">
+              <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Privacy Policy</a>
+              <span className="text-[var(--accent)]">·</span>
+              <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Terms of Service</a>
             </div>
-          )}
+          </div>
         </div>
-      )}
+      </footer>
     </div>
   )
 }
-

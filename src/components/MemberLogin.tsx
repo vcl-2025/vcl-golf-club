@@ -461,7 +461,10 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         <div className="flex-1 flex items-end justify-center px-4 py-4 sm:py-6 lg:items-center lg:py-12 lg:px-12">
           <div className="max-w-lg text-center lg:text-left w-full">
             {/* Logo */}
-                <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-white rounded-full flex items-center justify-center mx-auto lg:mx-0 mb-3 sm:mb-4 lg:mb-8 border-2 border-[#F15B98] shadow-lg">
+                <div 
+                  onClick={() => navigate('/')}
+                  className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-white rounded-full flex items-center justify-center mx-auto lg:mx-0 mb-3 sm:mb-4 lg:mb-8 border-2 border-[#F15B98] shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+                >
               <img 
                 src="/logo-192x192.png" 
                 alt="VCL Golf Club" 
@@ -864,20 +867,14 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
                       </button>
                     </p>
                   ) : (
-                    // 暂时屏蔽注册功能
-                    null
-                    // <p className="text-xs sm:text-sm text-gray-600">
-                    //   还不是会员？
-                    //   <button 
-                    //     onClick={() => {
-                    //       setMode('register')
-                    //       resetForm()
-                    //     }}
-                    //     className="text-golf-600 hover:text-golf-700 font-medium ml-1 transition-colors"
-                    //   >
-                    //     立即注册
-                    //   </button>
-                    // </p>
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      <button 
+                        onClick={() => navigate('/')}
+                        className="text-[#F15B98] hover:text-[#F15B98]/80 font-medium transition-colors"
+                      >
+                        返回首页
+                      </button>
+                    </p>
                   )
                 )}
               </div>
