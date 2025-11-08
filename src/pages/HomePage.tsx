@@ -13,6 +13,8 @@ export default function HomePage() {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
   const carouselTrackRef = useRef<HTMLDivElement>(null)
   const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   
@@ -114,24 +116,81 @@ export default function HomePage() {
     }
   }, [events, loading])
 
+  const marqueeOffsetRef = useRef<number>(0)
+  const isPausedRef = useRef<boolean>(false)
+  const currentIndexRef = useRef<number>(0)
+  const lastUpdateTimeRef = useRef<number>(0)
+
   useEffect(() => {
-    // Carousel auto scroll
+    // Marquee auto scroll - continuous left scrolling
     const startAutoScroll = () => {
       if (autoScrollIntervalRef.current) {
         clearInterval(autoScrollIntervalRef.current)
       }
-      autoScrollIntervalRef.current = setInterval(() => {
-        nextSlide()
-      }, 3000)
+      if (carouselTrackRef.current && !isPausedRef.current) {
+        autoScrollIntervalRef.current = setInterval(() => {
+          if (carouselTrackRef.current && !isPausedRef.current) {
+            marqueeOffsetRef.current -= 1
+            carouselTrackRef.current.style.transition = 'none'
+            carouselTrackRef.current.style.transform = `translateX(${marqueeOffsetRef.current}px)`
+            
+            // Update carouselIndex based on current scroll position (throttle to every 100ms)
+            const now = Date.now()
+            if (now - lastUpdateTimeRef.current > 100) {
+              lastUpdateTimeRef.current = now
+              
+              const itemWidth = carouselTrackRef.current.children[0]?.clientWidth || 0
+              if (itemWidth > 0) {
+                const gap = windowWidth <= 768 ? 16 : windowWidth <= 1024 ? 30 : 30
+                const itemWithGap = itemWidth + gap
+                const containerWidth = carouselTrackRef.current.parentElement?.clientWidth || 0
+                const centerX = containerWidth / 2
+                const totalWidth = galleryImages.length * itemWithGap
+                
+                // Calculate which image is currently in the center
+                // marqueeOffsetRef.current is negative, so we need to account for that
+                const absoluteOffset = Math.abs(marqueeOffsetRef.current)
+                const normalizedOffset = absoluteOffset % totalWidth
+                
+                // Find which item's center is closest to the container center
+                let closestIndex = 0
+                let minDistance = Infinity
+                for (let i = 0; i < galleryImages.length; i++) {
+                  const itemStartX = normalizedOffset + (i * itemWithGap)
+                  const itemCenterX = itemStartX + (itemWidth / 2)
+                  const distance = Math.abs(itemCenterX - centerX)
+                  if (distance < minDistance) {
+                    minDistance = distance
+                    closestIndex = i
+                  }
+                }
+                
+                // Only update if index changed
+                if (closestIndex !== currentIndexRef.current) {
+                  currentIndexRef.current = closestIndex
+                  setCarouselIndex(closestIndex)
+                }
+              }
+            }
+            
+            // Reset when scrolled past first set of items
+            if (Math.abs(marqueeOffsetRef.current) >= totalWidth) {
+              marqueeOffsetRef.current = 0
+            }
+          }
+        }, 20) // Smooth continuous scrolling
+      }
     }
 
-    startAutoScroll()
+    if (!isPausedRef.current) {
+      startAutoScroll()
+    }
     return () => {
       if (autoScrollIntervalRef.current) {
         clearInterval(autoScrollIntervalRef.current)
       }
     }
-  }, [carouselIndex])
+  }, [windowWidth, galleryImages.length])
 
   const fetchPublishedArticles = async () => {
     try {
@@ -163,35 +222,90 @@ export default function HomePage() {
 
   const maxIndex = Math.max(0, galleryImages.length - getItemsPerPage())
 
-  const updateCarousel = (newIndex: number) => {
-    if (isTransitioning) return
-    setIsTransitioning(true)
-    setCarouselIndex(newIndex)
+  const goToIndex = (index: number) => {
+    if (isTransitioning || !carouselTrackRef.current) return
     
-    if (carouselTrackRef.current) {
-      const itemWidth = carouselTrackRef.current.children[0]?.clientWidth || 0
-      const gap = 30
-      const offset = -(newIndex * (itemWidth + gap))
-      carouselTrackRef.current.style.transform = `translateX(${offset}px)`
+    // Pause marquee
+    isPausedRef.current = true
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current)
     }
+    
+    setIsTransitioning(true)
+    setCarouselIndex(index)
+    currentIndexRef.current = index
+    
+    const itemWidth = carouselTrackRef.current.children[0]?.clientWidth || 0
+    const gap = windowWidth <= 768 ? 16 : windowWidth <= 1024 ? 30 : 30
+    const containerWidth = carouselTrackRef.current.parentElement?.clientWidth || 0
+    const itemWithGap = itemWidth + gap
+    
+    // Calculate offset to center the selected item (use first set of images)
+    const offset = -(index * itemWithGap) + (containerWidth - itemWidth) / 2
+    marqueeOffsetRef.current = offset
+    
+    carouselTrackRef.current.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+    carouselTrackRef.current.style.transform = `translateX(${offset}px)`
 
     setTimeout(() => {
       setIsTransitioning(false)
+      // Resume marquee after 3 seconds
+      setTimeout(() => {
+        isPausedRef.current = false
+        const startAutoScroll = () => {
+          if (autoScrollIntervalRef.current) {
+            clearInterval(autoScrollIntervalRef.current)
+          }
+          if (carouselTrackRef.current) {
+            autoScrollIntervalRef.current = setInterval(() => {
+              if (carouselTrackRef.current && !isPausedRef.current) {
+                marqueeOffsetRef.current -= 1
+                carouselTrackRef.current.style.transition = 'none'
+                carouselTrackRef.current.style.transform = `translateX(${marqueeOffsetRef.current}px)`
+                
+                const itemWidth = carouselTrackRef.current.children[0]?.clientWidth || 0
+                const gap = windowWidth <= 768 ? 16 : windowWidth <= 1024 ? 30 : 30
+                const totalWidth = galleryImages.length * (itemWidth + gap)
+                if (Math.abs(marqueeOffsetRef.current) >= totalWidth) {
+                  marqueeOffsetRef.current = 0
+                }
+              }
+            }, 20)
+          }
+        }
+        startAutoScroll()
+      }, 3000)
     }, 600)
   }
 
-  const nextSlide = () => {
-    const newIndex = carouselIndex >= maxIndex ? 0 : carouselIndex + 1
-    updateCarousel(newIndex)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchEndX.current = touchStartX.current
   }
 
-  const prevSlide = () => {
-    const newIndex = carouselIndex <= 0 ? maxIndex : carouselIndex - 1
-    updateCarousel(newIndex)
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX
   }
 
-  const goToIndex = (index: number) => {
-    updateCarousel(index)
+  const handleTouchEnd = () => {
+    if (touchStartX.current === 0) return
+    
+    const distance = touchStartX.current - touchEndX.current
+    const minSwipeDistance = 50 // 最小滑动距离
+
+    if (Math.abs(distance) > minSwipeDistance) {
+      if (distance > 0) {
+        // 向左滑动，显示下一张
+        nextSlide()
+      } else {
+        // 向右滑动，显示上一张
+        prevSlide()
+      }
+    }
+
+    // 重置
+    touchStartX.current = 0
+    touchEndX.current = 0
   }
 
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
@@ -464,11 +578,11 @@ export default function HomePage() {
         }`}
         style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
       >
-        <div className="flex items-center gap-2 sm:gap-[15px]" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '16px sm:text-[20px]', fontWeight: 700, letterSpacing: '1px', color: 'var(--light)' }}>
-          <img src="/vcl_sample/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain" />
-          <div className="flex flex-col gap-[1px] sm:gap-[2px]">
-            <span className="text-lg sm:text-[22px] font-semibold leading-tight" style={{ color: 'var(--light)', letterSpacing: '1px' }}>溫哥華華人女子高爾夫俱樂部</span>
-            <span className="text-[10px] sm:text-[11px] uppercase leading-tight" style={{ color: 'var(--accent)', letterSpacing: '1.5px', fontWeight: 400 }}>Vancouver Chinese Women's Golf Club</span>
+        <div className="flex items-center gap-2 sm:gap-[15px] flex-1 min-w-0" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '16px sm:text-[20px]', fontWeight: 700, letterSpacing: '1px', color: 'var(--light)' }}>
+          <img src="/vcl_sample/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain flex-shrink-0" />
+          <div className="flex flex-col gap-[1px] sm:gap-[2px] min-w-0 flex-1">
+            <span className="text-xl sm:text-[22px] font-semibold leading-tight truncate" style={{ color: 'var(--light)', letterSpacing: '1px' }}>溫哥華華人女子高爾夫俱樂部</span>
+            <span className="text-[9px] sm:text-[11px] uppercase leading-tight break-words" style={{ color: 'var(--accent)', letterSpacing: '1.5px', fontWeight: 400, fontFamily: 'sans-serif' }}>Vancouver Chinese Women's Golf Club</span>
               </div>
               </div>
         
@@ -586,20 +700,20 @@ export default function HomePage() {
           <div 
             className="absolute inset-0"
           style={{
-              background: 'linear-gradient(to right, rgba(26, 26, 26, 0.85) 0%, rgba(26, 26, 26, 0.6) 50%, rgba(26, 26, 26, 0.3) 100%)'
+              background: 'linear-gradient(to right, rgba(26, 26, 26, 0.5) 0%, rgba(26, 26, 26, 0.35) 50%, rgba(26, 26, 26, 0.15) 100%)'
             }}
           />
               </div>
               
-        <div className="relative z-[2] max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-[60px] w-full flex flex-col items-start">
-          <div className="text-xs sm:text-base uppercase mb-4 sm:mb-[30px] font-medium opacity-0 animate-fade-in" style={{ letterSpacing: '4px', color: 'var(--accent)' }}>
+        <div className="relative z-[2] max-w-[1400px] mx-auto px-8 sm:px-8 lg:px-[60px] w-full flex flex-col items-start">
+          <div className="text-sm sm:text-base uppercase mb-4 sm:mb-[30px] font-medium opacity-0 animate-fade-in" style={{ letterSpacing: '4px', color: 'var(--accent)' }}>
             Vancouver Chinese Ladies' Golf Club
           </div>
           <h1 
             className="font-light leading-[1.3] mb-6 sm:mb-10 opacity-0 animate-fade-in-delay max-w-[900px]"
             style={{ 
               fontFamily: '"Cormorant Garamond", serif', 
-              fontSize: 'clamp(28px, 6vw, 60px)',
+              fontSize: 'clamp(36px, 7vw, 60px)',
               color: '#fff'
             }}
           >
@@ -609,7 +723,7 @@ export default function HomePage() {
             </strong>
           </h1>
           <p 
-            className="text-sm sm:text-base lg:text-xl leading-[1.8] max-w-[600px] mb-6 sm:mb-[50px] font-light opacity-0 animate-fade-in-delay"
+            className="text-base sm:text-base lg:text-xl leading-[1.8] max-w-[600px] mb-6 sm:mb-[50px] font-light opacity-0 animate-fade-in-delay"
             style={{ color: 'rgba(255,255,255,0.9)' }}
           >
             汇聚温哥华优雅女性，在世界级球场挥洒激情，<br className="hidden sm:block" />
@@ -619,7 +733,7 @@ export default function HomePage() {
             <a 
               href="#about" 
               onClick={(e) => handleSmoothScroll(e, 'about')}
-              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-xs sm:text-sm font-semibold uppercase transition-all duration-[400ms] relative overflow-hidden text-center"
+              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-sm sm:text-sm font-semibold uppercase transition-all duration-[400ms] relative overflow-hidden text-center"
               style={{ 
                 background: 'linear-gradient(135deg, var(--accent), var(--pink))',
                 color: 'white',
@@ -632,7 +746,7 @@ export default function HomePage() {
             <a 
               href="#activities" 
               onClick={(e) => handleSmoothScroll(e, 'activities')}
-              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-xs sm:text-sm font-semibold uppercase transition-all duration-[400ms] text-center"
+              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-sm sm:text-sm font-semibold uppercase transition-all duration-[400ms] text-center"
               style={{ 
                 background: 'transparent',
                 color: '#fff',
@@ -652,26 +766,26 @@ export default function HomePage() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="relative" style={{ background: 'var(--light)', color: 'var(--dark)', padding: '100px 20px sm:100px 30px lg:180px 60px' }}>
-        <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-[100px] items-center">
+      <section id="about" className="relative pt-[100px] pb-[120px] sm:pt-[100px] sm:pb-[140px] lg:pt-[180px] lg:pb-[200px] px-5 sm:px-[30px] lg:px-[60px]" style={{ background: 'var(--light)', color: 'var(--dark)' }}>
+        <div className="max-w-[1400px] mx-auto px-7 sm:px-0 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-12 lg:gap-[100px] items-center">
           <div 
             ref={aboutTextRef}
             data-animate-id="about-text"
             className={`pr-0 md:pr-[60px] py-32 sm:py-40 lg:py-48 scroll-animate-left ${visibleElements.has('about-text') ? 'scroll-animate-visible' : ''}`}
           >
-            <div className="text-xs sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
+            <div className="text-sm sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
               About VCL Golf Club
                     </div>
             <h2 
-              className="font-light leading-[1.2] mb-6 sm:mb-10 text-3xl sm:text-5xl lg:text-[64px]"
+              className="font-light leading-[1.2] mb-6 sm:mb-10 text-4xl sm:text-5xl lg:text-[64px]"
               style={{ fontFamily: '"Cormorant Garamond", serif' }}
             >
               煥發女性 <strong className="font-bold" style={{ color: 'var(--primary)' }}>高爾夫</strong><br />的优雅与激情
             </h2>
-            <p className="text-sm sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
+            <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
               溫哥華華人女子高爾夫俱樂部，致力於為熱愛高爾夫的女性打造專屬平台。我們不僅提供世界級的球場資源，更創造了一個充滿活力、優雅精緻的社交圈層。
             </p>
-            <p className="text-sm sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
+            <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
               無論您是初學者還是資深球手，在這裡都能找到志同道合的夥伴，在綠茵場上揮灑激情，在交流中收穫友誼與成長。
             </p>
 
@@ -687,8 +801,8 @@ export default function HomePage() {
                     <feature.icon className="w-8 h-8" />
                     </div>
                 <div>
-                    <h4 className="text-lg mb-2 font-semibold">{feature.title}</h4>
-                    <p className="text-[15px] text-[#888] leading-[1.6]">{feature.desc}</p>
+                    <h4 className="text-xl mb-2 font-semibold">{feature.title}</h4>
+                    <p className="text-base text-[#888] leading-[1.6]">{feature.desc}</p>
                     </div>
                   </div>
               ))}
@@ -698,7 +812,7 @@ export default function HomePage() {
           <div 
             ref={aboutImageRef}
             data-animate-id="about-image"
-            className={`relative h-[400px] sm:h-[500px] lg:h-[700px] mt-8 md:mt-0 scroll-animate-right ${visibleElements.has('about-image') ? 'scroll-animate-visible' : ''}`}
+            className={`relative h-[400px] sm:h-[500px] lg:h-[700px] mt-0 md:mt-0 scroll-animate-right ${visibleElements.has('about-image') ? 'scroll-animate-visible' : ''}`}
           >
             <img
               src="https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?q=80&w=2070"
@@ -710,7 +824,7 @@ export default function HomePage() {
       </section>
 
       {/* Activities Section */}
-      <section id="activities" className="relative py-24 sm:py-32 lg:py-40 px-5 sm:px-8 lg:px-[60px] overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(25, 55, 30, 0.95) 0%, rgba(50, 100, 60, 0.95) 50%, rgba(30, 60, 35, 0.95) 100%)' }}>
+      <section id="activities" className="relative py-24 sm:py-32 lg:py-40 px-8 sm:px-8 lg:px-[60px] overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(25, 55, 30, 0.95) 0%, rgba(50, 100, 60, 0.95) 50%, rgba(30, 60, 35, 0.95) 100%)' }}>
         {/* 背景装饰图案 */}
         <div className="absolute inset-0 opacity-5 pointer-events-none">
           {/* 高尔夫球图案 */}
@@ -733,11 +847,11 @@ export default function HomePage() {
           data-animate-id="activities-title"
           className={`relative z-10 max-w-[1400px] mx-auto mb-12 sm:mb-20 text-center scroll-animate-up ${visibleElements.has('activities-title') ? 'scroll-animate-visible' : ''}`}
         >
-          <div className="text-xs sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
+          <div className="text-sm sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
             Recent Highlights
           </div>
           <h2 
-            className="font-light leading-[1.2] mb-6 sm:mb-10 text-white text-3xl sm:text-5xl lg:text-[64px]"
+            className="font-light leading-[1.2] mb-6 sm:mb-10 text-white text-4xl sm:text-5xl lg:text-[64px]"
             style={{ fontFamily: '"Cormorant Garamond", serif' }}
           >
             精彩<strong className="font-bold" style={{ color: 'var(--accent)' }}>活動回顧</strong>
@@ -754,8 +868,8 @@ export default function HomePage() {
                 <div
                   key={event.id}
                   data-animate-id={`activity-${event.id}`}
-                  className={`activity-card relative overflow-hidden rounded-lg cursor-pointer scroll-animate-up ${visibleElements.has(`activity-${event.id}`) ? 'scroll-animate-visible' : ''}`}
-                  style={{ aspectRatio: '4/5', transitionDelay: `${idx * 0.1}s` }}
+                  className={`activity-card relative overflow-hidden rounded-lg cursor-pointer scroll-animate-up shadow-lg hover:shadow-xl transition-shadow duration-300 ${visibleElements.has(`activity-${event.id}`) ? 'scroll-animate-visible' : ''}`}
+                  style={{ aspectRatio: '4/5', transitionDelay: `${idx * 0.1}s`, boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)' }}
                   onClick={() => navigate(`/review/${event.id}`)}
                 >
                       <img
@@ -798,8 +912,8 @@ export default function HomePage() {
             activityImages.map((activity, idx) => (
               <div
                 key={idx}
-                className="activity-card relative overflow-hidden rounded-lg cursor-pointer group"
-                style={{ aspectRatio: '4/5' }}
+                className="activity-card relative overflow-hidden rounded-lg cursor-pointer group shadow-lg hover:shadow-xl transition-shadow duration-300"
+                style={{ aspectRatio: '4/5', boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)' }}
               >
                 <img
                   src={activity.src}
@@ -857,7 +971,7 @@ export default function HomePage() {
       </section>
 
       {/* Members Gallery Section */}
-      <section className="relative overflow-hidden py-24 sm:py-32 lg:py-40 px-5 sm:px-8 lg:px-[60px]" style={{ background: 'linear-gradient(135deg, #fef5f8 0%, #fef9f5 50%, #fff5f8 100%)' }}>
+      <section className="relative overflow-hidden py-24 sm:py-32 lg:py-40 px-8 sm:px-8 lg:px-[60px]" style={{ background: 'linear-gradient(135deg, #fef5f8 0%, #fef9f5 50%, #fff5f8 100%)' }}>
         {/* 粉色云朵流动动画背景 */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* 云朵1 */}
@@ -918,81 +1032,90 @@ export default function HomePage() {
             data-animate-id="gallery-title"
             className={`text-center mb-12 sm:mb-20 scroll-animate-up ${visibleElements.has('gallery-title') ? 'scroll-animate-visible' : ''}`}
           >
-            <div className="text-xs sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
+            <div className="text-sm sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
               Members Moments
                                           </div>
             <h2 
-              className="font-light leading-[1.2] mb-6 sm:mb-10 text-3xl sm:text-5xl lg:text-[64px]"
+              className="font-light leading-[1.2] mb-6 sm:mb-10 text-4xl sm:text-5xl lg:text-[64px]"
               style={{ fontFamily: '"Cormorant Garamond", serif', color: 'var(--dark)' }}
             >
               會員<strong className="font-bold" style={{ color: 'var(--primary)' }}>風采</strong>
             </h2>
-            <p className="text-sm sm:text-base lg:text-lg text-[#666] px-4">
+            <p className="text-base sm:text-base lg:text-lg text-[#666] px-4">
               記錄每一個精彩瞬間，分享高爾夫的快樂時光
             </p>
                                       </div>
 
-          <div className="relative overflow-hidden" style={{ padding: '20px 0 sm:40px 0' }}>
+          {/* Main Image Display */}
+          <div className="relative overflow-hidden mb-6 sm:mb-8 bg-transparent" style={{ padding: '20px 0 sm:40px 0', height: windowWidth <= 768 ? '300px' : windowWidth <= 1024 ? '400px' : '500px', backgroundColor: 'transparent' }}>
             <div 
               ref={carouselTrackRef}
-              className="flex gap-4 sm:gap-[30px] transition-transform duration-[600ms]"
-              style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
+              className="flex gap-4 sm:gap-[30px] bg-transparent"
+              style={{ 
+                transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'transform',
+                backgroundColor: 'transparent'
+              }}
             >
-              {galleryImages.map((img, idx) => (
-                                                <div
-                                                  key={idx}
-                                                  data-animate-id={`gallery-${idx}`}
-                                                  className={`flex-shrink-0 rounded-2xl overflow-hidden relative cursor-pointer transition-all duration-[400ms] hover:-translate-y-4 w-full sm:w-[calc((100%-30px)/2)] lg:w-[calc((100%-60px)/3)] scroll-animate-up ${visibleElements.has(`gallery-${idx}`) ? 'scroll-animate-visible' : ''}`}
-                                                  style={{ 
-                                                    height: windowWidth <= 768 ? '300px' : windowWidth <= 1024 ? '400px' : '500px',
-                                                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
-                                                    transitionDelay: `${idx * 0.15}s`
-                                                  }}
-                                                >
-                                                  <img
+              {/* Duplicate images for seamless loop */}
+              {[...galleryImages, ...galleryImages].map((img, idx) => (
+                <div
+                  key={idx}
+                  className="flex-shrink-0 rounded-2xl overflow-hidden relative bg-transparent"
+                  style={{ 
+                    width: windowWidth <= 768 ? 'calc(100vw - 80px)' : windowWidth <= 1024 ? 'calc((100vw - 120px) / 2)' : 'calc((100vw - 240px) / 3)',
+                    height: windowWidth <= 768 ? '300px' : windowWidth <= 1024 ? '400px' : '500px',
+                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+                    backgroundColor: 'transparent'
+                  }}
+                >
+                  <img
                     src={img}
                     alt="Golf moment"
-                    className="w-full h-full object-cover object-center transition-transform duration-[600ms] hover:scale-110"
-                                                  />
-                                                </div>
-                                              ))}
-                                            </div>
-                                      </div>
-
-          <div className="flex justify-center gap-4 sm:gap-5 mt-8 sm:mt-15">
-                          <button
-              onClick={prevSlide}
-              className="w-12 h-12 sm:w-[60px] sm:h-[60px] rounded-full bg-white border-2 border-[#e0e0e0] text-[var(--dark)] cursor-pointer transition-all duration-300 flex items-center justify-center text-lg sm:text-xl hover:bg-[var(--accent)] hover:border-[var(--accent)] hover:text-white hover:scale-110"
-              style={{ boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)' }}
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                          </button>
-                            <button
-              onClick={nextSlide}
-              className="w-12 h-12 sm:w-[60px] sm:h-[60px] rounded-full bg-white border-2 border-[#e0e0e0] text-[var(--dark)] cursor-pointer transition-all duration-300 flex items-center justify-center text-lg sm:text-xl hover:bg-[var(--accent)] hover:border-[var(--accent)] hover:text-white hover:scale-110"
-              style={{ boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)' }}
-            >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </button>
+                    className="w-full h-full object-cover object-center"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="flex justify-center gap-2 sm:gap-[10px] mt-6 sm:mt-10">
-            {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
-                                    <button
-                key={idx}
-                onClick={() => goToIndex(idx)}
-                className={`h-1 rounded transition-all duration-300 border-0 p-0 ${
-                  idx === carouselIndex ? 'w-12 sm:w-[60px] bg-[var(--accent)]' : 'w-8 sm:w-10 bg-[#e0e0e0]'
-                }`}
-              />
-                                  ))}
-                                </div>
+          {/* Thumbnail Gallery */}
+          <div className="flex justify-center gap-2 sm:gap-3 overflow-x-auto pt-2 pb-2 px-4 bg-transparent" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', backgroundColor: 'transparent' }}>
+            <style>{`
+              .thumbnail-scroll::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
+            <div className="flex gap-2 sm:gap-3 thumbnail-scroll py-1">
+              {galleryImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => goToIndex(idx)}
+                  className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+                    idx === carouselIndex 
+                      ? 'border-[var(--accent)] scale-110 shadow-lg' 
+                      : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'
+                  }`}
+                  style={{ 
+                    width: windowWidth <= 768 ? '60px' : windowWidth <= 1024 ? '80px' : '100px',
+                    height: windowWidth <= 768 ? '60px' : windowWidth <= 1024 ? '80px' : '100px'
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`Thumbnail ${idx + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
                               </div>
       </section>
 
       {/* Footer */}
       <footer className="relative overflow-hidden" style={{ background: '#0f0f0f', color: 'rgba(255,255,255,0.7)' }}>
-        <div className="max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-[60px] pt-16 sm:pt-20 lg:pt-24 pb-6 sm:pb-8 lg:pb-10">
+        <div className="max-w-[1400px] mx-auto px-8 sm:px-8 lg:px-[60px] pt-16 sm:pt-20 lg:pt-24 pb-6 sm:pb-8 lg:pb-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 sm:gap-16 lg:gap-20 mb-12 sm:mb-16 lg:mb-20">
             {/* Left Column - About */}
             <div>
