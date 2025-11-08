@@ -61,7 +61,7 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
       if (!supabase) return
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select('*, image_url, article_featured_image_url')
         .in('id', item.linked_events)
         .order('start_time', { ascending: true })
       

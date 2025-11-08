@@ -141,6 +141,26 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         return
       }
 
+      // 乐观锁检查：查询活动的当前报名人数
+      const { data: currentRegistrations, error: countError } = await supabase
+        .from('event_registrations')
+        .select('id')
+        .eq('event_id', event.id)
+        .eq('status', 'registered')
+
+      if (countError) {
+        console.error('检查报名名额失败:', countError)
+        setMessage('检查报名名额失败，请重试')
+        return
+      }
+
+      // 检查是否已满
+      const currentCount = currentRegistrations?.length || 0
+      if (currentCount >= event.max_participants) {
+        setMessage(`抱歉，该活动报名名额已满（${currentCount}/${event.max_participants}）。`)
+        return
+      }
+
       // 上传支付证明（如果有）
       let paymentProofUrl = null
       if (paymentProof) {

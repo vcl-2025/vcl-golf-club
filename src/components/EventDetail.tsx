@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   X, Calendar, MapPin, Users, Clock, DollarSign, 
-  FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye, Maximize2, Minimize2, Share2, ChevronLeft
+  FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye, Maximize2, Minimize2, Share2, ChevronLeft, ShoppingCart
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventStats, EventRegistration } from '../types'
@@ -19,9 +19,12 @@ interface EventDetailProps {
   user: any
   userProfile?: any
   isStandalonePage?: boolean // 是否为独立页面模式
+  eventCart?: Set<string> // 购物车中的活动ID集合
+  onAddToCart?: (eventId: string) => void // 添加到购物车
+  onRemoveFromCart?: (eventId: string) => void // 从购物车移除
 }
 
-export default function EventDetail({ event, onClose, user, userProfile, isStandalonePage = false }: EventDetailProps) {
+export default function EventDetail({ event, onClose, user, userProfile, isStandalonePage = false, eventCart = new Set(), onAddToCart, onRemoveFromCart }: EventDetailProps) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [stats, setStats] = useState<EventStats | null>(null)
@@ -510,12 +513,33 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
 
                 {/* 报名按钮 */}
                 {canRegister() && (
-                  <button
-                    onClick={() => setShowRegistrationModal(true)}
-                    className="w-full btn-primary py-3 text-lg mt-4"
-                  >
-                    立即报名
-                  </button>
+                  <div className="space-y-3 mt-4">
+                    <button
+                      onClick={() => setShowRegistrationModal(true)}
+                      className="w-full btn-primary py-3 text-lg"
+                    >
+                      立即报名
+                    </button>
+                    {onAddToCart && onRemoveFromCart && (
+                      <button
+                        onClick={() => {
+                          if (eventCart.has(event.id)) {
+                            onRemoveFromCart(event.id)
+                          } else {
+                            onAddToCart(event.id)
+                          }
+                        }}
+                        className={`w-full py-3 text-lg rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                          eventCart.has(event.id)
+                            ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        {eventCart.has(event.id) ? '已加入购物车' : '加入购物车'}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* 取消报名按钮 */}
@@ -884,12 +908,33 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
 
                 {/* 报名按钮 */}
                 {canRegister() && (
-                  <button
-                    onClick={() => setShowRegistrationModal(true)}
-                    className="w-full btn-primary py-3 text-lg mt-4"
-                  >
-                    立即报名
-                  </button>
+                  <div className="space-y-3 mt-4">
+                    <button
+                      onClick={() => setShowRegistrationModal(true)}
+                      className="w-full btn-primary py-3 text-lg"
+                    >
+                      立即报名
+                    </button>
+                    {onAddToCart && onRemoveFromCart && (
+                      <button
+                        onClick={() => {
+                          if (eventCart.has(event.id)) {
+                            onRemoveFromCart(event.id)
+                          } else {
+                            onAddToCart(event.id)
+                          }
+                        }}
+                        className={`w-full py-3 text-lg rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                          eventCart.has(event.id)
+                            ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        {eventCart.has(event.id) ? '已加入购物车' : '加入购物车'}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* 取消报名按钮 */}

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -21,6 +21,7 @@ import EventReviews from './EventReviews'
 import MemberPhotoGallery from './MemberPhotoGallery'
 import InformationCenterList from './InformationCenterList'
 import InformationCenterDetail from './InformationCenterDetail'
+import EventCartModal from './EventCartModal'
 import { Event, InformationItem } from '../types'
 
 interface Poster {
@@ -118,6 +119,48 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin'>(
     (viewParam as any) || 'dashboard'
   )
+  
+  // 购物车状态 - 存储待报名的活动ID
+  // 从 localStorage 初始化购物车
+  const [eventCart, setEventCart] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('eventCart')
+      if (saved) {
+        const cartArray = JSON.parse(saved) as string[]
+        return new Set(cartArray)
+      }
+    } catch (error) {
+      console.error('读取购物车数据失败:', error)
+    }
+    return new Set()
+  })
+  const [showCartModal, setShowCartModal] = useState(false)
+  
+  // 记忆化 eventIds，避免不必要的重新渲染
+  const memoizedEventIds = useMemo(() => Array.from(eventCart), [eventCart])
+  
+  // 保存购物车到 localStorage
+  useEffect(() => {
+    try {
+      const cartArray = Array.from(eventCart)
+      localStorage.setItem('eventCart', JSON.stringify(cartArray))
+    } catch (error) {
+      console.error('保存购物车数据失败:', error)
+    }
+  }, [eventCart])
+  
+  // 购物车管理函数
+  const handleAddToCart = (eventId: string) => {
+    setEventCart(prev => new Set(prev).add(eventId))
+  }
+  
+  const handleRemoveFromCart = (eventId: string) => {
+    setEventCart(prev => {
+      const newCart = new Set(prev)
+      newCart.delete(eventId)
+      return newCart
+    })
+  }
   
   // 当URL参数变化时，更新currentView
   useEffect(() => {
@@ -1028,6 +1071,20 @@ export default function Dashboard() {
 
             {/* User Menu */}
             <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* 购物车按钮 */}
+              <button
+                onClick={() => setShowCartModal(true)}
+                className="relative flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
+                title={eventCart.size > 0 ? `购物车 (${eventCart.size})` : '购物车'}
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {eventCart.size > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#F15B98] text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {eventCart.size}
+                  </span>
+                )}
+              </button>
+              
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -2924,6 +2981,9 @@ export default function Dashboard() {
           }}
           user={user}
           userProfile={userProfile}
+          eventCart={eventCart}
+          onAddToCart={handleAddToCart}
+          onRemoveFromCart={handleRemoveFromCart}
         />
       )}
 
@@ -2957,6 +3017,19 @@ export default function Dashboard() {
           onClose={() => {
             setSelectedInformationItem(null)
             // URL 更新由 InformationCenterDetail 组件内部处理
+          }}
+        />
+      )}
+
+      {/* 购物车模态框 */}
+      {showCartModal && (
+        <EventCartModal
+          eventIds={memoizedEventIds}
+          onClose={() => setShowCartModal(false)}
+          onRemoveFromCart={handleRemoveFromCart}
+          onSuccess={() => {
+            setEventCart(new Set())
+            setShowCartModal(false)
           }}
         />
       )}

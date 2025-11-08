@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, ShoppingCart, Calendar, MapPin, DollarSign, Upload, CheckCircle, AlertCircle, Trash2, QrCode, Mail } from 'lucide-react'
+import { X, ShoppingCart, Calendar, MapPin, DollarSign, Upload, CheckCircle, AlertCircle, Trash2, QrCode, Mail, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
 import { useAuth } from '../hooks/useAuth'
@@ -22,6 +22,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
   const [userRegistrations, setUserRegistrations] = useState<Record<string, EventRegistration>>({})
   const [enlargedQrCode, setEnlargedQrCode] = useState<string | null>(null)
   const [userProfile, setUserProfile] = useState<any>(null)
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (user && supabase) {
@@ -199,7 +200,42 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
     setIsSubmitting(true)
 
     try {
-      console.log('6. 开始上传支付凭证...')
+      // 乐观锁检查：查询每个活动的当前报名人数
+      console.log('6. 开始检查报名名额...')
+      const eventIds = selectedEvents.map(e => e.id)
+      const { data: currentRegistrations, error: checkError } = await supabase
+        .from('event_registrations')
+        .select('event_id')
+        .in('event_id', eventIds)
+        .eq('status', 'registered')
+
+      if (checkError) {
+        console.error('❌ 检查报名名额失败:', checkError)
+        throw new Error('检查报名名额失败: ' + checkError.message)
+      }
+
+      // 统计每个活动的报名人数
+      const registrationCounts: Record<string, number> = {}
+      currentRegistrations?.forEach((reg: any) => {
+        registrationCounts[reg.event_id] = (registrationCounts[reg.event_id] || 0) + 1
+      })
+
+      // 检查是否有活动已满
+      const fullEvents: string[] = []
+      selectedEvents.forEach(event => {
+        const currentCount = registrationCounts[event.id] || 0
+        if (currentCount >= event.max_participants) {
+          fullEvents.push(event.title)
+        }
+      })
+
+      if (fullEvents.length > 0) {
+        console.error('❌ 存在已满的活动:', fullEvents)
+        throw new Error(`以下活动报名名额已满：${fullEvents.join('、')}。请从选择中移除这些活动后重试。`)
+      }
+
+      console.log('✅ 名额检查通过')
+      console.log('7. 开始上传支付凭证...')
       // 上传支付凭证
       const paymentProofUrl = await uploadPaymentProof(paymentProof)
       console.log('✅ 支付凭证上传成功:', paymentProofUrl)
@@ -223,7 +259,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
         return registration
       })
 
-      console.log('7. 准备插入报名记录:', {
+      console.log('8. 准备插入报名记录:', {
         registrationsCount: registrations.length,
         registrations: registrations.map(r => ({
           event_id: r.event_id,
@@ -237,7 +273,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
         .insert(registrations)
         .select()
 
-      console.log('8. 插入结果:', { data, error })
+      console.log('9. 插入结果:', { data, error })
 
       if (error) {
         console.error('❌ 插入报名记录失败:', error)
@@ -296,6 +332,11 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
             <div className="space-y-3">
               {selectedEvents.map((event) => {
                 const isRegistered = !!userRegistrations[event.id]
+                // 获取图片 URL，确保是有效的 URL
+                const rawImageUrl = event.image_url || event.article_featured_image_url
+                const imageUrl = rawImageUrl && rawImageUrl.trim() && rawImageUrl.startsWith('http') ? rawImageUrl : null
+                const hasImageError = imageErrors[event.id] || false
+                
                 return (
                   <div
                     key={event.id}
@@ -305,8 +346,25 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
                         : 'border-gray-200 bg-white'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                    <div className="flex items-start justify-between gap-4">
+                      {/* 活动图片 */}
+                      <div className="flex-shrink-0">
+                        {imageUrl && !hasImageError ? (
+                          <img
+                            src={imageUrl}
+                            alt={event.title}
+                            className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg"
+                            onError={() => {
+                              setImageErrors(prev => ({ ...prev, [event.id]: true }))
+                            }}
+                          />
+                        ) : (
+                          <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
+                            <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <h4 className="font-semibold text-gray-900">{event.title}</h4>
                           {isRegistered && (
@@ -340,27 +398,21 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
                                 <div className="flex items-start gap-2">
                                   <QrCode className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
                                   <div className="flex-1">
-                                    <div className="text-xs text-gray-600 mb-1">扫码支付</div>
+                                    <div className="text-xs text-gray-600 mb-1">
+                                      扫码支付 <span className="text-red-500">（点击图片下载）</span>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                       <img
                                         src={event.payment_qr_code}
                                         alt="支付二维码"
-                                        onClick={() => setEnlargedQrCode(event.payment_qr_code || null)}
-                                        className="w-24 h-24 object-contain border border-gray-200 rounded cursor-pointer hover:border-[#F15B98] transition-colors"
-                                        title="点击查看大图"
-                                      />
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation()
+                                        onClick={() => {
                                           if (event.payment_qr_code) {
                                             downloadQRCode(event.payment_qr_code, event.title)
                                           }
                                         }}
-                                        className="px-2 py-1 text-xs text-[#F15B98] border border-[#F15B98] rounded hover:bg-[#F15B98] hover:text-white transition-colors"
-                                        title="下载二维码"
-                                      >
-                                        下载
-                                      </button>
+                                        className="w-12 h-12 sm:w-24 sm:h-24 object-contain border border-gray-200 rounded cursor-pointer hover:border-[#F15B98] transition-colors"
+                                        title="点击下载二维码"
+                                      />
                                     </div>
                                   </div>
                                 </div>
@@ -419,21 +471,33 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
                 <Upload className="w-4 h-4 inline mr-2" />
                 上传支付凭证（所有活动共享同一凭证）*
               </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePaymentProofChange}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-              />
-              {paymentProofPreview && (
-                <div className="mt-3">
-                  <img
-                    src={paymentProofPreview}
-                    alt="凭证预览"
-                    className="w-full max-w-md h-auto rounded-lg border border-gray-200"
-                  />
-                </div>
-              )}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePaymentProofChange}
+                  className="hidden"
+                  id="payment-proof-upload"
+                />
+                <label htmlFor="payment-proof-upload" className="cursor-pointer block">
+                  {paymentProofPreview ? (
+                    <div>
+                      <img
+                        src={paymentProofPreview}
+                        alt="凭证预览"
+                        className="max-w-full max-h-48 mx-auto mb-2 rounded-lg"
+                      />
+                      <p className="text-sm text-gray-600">点击更换凭证</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600 mb-1">点击上传支付凭证</p>
+                      <p className="text-xs text-gray-500">支持 JPG、PNG 格式</p>
+                    </div>
+                  )}
+                </label>
+              </div>
             </div>
           )}
 

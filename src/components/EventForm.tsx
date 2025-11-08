@@ -91,6 +91,18 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
       if (event.payment_qr_code) {
         setQrCodePreview(event.payment_qr_code)
       }
+      
+      // 如果有现有的活动图片，设置预览
+      if (event.image_url) {
+        setImagePreview(event.image_url)
+        // 如果图片是 URL，默认使用 URL 输入方式
+        if (event.image_url.startsWith('http')) {
+          setImageUploadMethod('url')
+        } else {
+          // 如果是相对路径或存储路径，使用上传方式
+          setImageUploadMethod('upload')
+        }
+      }
     } else {
       // 创建模式 - 重置为默认值
       isInitializing.current = true
@@ -521,10 +533,10 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                         id="event-image-upload"
                       />
                       <label htmlFor="event-image-upload" className="cursor-pointer block">
-                        {imagePreview ? (
+                        {(imagePreview || formData.image_url) ? (
                           <div>
                             <img
-                              src={imagePreview}
+                              src={imagePreview || formData.image_url}
                               alt="活动图片预览"
                               className="max-w-full max-h-48 mx-auto mb-2 rounded-lg"
                             />
