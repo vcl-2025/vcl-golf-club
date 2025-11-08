@@ -276,10 +276,10 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
   }
 
   return (
-    <div className="relative px-2 sm:px-4 py-3 sm:py-5 bg-white/20 backdrop-blur-md border-2 border-white/40 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden" style={{ 
-      boxShadow: '0 8px 24px 0 rgba(31, 38, 135, 0.15), 0 2px 8px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.6)',
-      WebkitBackdropFilter: 'blur(12px)',
-      backdropFilter: 'blur(12px)'
+    <div className="relative px-2 sm:px-4 py-3 sm:py-5 bg-white/20 backdrop-blur-sm border-2 border-white/40 rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden" style={{ 
+      boxShadow: '0 2px 8px 0 rgba(31, 38, 135, 0.08), 0 1px 4px 0 rgba(0, 0, 0, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.6)',
+      WebkitBackdropFilter: 'blur(6px)',
+      backdropFilter: 'blur(6px)'
     }}>
       {/* 装饰性背景元素 */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F15B98]/5 to-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>

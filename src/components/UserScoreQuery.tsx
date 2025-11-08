@@ -63,6 +63,7 @@ export default function UserScoreQuery() {
   const [selectedYear, setSelectedYear] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
+  const [pressedEventId, setPressedEventId] = useState<string | null>(null)
   const [animatedStats, setAnimatedStats] = useState<UserStats>({
     totalRounds: 0,
     averageStrokes: 0,
@@ -595,15 +596,30 @@ export default function UserScoreQuery() {
             
             const scoreDisplay = getUserScoreDisplay()
             
+            const isPressed = pressedEventId === group.event.id
+            
             return (
               <div
                 key={group.event.id}
                 ref={setEventRef}
-                className={`rounded-xl sm:rounded-2xl shadow-md hover:shadow-lg transition-all duration-500 ease-in-out border mx-1 sm:mx-0 ${
+                className={`rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border mx-1 sm:mx-0 ${
                   isExpanded 
                     ? 'bg-gradient-to-br from-[#F15B98]/10 to-golf-50 border-[#F15B98]/40' 
                     : 'bg-[#fffbf9]/80 border-gray-100 hover:border-gray-200'
                 }`}
+                style={{
+                  boxShadow: isPressed
+                    ? '0 12px 24px -4px rgba(241, 91, 152, 0.2), 0 8px 16px -4px rgba(0, 0, 0, 0.12)'
+                    : isExpanded 
+                    ? '0 6px 12px -3px rgba(241, 91, 152, 0.1), 0 4px 8px -2px rgba(0, 0, 0, 0.06)'
+                    : '0 2px 4px -1px rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03)',
+                  transform: isPressed ? 'translateY(-2px)' : 'translateY(0)'
+                }}
+                onMouseDown={() => setPressedEventId(group.event.id)}
+                onMouseUp={() => setPressedEventId(null)}
+                onMouseLeave={() => setPressedEventId(null)}
+                onTouchStart={() => setPressedEventId(group.event.id)}
+                onTouchEnd={() => setPressedEventId(null)}
               >
                 {/* 活动卡片头部 */}
                 <div

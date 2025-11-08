@@ -117,80 +117,93 @@ export default function HomePage() {
   }, [events, loading])
 
   const marqueeOffsetRef = useRef<number>(0)
-  const isPausedRef = useRef<boolean>(false)
+  const [isMarqueePaused, setIsMarqueePaused] = useState(false)
   const currentIndexRef = useRef<number>(0)
-  const lastUpdateTimeRef = useRef<number>(0)
+  const animationFrameRef = useRef<number | null>(null)
+  const frameCountRef = useRef<number>(0)
 
   useEffect(() => {
     // Marquee auto scroll - continuous left scrolling
-    const startAutoScroll = () => {
-      if (autoScrollIntervalRef.current) {
-        clearInterval(autoScrollIntervalRef.current)
-      }
-      if (carouselTrackRef.current && !isPausedRef.current) {
-        autoScrollIntervalRef.current = setInterval(() => {
-          if (carouselTrackRef.current && !isPausedRef.current) {
-            marqueeOffsetRef.current -= 1
-            carouselTrackRef.current.style.transition = 'none'
-            carouselTrackRef.current.style.transform = `translateX(${marqueeOffsetRef.current}px)`
-            
-            // Update carouselIndex based on current scroll position (throttle to every 100ms)
-            const now = Date.now()
-            if (now - lastUpdateTimeRef.current > 100) {
-              lastUpdateTimeRef.current = now
+    const animate = () => {
+      if (carouselTrackRef.current && !isMarqueePaused) {
+        marqueeOffsetRef.current -= 1
+        carouselTrackRef.current.style.transition = 'none'
+        carouselTrackRef.current.style.transform = `translateX(${marqueeOffsetRef.current}px)`
+        
+        // Update carouselIndex based on current scroll position (throttle to every 5 frames)
+        frameCountRef.current += 1
+        if (frameCountRef.current % 5 === 0) {
+          if (carouselTrackRef.current && carouselTrackRef.current.children.length > 0) {
+            const itemWidth = carouselTrackRef.current.children[0]?.clientWidth || 0
+            if (itemWidth > 0) {
+              const gap = windowWidth <= 768 ? 16 : windowWidth <= 1024 ? 30 : 30
+              const totalWidth = galleryImages.length * (itemWidth + gap)
+              const currentOffset = Math.abs(marqueeOffsetRef.current)
               
-              const itemWidth = carouselTrackRef.current.children[0]?.clientWidth || 0
-              if (itemWidth > 0) {
-                const gap = windowWidth <= 768 ? 16 : windowWidth <= 1024 ? 30 : 30
-                const itemWithGap = itemWidth + gap
-                const containerWidth = carouselTrackRef.current.parentElement?.clientWidth || 0
-                const centerX = containerWidth / 2
-                const totalWidth = galleryImages.length * itemWithGap
-                
-                // Calculate which image is currently in the center
-                // marqueeOffsetRef.current is negative, so we need to account for that
-                const absoluteOffset = Math.abs(marqueeOffsetRef.current)
-                const normalizedOffset = absoluteOffset % totalWidth
-                
-                // Find which item's center is closest to the container center
-                let closestIndex = 0
-                let minDistance = Infinity
-                for (let i = 0; i < galleryImages.length; i++) {
-                  const itemStartX = normalizedOffset + (i * itemWithGap)
-                  const itemCenterX = itemStartX + (itemWidth / 2)
-                  const distance = Math.abs(itemCenterX - centerX)
-                  if (distance < minDistance) {
-                    minDistance = distance
-                    closestIndex = i
-                  }
+              const itemWithGap = itemWidth + gap
+              
+              // Check if we need to reset - reset when we've scrolled past the first set
+              // Reset when the duplicate set's first image is about to enter the viewport
+              if (currentOffset >= totalWidth) {
+                // Reset to start of first set, maintaining smooth transition
+                const overflow = currentOffset - totalWidth
+                marqueeOffsetRef.current = -overflow
+                // Set index to 0 when resetting
+                if (currentIndexRef.current !== 0) {
+                  currentIndexRef.current = 0
+                  setCarouselIndex(0)
                 }
-                
-                // Only update if index changed
-                if (closestIndex !== currentIndexRef.current) {
-                  currentIndexRef.current = closestIndex
-                  setCarouselIndex(closestIndex)
+              } else {
+                // Normal detection - find which image is closest to center
+                const container = carouselTrackRef.current.parentElement
+                if (container) {
+                  const containerRect = container.getBoundingClientRect()
+                  const containerCenterX = containerRect.left + containerRect.width / 2
+                  
+                  // Find which image's center is closest to container center (only check first set)
+                  let closestIndex = 0
+                  let minDistance = Infinity
+                  
+                  for (let i = 0; i < galleryImages.length; i++) {
+                    const child = carouselTrackRef.current.children[i] as HTMLElement
+                    if (child) {
+                      const childRect = child.getBoundingClientRect()
+                      const childCenterX = childRect.left + childRect.width / 2
+                      const distance = Math.abs(childCenterX - containerCenterX)
+                      
+                      if (distance < minDistance) {
+                        minDistance = distance
+                        closestIndex = i
+                      }
+                    }
+                  }
+                  
+                  // Update if index changed
+                  if (closestIndex !== currentIndexRef.current) {
+                    currentIndexRef.current = closestIndex
+                    setCarouselIndex(closestIndex)
+                  }
                 }
               }
             }
-            
-            // Reset when scrolled past first set of items
-            if (Math.abs(marqueeOffsetRef.current) >= totalWidth) {
-              marqueeOffsetRef.current = 0
-            }
           }
-        }, 20) // Smooth continuous scrolling
+        }
+        
+        animationFrameRef.current = requestAnimationFrame(animate)
       }
     }
-
-    if (!isPausedRef.current) {
-      startAutoScroll()
+    
+    if (!isMarqueePaused && carouselTrackRef.current) {
+      animationFrameRef.current = requestAnimationFrame(animate)
     }
+    
     return () => {
-      if (autoScrollIntervalRef.current) {
-        clearInterval(autoScrollIntervalRef.current)
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
       }
     }
-  }, [windowWidth, galleryImages.length])
+  }, [windowWidth, galleryImages.length, isMarqueePaused])
 
   const fetchPublishedArticles = async () => {
     try {
@@ -226,9 +239,10 @@ export default function HomePage() {
     if (isTransitioning || !carouselTrackRef.current) return
     
     // Pause marquee
-    isPausedRef.current = true
-    if (autoScrollIntervalRef.current) {
-      clearInterval(autoScrollIntervalRef.current)
+    setIsMarqueePaused(true)
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
     }
     
     setIsTransitioning(true)
@@ -251,29 +265,7 @@ export default function HomePage() {
       setIsTransitioning(false)
       // Resume marquee after 3 seconds
       setTimeout(() => {
-        isPausedRef.current = false
-        const startAutoScroll = () => {
-          if (autoScrollIntervalRef.current) {
-            clearInterval(autoScrollIntervalRef.current)
-          }
-          if (carouselTrackRef.current) {
-            autoScrollIntervalRef.current = setInterval(() => {
-              if (carouselTrackRef.current && !isPausedRef.current) {
-                marqueeOffsetRef.current -= 1
-                carouselTrackRef.current.style.transition = 'none'
-                carouselTrackRef.current.style.transform = `translateX(${marqueeOffsetRef.current}px)`
-                
-                const itemWidth = carouselTrackRef.current.children[0]?.clientWidth || 0
-                const gap = windowWidth <= 768 ? 16 : windowWidth <= 1024 ? 30 : 30
-                const totalWidth = galleryImages.length * (itemWidth + gap)
-                if (Math.abs(marqueeOffsetRef.current) >= totalWidth) {
-                  marqueeOffsetRef.current = 0
-                }
-              }
-            }, 20)
-          }
-        }
-        startAutoScroll()
+        setIsMarqueePaused(false)
       }, 3000)
     }, 600)
   }
@@ -455,6 +447,33 @@ export default function HomePage() {
           width: 100%;
         }
 
+        .hero-btn-primary {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .hero-btn-primary::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: var(--primary);
+          transform: translateX(-100%);
+          transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hero-btn-primary:hover::before {
+          transform: translateX(0);
+        }
+
+        .hero-btn-secondary {
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hero-btn-secondary:hover {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+
         .activity-card {
           position: relative;
         }
@@ -567,6 +586,23 @@ export default function HomePage() {
           }
         }
 
+        @keyframes gradientSweep {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+
+        .hero-gradient-animate {
+          background-size: 300% 100%;
+          animation: gradientSweep 10s ease-in-out infinite;
+        }
+
       `}</style>
 
       {/* Navigation */}
@@ -587,7 +623,7 @@ export default function HomePage() {
               </div>
         
         {/* Desktop Navigation */}
-        <ul className="hidden lg:flex gap-[50px] list-none">
+        <ul className="hidden lg:flex gap-[50px] list-none mr-8 lg:mr-12">
           <li>
             <a 
               href="#hero" 
@@ -595,7 +631,7 @@ export default function HomePage() {
               className="nav-link text-[14px] font-medium uppercase transition-colors duration-300 hover:text-[var(--accent)]"
               style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1.5px', textDecoration: 'none' }}
             >
-              Home
+              首頁
             </a>
           </li>
           <li>
@@ -605,7 +641,7 @@ export default function HomePage() {
               className="nav-link text-[14px] font-medium uppercase transition-colors duration-300 hover:text-[var(--accent)]"
               style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1.5px', textDecoration: 'none' }}
             >
-              About Us
+              關於我們
             </a>
           </li>
           <li>
@@ -616,6 +652,16 @@ export default function HomePage() {
               style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1.5px', textDecoration: 'none' }}
             >
               精彩回顾
+            </a>
+          </li>
+          <li>
+            <a 
+              href="#members-gallery" 
+              onClick={(e) => handleSmoothScroll(e, 'members-gallery')}
+              className="nav-link text-[14px] font-medium uppercase transition-colors duration-300 hover:text-[var(--accent)]"
+              style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1.5px', textDecoration: 'none' }}
+            >
+              CLUB風采
             </a>
           </li>
         </ul>
@@ -653,7 +699,7 @@ export default function HomePage() {
                 className="text-white py-3 px-4 hover:bg-white/10 rounded-lg transition-colors uppercase text-sm"
                 style={{ letterSpacing: '1.5px' }}
               >
-                Home
+                首頁
               </a>
               <a 
                 href="#about" 
@@ -664,7 +710,7 @@ export default function HomePage() {
                 className="text-white py-3 px-4 hover:bg-white/10 rounded-lg transition-colors uppercase text-sm"
                 style={{ letterSpacing: '1.5px' }}
               >
-                About Us
+                關於我們
               </a>
               <a 
                 href="#activities" 
@@ -675,6 +721,16 @@ export default function HomePage() {
                 className="text-white py-3 px-4 hover:bg-white/10 rounded-lg transition-colors text-sm"
               >
                 精彩回顾
+              </a>
+              <a 
+                href="#members-gallery" 
+                onClick={(e) => {
+                  handleSmoothScroll(e, 'members-gallery')
+                  setMobileMenuOpen(false)
+                }}
+                className="text-white py-3 px-4 hover:bg-white/10 rounded-lg transition-colors text-sm"
+              >
+                CLUB風采
               </a>
                 <button
                   onClick={() => {
@@ -698,9 +754,10 @@ export default function HomePage() {
           style={{ backgroundImage: 'url(/vcl_sample/hero_photo.jpg)' }}
         >
           <div 
-            className="absolute inset-0"
-          style={{
-              background: 'linear-gradient(to right, rgba(26, 26, 26, 0.5) 0%, rgba(26, 26, 26, 0.35) 50%, rgba(26, 26, 26, 0.15) 100%)'
+            className="absolute inset-0 hero-gradient-animate"
+            style={{
+              background: 'linear-gradient(to right, rgba(26, 26, 26, 0.8) 0%, rgba(26, 26, 26, 0.65) 16.66%, rgba(26, 26, 26, 0.5) 33.33%, rgba(26, 26, 26, 0.25) 50%, rgba(26, 26, 26, 0.5) 66.66%, rgba(26, 26, 26, 0.65) 83.33%, rgba(26, 26, 26, 0.8) 100%)',
+              backgroundSize: '300% 100%'
             }}
           />
               </div>
@@ -733,7 +790,7 @@ export default function HomePage() {
             <a 
               href="#about" 
               onClick={(e) => handleSmoothScroll(e, 'about')}
-              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-sm sm:text-sm font-semibold uppercase transition-all duration-[400ms] relative overflow-hidden text-center"
+              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-sm sm:text-sm font-semibold uppercase transition-all duration-[400ms] relative overflow-hidden text-center hero-btn-primary"
               style={{ 
                 background: 'linear-gradient(135deg, var(--accent), var(--pink))',
                 color: 'white',
@@ -746,7 +803,7 @@ export default function HomePage() {
             <a 
               href="#activities" 
               onClick={(e) => handleSmoothScroll(e, 'activities')}
-              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-sm sm:text-sm font-semibold uppercase transition-all duration-[400ms] text-center"
+              className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-sm sm:text-sm font-semibold uppercase text-center hero-btn-secondary"
               style={{ 
                 background: 'transparent',
                 color: '#fff',
@@ -971,7 +1028,7 @@ export default function HomePage() {
       </section>
 
       {/* Members Gallery Section */}
-      <section className="relative overflow-hidden py-24 sm:py-32 lg:py-40 px-8 sm:px-8 lg:px-[60px]" style={{ background: 'linear-gradient(135deg, #fef5f8 0%, #fef9f5 50%, #fff5f8 100%)' }}>
+      <section id="members-gallery" className="relative overflow-hidden py-24 sm:py-32 lg:py-40 px-8 sm:px-8 lg:px-[60px]" style={{ background: 'linear-gradient(135deg, #fef5f8 0%, #fef9f5 50%, #fff5f8 100%)' }}>
         {/* 粉色云朵流动动画背景 */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* 云朵1 */}
@@ -1039,7 +1096,7 @@ export default function HomePage() {
               className="font-light leading-[1.2] mb-6 sm:mb-10 text-4xl sm:text-5xl lg:text-[64px]"
               style={{ fontFamily: '"Cormorant Garamond", serif', color: 'var(--dark)' }}
             >
-              會員<strong className="font-bold" style={{ color: 'var(--primary)' }}>風采</strong>
+              CLUB<strong className="font-bold" style={{ color: 'var(--primary)' }}>風采</strong>
             </h2>
             <p className="text-base sm:text-base lg:text-lg text-[#666] px-4">
               記錄每一個精彩瞬間，分享高爾夫的快樂時光
