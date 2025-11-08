@@ -483,13 +483,30 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                     const theme = colorThemes[monthIndex]
                     
                     return (
-                      <div className="w-[65px] sm:w-[75px] rounded-lg overflow-hidden shadow-lg flex-shrink-0">
+                      <div 
+                        className="w-[65px] sm:w-[75px] rounded-lg overflow-hidden flex-shrink-0"
+                        style={{
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+                          transform: 'translateZ(0)',
+                          transformStyle: 'preserve-3d'
+                        }}
+                      >
                         {/* 上部分 - 有颜色的背景，显示月份 */}
-                        <div className={`${theme.bg} ${theme.border} border-b-2 px-2 py-1 sm:px-3 sm:py-1.5`}>
+                        <div 
+                          className={`${theme.bg} ${theme.border} border-b-2 px-2 py-1 sm:px-3 sm:py-1.5`}
+                          style={{
+                            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.1)'
+                          }}
+                        >
                           <div className="text-sm sm:text-base font-bold text-white text-center">{dateInfo.month}</div>
                         </div>
                         {/* 下部分 - 白色背景，显示日期和星期 */}
-                        <div className="bg-white px-2 py-1.5 sm:px-3 sm:py-2">
+                        <div 
+                          className="bg-white px-2 py-1.5 sm:px-3 sm:py-2"
+                          style={{
+                            boxShadow: 'inset 0 -1px 0 rgba(0, 0, 0, 0.05)'
+                          }}
+                        >
                           <div className="text-xl sm:text-2xl font-bold text-gray-900 text-center leading-none mb-0.5">{dateInfo.day}</div>
                           <div className="text-[10px] sm:text-xs font-semibold text-gray-700 text-center">{dateInfo.dayOfWeek}</div>
                         </div>
