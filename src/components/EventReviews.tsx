@@ -1733,8 +1733,8 @@ export default function EventReviews() {
         />
       )}
 
-      {/* 图片查看器 Modal */}
-      {imageViewerOpen && (
+      {/* 图片查看器 Modal - 使用 Portal 渲染到 body 下 */}
+      {imageViewerOpen && createPortal(
         <div 
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[70]"
           onClick={() => setImageViewerOpen(false)}
@@ -1789,7 +1789,8 @@ export default function EventReviews() {
               </span>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 删除确认对话框 */}
