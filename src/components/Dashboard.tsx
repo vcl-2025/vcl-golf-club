@@ -188,7 +188,8 @@ export default function Dashboard() {
     
     // 只有在 events 视图时才处理 eventId（用于打开活动详情）
     // 在 scores 视图时，eventId 由 UserScoreQuery 组件处理
-    if (viewParam !== 'events') {
+    // 使用 currentView 或 viewParam 来判断，因为 viewParam 可能已被删除
+    if (currentView !== 'events' && viewParam !== 'events') {
       // 如果不是 events 视图，清除活动详情模态框
       if (selectedEvent) {
         setSelectedEvent(null)
@@ -209,7 +210,12 @@ export default function Dashboard() {
     if (eventId && !selectedEvent) {
       fetchEventById(eventId)
     }
-  }, [searchParams, selectedEvent])
+    
+    // 如果有 eventId 且当前有打开模态框，但 eventId 不同，更新活动
+    if (eventId && selectedEvent && selectedEvent.id !== eventId) {
+      fetchEventById(eventId)
+    }
+  }, [searchParams, selectedEvent, currentView])
 
   const [selectedPoster, setSelectedPoster] = useState<Poster | null>(null)
   const [selectedScore, setSelectedScore] = useState<Score | null>(null)
@@ -2268,11 +2274,11 @@ export default function Dashboard() {
                       <p className="text-gray-500 mt-3 text-sm">加载中...</p>
                     </div>
                   ) : upcomingEvents.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-4 w-full">
                       {upcomingEvents.map((event) => (
                         <div 
                           key={event.id} 
-                          className="group relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
+                          className="group relative p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer"
                           onClick={() => navigate(`/event/${event.id}`)}
                           onMouseDown={(e) => {
                             e.currentTarget.style.background = 'linear-gradient(to bottom right, rgba(240, 253, 244, 0.95), rgba(220, 252, 231, 0.85), rgba(187, 247, 208, 0.75))'
@@ -2300,46 +2306,46 @@ export default function Dashboard() {
                           {/* 按压时的绿色渐变层 */}
                           <div className="absolute inset-0 bg-gradient-to-br from-golf-100/0 via-golf-200/0 to-golf-300/0 opacity-0 transition-opacity duration-200 pointer-events-none" id="press-gradient"></div>
                           
-                          {/* 左侧图片容器 */}
-                          <div className="relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300">
-                            {event.image_url || event.article_featured_image_url ? (
-                              <>
-                                <img
-                                  src={event.image_url || event.article_featured_image_url}
-                                  alt={event.title}
-                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
-                                {/* 图片渐变遮罩 */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                              </>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
-                                <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 group-hover:text-[#F15B98] transition-colors duration-300" />
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* 右侧内容 */}
-                          <div className="flex-1 min-w-0 relative z-10 pr-2">
-                            <div className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2 group-hover:text-[#F15B98] transition-colors duration-300 break-words">
-                              {event.title}
+                          {/* 使用grid布局，确保右侧内容占满剩余空间 */}
+                          <div className="relative z-10 grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-3 sm:gap-4">
+                            {/* 左侧图片容器 */}
+                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                              {event.image_url || event.article_featured_image_url ? (
+                                <>
+                                  <img
+                                    src={event.image_url || event.article_featured_image_url}
+                                    alt={event.title}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                  />
+                                  {/* 图片渐变遮罩 */}
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
+                                  <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 group-hover:text-[#F15B98] transition-colors duration-300" />
+                                </div>
+                              )}
                             </div>
-                            <div className="space-y-1.5">
-                              <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-[#F15B98]/70" />
-                                <span className="whitespace-nowrap">{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                              <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-golf-500/70" />
-                                <span className="flex-1 min-w-0 break-words">{event.location || '地点未设置'}</span>
-                                <span className="text-[#F15B98] font-medium whitespace-nowrap">· {event.max_participants || 0}人</span>
+                            
+                            {/* 右侧内容 - grid第二列自动占满剩余空间 */}
+                            <div className="min-w-0">
+                              <h3 
+                                className="font-bold text-gray-900 text-sm sm:text-base mb-2 line-clamp-2 group-hover:text-[#F15B98] transition-colors duration-300 leading-tight"
+                              >
+                                {event.title}
+                              </h3>
+                              <div className="space-y-1.5">
+                                <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-[#F15B98]/70" />
+                                  <span className="whitespace-nowrap">{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                                <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-golf-500/70" />
+                                  <span className="flex-1 min-w-0 break-words">{event.location || '地点未设置'}</span>
+                                  <span className="text-[#F15B98] font-medium whitespace-nowrap">· {event.max_participants || 0}人</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          
-                          {/* 右侧箭头指示器 */}
-                          <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-1">
-                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#F15B98] group-hover:translate-x-1 transition-transform duration-300" />
                           </div>
                         </div>
                       ))}
@@ -2394,7 +2400,7 @@ export default function Dashboard() {
                       {recentScores.map((result, index) => (
                         <div 
                           key={index} 
-                          className="group relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden"
+                          className="group relative p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer"
                           onClick={() => {
                             if (result.event_id) {
                               // 切换到成绩查询视图并传递 eventId 参数
@@ -2429,32 +2435,35 @@ export default function Dashboard() {
                           <div className="absolute inset-0 bg-gradient-to-r from-[#F15B98]/0 via-[#F15B98]/0 to-golf-400/0 group-hover:from-[#F15B98]/5 group-hover:via-transparent group-hover:to-golf-400/5 transition-all duration-300"></div>
                           {/* 按压时的绿色渐变层 */}
                           <div className="absolute inset-0 bg-gradient-to-br from-golf-100/0 via-golf-200/0 to-golf-300/0 opacity-0 transition-opacity duration-200 pointer-events-none"></div>
-                          {/* 左侧图片容器 */}
-                          <div className="relative flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300">
-                            {result.image_url ? (
-                              <>
-                                <img
-                                  src={result.image_url}
-                                  alt={result.competition_name}
-                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
-                                {/* 图片渐变遮罩 */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                              </>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
-                                <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-[#F15B98] group-hover:scale-110 transition-transform duration-300" />
-                              </div>
-                            )}
-                          </div>
                           
-                          {/* 右侧内容 */}
-                          <div className="flex-1 min-w-0 relative z-10 pr-2">
-                            {/* 活动标题和日期 */}
-                            <div className="mb-2">
-                              <div className="font-bold text-gray-900 text-sm sm:text-base mb-1.5 line-clamp-2 group-hover:text-[#F15B98] transition-colors duration-300 break-words">
-                                {result.competition_name}
-                              </div>
+                          {/* 使用grid布局，确保右侧内容占满剩余空间 */}
+                          <div className="relative z-10 grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-3 sm:gap-4">
+                            {/* 左侧图片容器 */}
+                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                              {result.image_url ? (
+                                <>
+                                  <img
+                                    src={result.image_url}
+                                    alt={result.competition_name}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                  />
+                                  {/* 图片渐变遮罩 */}
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
+                                  <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-[#F15B98] group-hover:scale-110 transition-transform duration-300" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* 右侧内容 - grid第二列自动占满剩余空间 */}
+                            <div className="min-w-0">
+                              {/* 活动标题和日期 */}
+                              <div className="mb-2">
+                                <div className="font-bold text-gray-900 text-sm sm:text-base mb-1.5 line-clamp-2 group-hover:text-[#F15B98] transition-colors duration-300 leading-tight">
+                                  {result.competition_name}
+                                </div>
                               <div className="space-y-1.5">
                                 <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                   <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-[#F15B98]/70" />
@@ -2468,10 +2477,10 @@ export default function Dashboard() {
                                 )}
                               </div>
                             </div>
-
+                            
                             {/* 成绩信息 - 一行显示 */}
                             {result.event_type === '个人赛' && result.topThree && result.topThree.length > 0 && (
-                              <div className="grid grid-cols-2 sm:flex sm:flex-row sm:items-center gap-2 text-xs sm:text-sm">
+                              <div className="flex flex-row items-center gap-2 text-xs sm:text-sm flex-wrap">
                                 {result.topThree.slice(0, 3).map((player, idx) => {
                                   const medalColors = [
                                     { color: '#FFD700', name: 'gold' }, // 金色
@@ -2480,12 +2489,12 @@ export default function Dashboard() {
                                   ]
                                   const medal = medalColors[player.rank - 1]
                                   return (
-                                    <span key={idx} className="text-gray-700 flex items-center gap-1.5">
+                                    <span key={idx} className="text-gray-700 flex items-center gap-1.5 whitespace-nowrap">
                                       {medal && (
                                         <Medal className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" style={{ color: medal.color }} />
                                       )}
                                       <span className="font-medium">{player.name}</span>
-                                      {idx < Math.min(result.topThree.length, 3) - 1 && <span className="mx-1.5 text-gray-400 hidden sm:inline">·</span>}
+                                      {idx < Math.min(result.topThree.length, 3) - 1 && <span className="mx-1.5 text-gray-400">·</span>}
                                     </span>
                                   )
                                 })}
@@ -2516,12 +2525,8 @@ export default function Dashboard() {
                               </div>
                             )}
                           </div>
-                          
-                          {/* 右侧箭头指示器 */}
-                          <div className="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ml-1">
-                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-[#F15B98] group-hover:translate-x-1 transition-transform duration-300" />
-                          </div>
                         </div>
+                      </div>
                     ))}
                       <div className="text-center pt-3">
                         <button 

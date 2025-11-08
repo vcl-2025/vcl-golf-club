@@ -710,7 +710,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   return (
     <>
       <div 
-        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-2 sm:p-4 overflow-hidden transition-opacity duration-200 ${
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-0 sm:p-4 overflow-hidden transition-opacity duration-200 ${
           isClosing ? 'opacity-0' : 'opacity-100'
         }`}
         onTouchMove={(e) => e.preventDefault()}
@@ -721,11 +721,11 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
           }
         }}
       >
-        <div className={`bg-white rounded-2xl w-full max-w-6xl max-h-[95vh] sm:max-h-[90vh] flex flex-col relative mx-auto transition-transform duration-200 ${
+        <div className={`bg-white rounded-none sm:rounded-2xl w-full h-full sm:h-auto max-w-6xl sm:max-h-[90vh] flex flex-col relative mx-auto transition-transform duration-200 ${
           isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
         }`}>
           {/* 固定头部 */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-6 py-4 rounded-t-2xl shadow-sm">
+          <div className="sticky top-0 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-4 sm:px-6 py-4 shadow-sm">
             <button
               onClick={handleCloseModal}
               className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
@@ -744,7 +744,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
 
           {/* 可滚动内容 */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
           {/* 活动图片横幅 */}
           <div className="aspect-[16/9] bg-gradient-to-br from-golf-200 to-golf-300 rounded-2xl overflow-hidden mb-8">
             <img

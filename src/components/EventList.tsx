@@ -432,7 +432,10 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation()
-                            onEventSelect(event)
+                            const params = new URLSearchParams()
+                            params.set('view', 'events')
+                            params.set('eventId', event.id)
+                            navigate(`/dashboard?${params.toString()}`, { replace: true })
                           }}
                           className="px-4 py-1.5 bg-gray-100 text-green-500 rounded-full text-sm font-bold cursor-default flex items-center gap-1.5"
                           disabled
@@ -448,7 +451,10 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation()
-                              onEventSelect(event)
+                              const params = new URLSearchParams()
+                              params.set('view', 'events')
+                              params.set('eventId', event.id)
+                              navigate(`/dashboard?${params.toString()}`, { replace: true })
                             }}
                             className="px-4 py-1.5 bg-gray-300 text-gray-500 rounded-full text-sm font-bold cursor-default"
                             disabled
@@ -461,7 +467,10 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation()
-                              onEventSelect(event)
+                              const params = new URLSearchParams()
+                              params.set('view', 'events')
+                              params.set('eventId', event.id)
+                              navigate(`/dashboard?${params.toString()}`, { replace: true })
                             }}
                             className="px-4 py-1.5 bg-gray-400 text-white rounded-full text-sm font-medium cursor-default"
                             disabled
@@ -474,7 +483,10 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation()
-                              onEventSelect(event)
+                              const params = new URLSearchParams()
+                              params.set('view', 'events')
+                              params.set('eventId', event.id)
+                              navigate(`/dashboard?${params.toString()}`, { replace: true })
                             }}
                             className="px-4 py-1.5 bg-[#F15B98] text-white rounded-full text-sm font-medium hover:bg-[#F15B98]/80 transition-colors"
                           >

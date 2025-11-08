@@ -1401,7 +1401,7 @@ export default function EventReviews() {
       {/* 文章详情模态框 - 使用 Portal 渲染到 body 下 */}
       {selectedEvent && createPortal(
         <div 
-          className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[51] overflow-y-auto transition-opacity duration-200 ${
+          className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-0 sm:p-4 z-[51] overflow-y-auto transition-opacity duration-200 ${
             isClosing ? 'opacity-0' : 'opacity-100'
           }`}
           onClick={(e) => {
@@ -1411,13 +1411,13 @@ export default function EventReviews() {
           }}
         >
           <div 
-            className={`bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-xl transition-transform duration-200 ${
+            className={`bg-white rounded-none sm:rounded-2xl max-w-4xl w-full h-full sm:h-auto sm:max-h-[90vh] flex flex-col shadow-xl transition-transform duration-200 ${
               isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
             }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* 固定头部 */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-6 py-4 rounded-t-2xl shadow-sm">
+            <div className="sticky top-0 bg-white border-b border-gray-200 z-20 flex items-center justify-between px-4 sm:px-6 py-4 shadow-sm">
               <button
                 onClick={handleCloseModal}
                 className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"

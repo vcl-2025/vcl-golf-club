@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { 
   Trophy, Medal, Award, TrendingUp, Star, Clock,
-  ChevronDown, ChevronRight, User, BarChart,
+  ChevronDown, ChevronUp, ChevronRight, User, BarChart,
   UserCheck
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
@@ -1922,6 +1922,22 @@ export default function UserScoreQuery() {
                           </div>
                         )
                       })()
+                    )}
+                    
+                    {/* 收起按钮 - 在展开内容底部 */}
+                    {isExpanded && (
+                      <div className="flex justify-center mt-4 pt-4 border-t border-gray-100">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleEventExpansion(group.event.id)
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-[#F15B98] bg-gray-50 hover:bg-gray-100 rounded-lg transition-all duration-300 group"
+                        >
+                          <ChevronUp className="w-4 h-4 group-hover:translate-y-[-2px] transition-transform duration-300" />
+                          <span>收起</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
