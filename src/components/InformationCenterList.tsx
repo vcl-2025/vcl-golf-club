@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, FileText, BookOpen, AlertCircle, Search, Filter, ChevronDown, ChevronUp, Pin, Eye, Calendar, Clock, Flame, Paperclip } from 'lucide-react'
+import { Bell, FileText, BookOpen, AlertCircle, Search, Filter, ChevronDown, ChevronUp, ChevronRight, Pin, Eye, Calendar, Clock, Flame, Paperclip } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { InformationItem } from '../types'
 import { useAuth } from '../hooks/useAuth'
@@ -276,232 +276,276 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
   }
 
   return (
-    <div className="space-y-6">
-      {/* 筛选器 */}
-      <div className="bg-white rounded-2xl shadow-sm p-3 sm:p-6 mb-4 sm:mb-6">
-        <div className="flex items-center justify-between mb-2 sm:mb-4">
-          <div className="flex items-center">
-            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">筛选条件</h3>
-            {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
-              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
-                已筛选
-              </span>
-            )}
-          </div>
-          
-          {/* 移动端折叠按钮 */}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="md:hidden flex items-center text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            {isExpanded ? (
-              <>
-                <span className="text-xs mr-1">收起</span>
-                <ChevronUp className="w-3 h-3" />
-              </>
-            ) : (
-              <>
-                <span className="text-xs mr-1">展开</span>
-                <ChevronDown className="w-3 h-3" />
-              </>
-            )}
-          </button>
-        </div>
-        
-        {/* 桌面端始终显示，移动端根据状态显示 */}
-        <div className={`flex flex-col gap-3 sm:gap-4 ${isExpanded ? 'flex' : 'hidden md:flex'}`}>
-          {/* 标题搜索 - 独占一行 */}
-          <div className="w-full">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-              搜索
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="搜索标题、内容..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] text-sm"
-              />
+    <div className="relative px-2 sm:px-4 py-3 sm:py-5 bg-white/20 backdrop-blur-md border-2 border-white/40 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden" style={{ 
+      boxShadow: '0 8px 24px 0 rgba(31, 38, 135, 0.15), 0 2px 8px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.6)',
+      WebkitBackdropFilter: 'blur(12px)',
+      backdropFilter: 'blur(12px)'
+    }}>
+      {/* 装饰性背景元素 */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F15B98]/5 to-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-golf-400/5 to-transparent rounded-full blur-2xl -ml-12 -mb-12"></div>
+      
+      <div className="relative z-10">
+        {/* 筛选器 */}
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm p-3 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex items-center justify-between mb-2 sm:mb-4">
+            <div className="flex items-center">
+              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2" />
+              <h4 className="text-base sm:text-lg font-semibold text-gray-900">筛选条件</h4>
+              {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
+                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
+                  已筛选
+                </span>
+              )}
             </div>
-          </div>
-
-          {/* 分类和优先级 - 放在一行 */}
-          <div className="flex flex-row gap-3 sm:gap-4">
-            {/* 分类筛选 */}
-            <div className="w-32 sm:w-40">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                分类
-              </label>
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
-                >
-                  <option value="all">全部分类</option>
-                  <option value="公告">公告</option>
-                  <option value="通知">通知</option>
-                  <option value="重要资料">重要资料</option>
-                  <option value="规则章程">规则章程</option>
-                </select>
-              </div>
-            </div>
-
-            {/* 优先级筛选 */}
-            <div className="w-32 sm:w-40">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                优先级
-              </label>
-              <div className="relative">
-                <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <select
-                  value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
-                >
-                  <option value="all">全部</option>
-                  <option value="0">普通</option>
-                  <option value="1">重要</option>
-                  <option value="2">紧急</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 清除过滤器按钮 */}
-        {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
-          <div className="mt-2 sm:mt-4 flex justify-end">
+            
+            {/* 移动端折叠按钮 */}
             <button
-              onClick={() => {
-                setSearchTerm('')
-                setCategoryFilter('all')
-                setPriorityFilter('all')
-              }}
-              className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="md:hidden flex items-center text-gray-500 hover:text-gray-700 transition-colors"
             >
-              清除所有筛选
+              {isExpanded ? (
+                <>
+                  <span className="text-xs mr-1">收起</span>
+                  <ChevronUp className="w-3 h-3" />
+                </>
+              ) : (
+                <>
+                  <span className="text-xs mr-1">展开</span>
+                  <ChevronDown className="w-3 h-3" />
+                </>
+              )}
             </button>
           </div>
-        )}
-
-        {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
-          <div className="mt-4 text-sm text-gray-600">
-            共找到 {filteredItems.length} 条信息
-          </div>
-        )}
-      </div>
-
-      {/* 信息列表 - 统一列表显示 */}
-      <div className="space-y-4">
-        {filteredItems.map((item) => {
-          const hoverBg = 'hover:bg-gray-50'
           
+          {/* 桌面端始终显示，移动端根据状态显示 */}
+          <div className={`flex flex-col gap-3 sm:gap-4 ${isExpanded ? 'flex' : 'hidden md:flex'}`}>
+            {/* 标题搜索 - 独占一行 */}
+            <div className="w-full">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                搜索
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="搜索标题、内容..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] text-sm bg-white"
+                />
+              </div>
+            </div>
+
+            {/* 分类和优先级 - 放在一行 */}
+            <div className="flex flex-row gap-3 sm:gap-4">
+              {/* 分类筛选 */}
+              <div className="w-32 sm:w-40">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                  分类
+                </label>
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
+                  >
+                    <option value="all">全部分类</option>
+                    <option value="公告">公告</option>
+                    <option value="通知">通知</option>
+                    <option value="重要资料">重要资料</option>
+                    <option value="规则章程">规则章程</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 优先级筛选 */}
+              <div className="w-32 sm:w-40">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                  优先级
+                </label>
+                <div className="relative">
+                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <select
+                    value={priorityFilter}
+                    onChange={(e) => setPriorityFilter(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] appearance-none bg-white text-sm"
+                  >
+                    <option value="all">全部</option>
+                    <option value="0">普通</option>
+                    <option value="1">重要</option>
+                    <option value="2">紧急</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 清除过滤器按钮 */}
+          {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
+            <div className="mt-2 sm:mt-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setSearchTerm('')
+                  setCategoryFilter('all')
+                  setPriorityFilter('all')
+                }}
+                className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
+              >
+                清除所有筛选
+              </button>
+            </div>
+          )}
+
+          {(searchTerm || categoryFilter !== 'all' || priorityFilter !== 'all') && (
+            <div className="mt-4 text-sm text-gray-600">
+              共找到 {filteredItems.length} 条信息
+            </div>
+          )}
+        </div>
+
+        {/* 信息列表 - 统一列表显示 */}
+        <div className="space-y-4">
+        {filteredItems.map((item) => {
           return (
             <div
               key={item.id}
               onClick={() => handleItemClick(item)}
-              className={`bg-white rounded-xl shadow-md px-5 py-4 sm:px-5 sm:py-6 ${hoverBg} cursor-pointer transition-colors ${
-                !item.is_read && (item.category === '通知' || item.category === '公告') ? 'ring-2 ring-[#F15B98]' : ''
+              className={`group relative bg-white/90 backdrop-blur-sm rounded-xl px-5 py-4 sm:px-5 sm:py-6 cursor-pointer transition-all duration-300 border border-gray-200 ${
+                !item.is_read && (item.category === '通知' || item.category === '公告') ? 'ring-2 ring-[#F15B98]/50' : ''
               }`}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = 'scale(0.98)'
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = ''
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = ''
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'scale(0.98)'
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.transform = ''
+              }}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  {/* 标题行 */}
-                  <div className="flex items-center gap-2 mb-2">
-                    {item.is_pinned && (
-                      <Pin className="w-4 h-4 text-[#F15B98] flex-shrink-0" />
-                    )}
-                    <h3 className={`text-base sm:text-lg font-semibold text-gray-900 truncate flex items-center gap-2 ${
-                      !item.is_read ? 'font-bold' : ''
-                    }`}>
-                      {!item.is_read && (item.category === '通知' || item.category === '公告') && (
-                        <span className="text-[#F15B98] flex-shrink-0 text-xs">●</span>
+              {/* 悬停时的背景渐变 */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#F15B98]/0 via-[#F15B98]/0 to-golf-400/0 group-hover:from-[#F15B98]/5 group-hover:via-transparent group-hover:to-golf-400/5 transition-all duration-300 rounded-xl pointer-events-none"></div>
+              
+              {/* 内容区域 */}
+              <div className="relative z-10">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    {/* 标题行 */}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {item.is_pinned && (
+                        <Pin className="w-4 h-4 text-[#F15B98] flex-shrink-0 group-hover:scale-110 transition-transform duration-300" />
                       )}
-                      <span>{item.title}</span>
-                    </h3>
-                    {/* 分类标签 */}
-                    {(() => {
-                      const CategoryIcon = categoryIcons[item.category as keyof typeof categoryIcons]
-                      return (
-                        <span className={`px-2 py-1.5 rounded-full flex-shrink-0 flex items-center justify-center ${
-                          categoryColors[item.category as keyof typeof categoryColors]
-                        }`}>
-                          {CategoryIcon && <CategoryIcon className="w-3.5 h-3.5" />}
-                        </span>
-                      )
-                    })()}
-                    {priorityLabels[item.priority as keyof typeof priorityLabels] && (() => {
-                      const PriorityIcon = priorityIcons[item.priority as keyof typeof priorityIcons]
-                      return PriorityIcon ? (
-                        <span className={`px-2 py-1.5 rounded-full flex-shrink-0 flex items-center justify-center ${
-                          priorityColors[item.priority as keyof typeof priorityColors]
-                        }`}>
-                          <PriorityIcon className="w-3.5 h-3.5" />
-                        </span>
-                      ) : null
-                    })()}
+                      <h3 className={`text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2 ${
+                        !item.is_read ? 'font-bold' : ''
+                      }`}>
+                        {!item.is_read && (item.category === '通知' || item.category === '公告') && (
+                          <span className="text-[#F15B98] flex-shrink-0 text-xs animate-pulse">●</span>
+                        )}
+                        <span className="group-hover:text-[#F15B98] transition-colors duration-300 line-clamp-2">{item.title}</span>
+                        {/* 分类标签 - 紧跟在标题后 */}
+                        {(() => {
+                          const CategoryIcon = categoryIcons[item.category as keyof typeof categoryIcons]
+                          const categoryIconColors = {
+                            '公告': 'text-green-600',
+                            '通知': 'text-[#F15B98]',
+                            '重要资料': 'text-blue-600',
+                            '规则章程': 'text-purple-600'
+                          }
+                          const iconColor = categoryIconColors[item.category as keyof typeof categoryIconColors] || 'text-[#F15B98]'
+                          return CategoryIcon ? (
+                            <CategoryIcon className={`w-4 h-4 ${iconColor} flex-shrink-0 transition-all duration-300 group-hover:scale-110`} />
+                          ) : null
+                        })()}
+                        {priorityLabels[item.priority as keyof typeof priorityLabels] && (() => {
+                          const PriorityIcon = priorityIcons[item.priority as keyof typeof priorityIcons]
+                          const priorityIconColors = {
+                            1: 'text-[#F15B98]', // 重要
+                            2: 'text-red-600'    // 紧急
+                          }
+                          const iconColor = priorityIconColors[item.priority as keyof typeof priorityIconColors] || 'text-[#F15B98]'
+                          return PriorityIcon ? (
+                            <PriorityIcon className={`w-4 h-4 ${iconColor} flex-shrink-0 transition-all duration-300 group-hover:scale-110`} />
+                          ) : null
+                        })()}
+                      </h3>
+                    </div>
+
+                    {/* 摘要 */}
+                    {item.excerpt && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2 group-hover:text-gray-700 transition-colors duration-300">
+                        {item.excerpt}
+                      </p>
+                    )}
+
+                    {/* 元信息 */}
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                      {item.published_at && (
+                        <div className="flex items-center group-hover:text-gray-700 transition-colors duration-300">
+                          <Calendar className="w-3 h-3 mr-1 text-[#F15B98]" />
+                          <span>{formatDate(item.published_at)}</span>
+                        </div>
+                      )}
+                      {item.expires_at && (
+                        <div className="flex items-center text-[#F15B98]">
+                          <Clock className="w-3 h-3 mr-1" />
+                          <span>有效期至 {formatDate(item.expires_at)}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center group-hover:text-gray-700 transition-colors duration-300">
+                        <Eye className="w-3 h-3 mr-1 text-gray-400" />
+                        <span>{item.view_count} 次阅读</span>
+                      </div>
+                      {item.attachments && item.attachments.length > 0 && (
+                        <div className="flex items-center text-[#F15B98]">
+                          <Paperclip className="w-3 h-3 mr-1" />
+                          <span>{item.attachments.length} 个附件</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* 摘要 */}
-                  {item.excerpt && (
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {item.excerpt}
-                    </p>
-                  )}
-
-                  {/* 元信息 */}
-                  <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-gray-500">
-                    {item.published_at && (
-                      <div className="flex items-center">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        <span>{formatDate(item.published_at)}</span>
-                      </div>
-                    )}
-                    {item.expires_at && (
-                      <div className="flex items-center text-[#F15B98]">
-                        <Clock className="w-3 h-3 mr-1" />
-                        <span>有效期至 {formatDate(item.expires_at)}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center">
-                      <Eye className="w-3 h-3 mr-1" />
-                      <span>{item.view_count} 次阅读</span>
-                    </div>
-                    {item.attachments && item.attachments.length > 0 && (
-                      <div className="flex items-center text-[#F15B98]">
-                        <Paperclip className="w-3 h-3 mr-1" />
-                        <span>{item.attachments.length} 个附件</span>
+                  {/* 右侧区域：图片和箭头 */}
+                  <div className="relative flex-shrink-0">
+                    {/* 封面图 */}
+                    {item.featured_image_url && (
+                      <div className="relative">
+                        <img
+                          src={item.featured_image_url}
+                          alt={item.title}
+                          className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg transition-all duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </div>
                     )}
                   </div>
                 </div>
-
-                {/* 封面图 */}
-                {item.featured_image_url && (
-                  <img
-                    src={item.featured_image_url}
-                    alt={item.title}
-                    className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg ml-4 flex-shrink-0"
-                  />
-                )}
+              </div>
+              
+              {/* 卡片右下角箭头指示器 */}
+              <div className="absolute bottom-3 right-3 pointer-events-none z-20">
+                <ChevronRight className="w-5 h-5 text-[#F15B98]" />
               </div>
             </div>
           )
         })}
-      </div>
-
-      {/* 无数据提示 */}
-      {filteredItems.length === 0 && (
-        <div className="text-center py-12">
-          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">暂无信息</p>
         </div>
-      )}
+
+        {/* 无数据提示 */}
+        {filteredItems.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">暂无信息</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

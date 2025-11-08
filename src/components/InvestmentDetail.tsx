@@ -58,7 +58,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!amount || parseFloat(amount) <= 0) {
-      showError('请输入有效的投资金额')
+      showError('请输入有效的捐赠金额')
       return
     }
 
@@ -98,7 +98,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
       if (error) throw error
 
       // 使用 success 提示
-      showSuccess('感谢您的支持，我们会尽快确认您的投资。', '投资提交成功！')
+      showSuccess('感谢您的支持，我们会尽快确认您的捐赠。', '捐赠提交成功！')
       
       setAmount('')
       setNotes('')
@@ -106,7 +106,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
       setPreviewUrl(null)
       onClose()
     } catch (error) {
-      console.error('提交投资失败:', error)
+      console.error('提交捐赠失败:', error)
       showError('提交失败，请重试')
     } finally {
       setLoading(false)
@@ -142,7 +142,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                投资金额 (CAD) *
+                捐赠金额 (CAD) *
               </label>
               <input
                 type="number"
@@ -153,7 +153,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
                 step="0.01"
                 required
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
-                placeholder="请输入投资金额"
+                placeholder="请输入捐赠金额"
               />
             </div>
 
@@ -238,7 +238,7 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
                 disabled={loading}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-[#F15B98] to-[#F15B98]/90 text-white rounded-lg hover:from-[#F15B98]/90 hover:to-[#F15B98]/80 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? '提交中...' : '确认投资'}
+                {loading ? '提交中...' : '确认捐赠'}
               </button>
             </div>
           </form>

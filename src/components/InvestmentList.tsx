@@ -186,8 +186,8 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
         projects.length === 0 ? (
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">暂无投资项目</h3>
-            <p className="text-gray-600">当前没有进行中的投资项目</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">暂无捐赠项目</h3>
+            <p className="text-gray-600">当前没有进行中的捐赠项目</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -269,7 +269,7 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
         ) : (
           <div className="text-center py-12">
             <List className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600">请先登录查看投资记录</p>
+            <p className="text-gray-600">请先登录查看捐赠记录</p>
           </div>
         )
       )}

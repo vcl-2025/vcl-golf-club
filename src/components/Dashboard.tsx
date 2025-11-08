@@ -893,7 +893,7 @@ export default function Dashboard() {
         @media (max-width: 640px) {
           .dashboard-background::before {
             background-repeat: no-repeat !important;
-            background-size: 480px auto !important;
+            background-size: 581px auto !important;
             background-attachment: scroll !important;
             background-position: center center !important;
           }
@@ -929,7 +929,7 @@ export default function Dashboard() {
                 />
               </div>
               <div className="ml-2 sm:ml-3 pt-1">
-                <h1 className="text-sm sm:text-lg lg:text-lg xl:text-xl font-extrabold text-white">溫哥華華人女子高爾夫俱樂部</h1>
+                <h1 className="text-base sm:text-lg lg:text-lg xl:text-xl font-extrabold text-white">溫哥華華人女子高爾夫俱樂部</h1>
                 <p className="text-xs font-bold text-white">
                   <span style={{ color: '#FF7DB3', fontSize: '0.875rem', fontWeight: '900' }}>V</span>ancouver <span style={{ color: '#FF7DB3', fontSize: '0.875rem', fontWeight: '900' }}>C</span>hinese <span style={{ color: '#FF7DB3', fontSize: '0.875rem', fontWeight: '900' }}>L</span>adies' Golf Club
                 </p>
@@ -2256,7 +2256,11 @@ export default function Dashboard() {
             {/* Main Content Sections */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-3">
               {/* 即将举行的活动 */}
-              <div className="relative p-5 sm:p-7 bg-gradient-to-br from-white via-white to-gray-50/30 border border-gray-200/60 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+              <div className="relative p-5 sm:p-7 bg-white/20 backdrop-blur-md border-2 border-white/40 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden" style={{ 
+                boxShadow: '0 8px 24px 0 rgba(31, 38, 135, 0.15), 0 2px 8px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.6)',
+                WebkitBackdropFilter: 'blur(12px)',
+                backdropFilter: 'blur(12px)'
+              }}>
                 {/* 装饰性背景元素 */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F15B98]/5 to-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-golf-400/5 to-transparent rounded-full blur-2xl -ml-12 -mb-12"></div>
@@ -2301,10 +2305,6 @@ export default function Dashboard() {
                             e.currentTarget.style.borderColor = ''
                           }}
                         >
-                          {/* 悬停时的背景渐变 */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-[#F15B98]/0 via-[#F15B98]/0 to-golf-400/0 group-hover:from-[#F15B98]/5 group-hover:via-transparent group-hover:to-golf-400/5 transition-all duration-300"></div>
-                          {/* 按压时的绿色渐变层 */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-golf-100/0 via-golf-200/0 to-golf-300/0 opacity-0 transition-opacity duration-200 pointer-events-none" id="press-gradient"></div>
                           
                           {/* 使用grid布局，确保右侧内容占满剩余空间 */}
                           <div className="relative z-10 grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-3 sm:gap-4">
@@ -2378,7 +2378,11 @@ export default function Dashboard() {
               </div>
 
               {/* 最新发布的成绩活动 */}
-              <div className="relative p-5 sm:p-7 bg-gradient-to-br from-white via-white to-gray-50/30 border border-gray-200/60 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+              <div className="relative p-5 sm:p-7 bg-white/20 backdrop-blur-md border-2 border-white/40 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden" style={{ 
+                boxShadow: '0 8px 24px 0 rgba(31, 38, 135, 0.15), 0 2px 8px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.6)',
+                WebkitBackdropFilter: 'blur(12px)',
+                backdropFilter: 'blur(12px)'
+              }}>
                 {/* 装饰性背景元素 */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F15B98]/5 to-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-golf-400/5 to-transparent rounded-full blur-2xl -ml-12 -mb-12"></div>

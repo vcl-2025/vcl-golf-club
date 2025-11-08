@@ -1075,8 +1075,8 @@ const AdminAnalytics = () => {
                     <DollarSign className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <span className="text-sm font-semibold text-gray-800">投资确认待批</span>
-                    <p className="text-xs text-gray-600">需要确认的投资申请</p>
+                    <span className="text-sm font-semibold text-gray-800">捐赠确认待批</span>
+                    <p className="text-xs text-gray-600">需要确认的捐赠申请</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1110,7 +1110,7 @@ const AdminAnalytics = () => {
                 }}
                 className="px-4 py-2.5 text-sm bg-gradient-to-r from-[#F15B98] to-[#F15B98]/90 text-white rounded-lg hover:from-[#F15B98]/90 hover:to-[#F15B98]/80 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
               >
-                处理投资
+                处理捐赠
               </button>
             </div>
           </div>
