@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Calendar, MapPin, Users, Clock, DollarSign, ChevronRight, CheckCircle, AlertCircle, FileText, User } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Calendar, MapPin, Users, Clock, DollarSign, ChevronRight, CheckCircle, AlertCircle, FileText, User, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getEventStatus, getEventStatusText, getEventStatusStyles, canRegister } from '../utils/eventStatus'
 import { Event, EventStats } from '../types'
@@ -13,6 +13,7 @@ interface EventListProps {
 
 export default function EventList({ onEventSelect, user }: EventListProps) {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [events, setEvents] = useState<Event[]>([])
   const [eventStats, setEventStats] = useState<Record<string, EventStats>>({})
   const [userRegistrations, setUserRegistrations] = useState<Record<string, any>>({})
@@ -28,9 +29,119 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
   const [selectedMonth, setSelectedMonth] = useState('')
   const [locationTerm, setLocationTerm] = useState('')
 
+  // 获取用户报名状态的函数
+  const fetchUserRegistrations = useCallback(async () => {
+    if (!user || !supabase) return
+    
+    try {
+      console.log('开始刷新用户报名状态...')
+      const { data, error } = await supabase
+        .from('event_registrations')
+        .select('event_id, payment_status, status, approval_status')
+        .eq('user_id', user.id)
+      
+      if (error) {
+        console.error('获取用户报名状态失败:', error)
+        return
+      }
+      
+      if (data) {
+        console.log('获取到的报名数据:', data)
+        const regMap: Record<string, any> = {}
+        data.forEach((reg: any) => {
+          regMap[reg.event_id] = reg
+        })
+        setUserRegistrations(regMap)
+        console.log('更新后的报名状态映射:', regMap)
+      } else {
+        console.log('没有获取到报名数据')
+        setUserRegistrations({})
+      }
+    } catch (error) {
+      console.error('获取用户报名状态失败:', error)
+    }
+  }, [user])
+
+  // 只刷新活动统计数据的函数（用于报名后更新左上角的 1/40）
+  const fetchEventStats = useCallback(async () => {
+    if (!supabase) return
+    
+    try {
+      const statsResponse = await supabase.rpc('get_batch_event_stats')
+      
+      if (statsResponse.error) {
+        console.error('获取统计数据失败:', statsResponse.error)
+      } else {
+        const stats: Record<string, EventStats> = {}
+        if (statsResponse.data) {
+          statsResponse.data.forEach((stat: any) => {
+            stats[stat.event_id] = {
+              total_registrations: stat.total_registrations,
+              paid_registrations: stat.paid_registrations,
+              available_spots: stat.available_spots
+            }
+          })
+        }
+        setEventStats(stats)
+      }
+    } catch (error) {
+      console.error('刷新统计数据失败:', error)
+    }
+  }, [])
+
   useEffect(() => {
     fetchEvents()
   }, [user])
+
+  // 跟踪之前的 eventId 和 view
+  const prevEventIdRef = React.useRef<string | null>(null)
+  const prevViewRef = React.useRef<string | null>(null)
+  
+  // 当从 EventDetail 返回时（eventId 被移除或 view 变为 events），刷新用户报名状态
+  useEffect(() => {
+    const eventId = searchParams.get('eventId')
+    const view = searchParams.get('view')
+    
+    // 如果之前有 eventId，现在没有了，说明从 EventDetail 返回了
+    const returnedFromDetail = prevEventIdRef.current && !eventId
+    
+    // 或者如果 view 变为 events（从其他视图切换回来）
+    const switchedToEvents = view === 'events' && prevViewRef.current !== 'events'
+    
+    if ((returnedFromDetail || switchedToEvents) && user) {
+      console.log('检测到从 EventDetail 返回，准备刷新报名状态')
+      // 刷新报名状态 - 延迟一点确保数据已更新
+      setTimeout(() => {
+        console.log('执行刷新报名状态')
+        fetchUserRegistrations()
+      }, 800)
+    }
+    
+    prevEventIdRef.current = eventId
+    prevViewRef.current = view
+  }, [searchParams, user, fetchUserRegistrations])
+
+  // 监听报名更新事件
+  useEffect(() => {
+    const handleRegistrationUpdate = () => {
+      console.log('收到报名更新事件，准备刷新')
+      // 延迟刷新，确保数据库写入完成
+      setTimeout(() => {
+        console.log('执行刷新报名状态和统计数据（事件触发）')
+        if (user) {
+          fetchUserRegistrations()
+        }
+        // 刷新活动统计数据（包括左上角的 1/40）
+        fetchEventStats()
+      }, 600)
+    }
+    
+    window.addEventListener('eventRegistrationUpdated', handleRegistrationUpdate)
+    
+    return () => {
+      window.removeEventListener('eventRegistrationUpdated', handleRegistrationUpdate)
+    }
+  }, [user, fetchUserRegistrations, fetchEventStats])
 
   // 筛选活动
   const filteredEvents = events.filter(event => {
@@ -348,13 +459,14 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                 e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)'
               }}
             >
+
               {/* 活动图片区域 */}
               <div className="relative aspect-[3/4] sm:aspect-[2/3] overflow-hidden">
-                <img
-                  src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
-                  alt={event.title}
+                  <img
+                    src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
+                    alt={event.title}
                   className="w-full h-full object-cover"
-                />
+                  />
                 
                 {/* 底部渐变覆盖层 - 混合黑色和月份颜色 */}
                 {(() => {
@@ -400,10 +512,10 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                 <div className="absolute top-3 left-3 z-10 flex flex-col gap-2 items-start">
                   <div className="px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md border-2 border-white/60 flex items-center justify-center whitespace-nowrap min-w-fit shadow-lg">
                     <span className="text-xs text-gray-900 font-semibold drop-shadow-sm">
-                      {stats ? `${stats.total_registrations}/${event.max_participants}` : '0/50'}
-                    </span>
-                  </div>
-                  
+                    {stats ? `${stats.total_registrations}/${event.max_participants}` : '0/50'}
+                  </span>
+              </div>
+
                   {/* 已报名用户头像 - 显示在参与人数下方，最多5个，叠加显示 */}
                   {(() => {
                     const avatars = participantAvatars[event.id] || []
@@ -414,22 +526,22 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                       return (
                         <div className="flex items-center -space-x-2 relative w-fit">
                           {avatars.slice(0, 5).map((participant, idx) => (
-                            <div
-                              key={participant.id || idx}
+                      <div
+                        key={participant.id || idx}
                               className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-green-200 overflow-hidden bg-white/20 flex items-center justify-center flex-shrink-0 shadow-md backdrop-blur-sm relative"
                               style={{ zIndex: 10 - idx }}
-                            >
-                              {participant.avatarUrl ? (
-                                <img
-                                  src={participant.avatarUrl}
-                                  alt={participant.full_name || 'Participant'}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
+                      >
+                        {participant.avatarUrl ? (
+                          <img
+                            src={participant.avatarUrl}
+                            alt={participant.full_name || 'Participant'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
                                 <User className="w-4 h-4 sm:w-5 sm:h-5 text-green-300" />
-                              )}
-                            </div>
-                          ))}
+                        )}
+                      </div>
+                    ))}
                           {/* 在最后一个头像的右侧外部显示剩余人数 */}
                           {remainingCount > 0 && (
                             <div 
@@ -437,9 +549,9 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                             >
                               <span className="text-[10px] sm:text-xs text-green-600 font-semibold">
                                 +{remainingCount}
-                              </span>
-                            </div>
-                          )}
+                            </span>
+                          </div>
+                        )}
                         </div>
                       )
                     }
@@ -533,16 +645,17 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* 活动详情信息 - 在渐变背景上，白色文字 */}
                 <div className="absolute bottom-4 right-4 left-auto sm:right-4 sm:max-w-[40%] text-white space-y-1.5 sm:space-y-2">
                   {/* 报名按钮 */}
                   <div className="pt-2">
-                    {(() => {
-                      const registration = getUserRegistrationStatus(event.id)
-                      const isRegistered = registration && registration.approval_status === 'approved'
-                      
-                      if (isRegistered) {
+                  {(() => {
+                    const registration = getUserRegistrationStatus(event.id)
+                    const isRegistered = registration && registration.approval_status === 'approved'
+                    const isPending = registration && registration.approval_status === 'pending'
+                    
+                    if (isRegistered) {
                         return (
                           <button 
                             onClick={(e) => {
@@ -559,6 +672,23 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                             <span className="text-green-400">已报名</span>
                           </button>
                         )
+                      } else if (isPending) {
+                        return (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const params = new URLSearchParams()
+                              params.set('view', 'events')
+                              params.set('eventId', event.id)
+                              navigate(`/dashboard?${params.toString()}`, { replace: true })
+                            }}
+                            className="px-2 py-1 bg-yellow-500/90 backdrop-blur-sm border border-yellow-400/50 rounded-full text-[10px] sm:text-xs font-medium cursor-default flex items-center gap-1"
+                            disabled
+                          >
+                            <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+                            <span className="text-white">已申请待审批</span>
+                          </button>
+                        )
                       } else {
                         if (!registrationOpen) {
                           return (
@@ -570,53 +700,57 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                                 params.set('eventId', event.id)
                                 navigate(`/dashboard?${params.toString()}`, { replace: true })
                               }}
-                              className="px-3 py-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-xs sm:text-sm font-semibold cursor-default"
+                              className="px-2.5 py-1.5 bg-red-600 rounded-full text-[10px] sm:text-xs font-medium cursor-default shadow-sm flex items-center gap-1"
                               disabled
                             >
-                              <span className="text-red-400">报名已截止</span>
-                            </button>
-                          )
-                        } else if (eventFull) {
-                          return (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation()
+                              <X className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+                              <span className="text-white">报名已截止</span>
+                          </button>
+                        )
+                      } else if (eventFull) {
+                        return (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
                                 const params = new URLSearchParams()
                                 params.set('view', 'events')
                                 params.set('eventId', event.id)
                                 navigate(`/dashboard?${params.toString()}`, { replace: true })
-                              }}
+                            }}
                               className="px-3 py-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white rounded-full text-xs sm:text-sm font-semibold cursor-default"
-                              disabled
-                            >
-                              名额已满
-                            </button>
-                          )
-                        } else {
-                          return (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation()
+                            disabled
+                          >
+                            名额已满
+                          </button>
+                        )
+                      } else {
+                        return (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
                                 const params = new URLSearchParams()
                                 params.set('view', 'events')
                                 params.set('eventId', event.id)
                                 navigate(`/dashboard?${params.toString()}`, { replace: true })
-                              }}
-                              className="px-3 py-1.5 bg-white text-[#F15B98] rounded-full text-xs sm:text-sm font-semibold hover:bg-white/90 transition-colors shadow-md"
-                            >
-                              {statsLoading ? (
-                                <span className="flex items-center">
-                                  <div className="w-3 h-3 border-2 border-[#F15B98] border-t-transparent rounded-full animate-spin mr-2"></div>
-                                  加载中...
-                                </span>
-                              ) : (
-                                `还有 ${stats?.available_spots || 0} 个名额`
-                              )}
-                            </button>
-                          )
-                        }
+                            }}
+                              className="px-2.5 py-1.5 bg-white text-[#F15B98] rounded-full text-[10px] sm:text-xs font-medium hover:bg-white/90 transition-colors shadow-sm flex items-center gap-1"
+                          >
+                            {statsLoading ? (
+                              <span className="flex items-center">
+                                  <div className="w-2.5 h-2.5 border-2 border-[#F15B98] border-t-transparent rounded-full animate-spin mr-1.5"></div>
+                                加载中...
+                              </span>
+                            ) : (
+                              <>
+                                <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" />
+                                <span>还有 {stats?.available_spots || 0} 个名额</span>
+                              </>
+                            )}
+                          </button>
+                        )
                       }
-                    })()}
+                    }
+                  })()}
                   </div>
                 </div>
               </div>

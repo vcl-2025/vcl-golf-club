@@ -475,7 +475,7 @@ export default function InformationCenterList({ onItemSelect }: InformationCente
                             <PriorityIcon className={`w-4 h-4 ${iconColor} flex-shrink-0 transition-all duration-300 group-hover:scale-110`} />
                           ) : null
                         })()}
-                      </h3>
+                    </h3>
                   </div>
 
                   {/* 摘要 */}

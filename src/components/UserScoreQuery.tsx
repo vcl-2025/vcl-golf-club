@@ -428,10 +428,6 @@ export default function UserScoreQuery() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
-              style={{ 
-                animation: 'slideUp 0.5s ease-out 0.1s both',
-                opacity: 0
-              }}
             >
             <div className="text-xs sm:text-sm text-gray-600 mb-1">总轮次</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F15B98] to-golf-400">
@@ -441,10 +437,6 @@ export default function UserScoreQuery() {
 
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
-              style={{ 
-                animation: 'slideUp 0.5s ease-out 0.2s both',
-                opacity: 0
-              }}
             >
             <div className="text-xs sm:text-sm text-gray-600 mb-1">平均杆数</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-golf-400 to-[#F15B98]">
@@ -454,10 +446,6 @@ export default function UserScoreQuery() {
 
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
-              style={{ 
-                animation: 'slideUp 0.5s ease-out 0.3s both',
-                opacity: 0
-              }}
             >
             <div className="text-xs sm:text-sm text-gray-600 mb-1">最佳成绩</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-orange-500">
@@ -467,10 +455,6 @@ export default function UserScoreQuery() {
 
             <div 
               className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
-              style={{ 
-                animation: 'slideUp 0.5s ease-out 0.4s both',
-                opacity: 0
-              }}
             >
             <div className="text-xs sm:text-sm text-gray-600 mb-1">前三名次</div>
               <div className="text-lg sm:text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">

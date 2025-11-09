@@ -28,6 +28,8 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [stats, setStats] = useState<EventStats | null>(null)
+  const [flyingItem, setFlyingItem] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null)
+  const addToCartButtonRef = React.useRef<HTMLButtonElement>(null)
   const [userRegistration, setUserRegistration] = useState<EventRegistration | null>(null)
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
@@ -41,7 +43,6 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   const [articlePublishedAt, setArticlePublishedAt] = useState(event.article_published_at || '')
   const [isPublic, setIsPublic] = useState(event.is_public || false)
   const { confirmAction, showError } = useModal()
-
 
   useEffect(() => {
     fetchEventData()
@@ -296,6 +297,56 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
     return userRegistration && userRegistration.approval_status === 'pending' && isRegistrationOpen()
   }
 
+  // 飞入购物车动画
+  const handleAddToCartWithAnimation = (buttonElement: HTMLButtonElement | null) => {
+    if (eventCart.has(event.id)) {
+      if (onRemoveFromCart) {
+        onRemoveFromCart(event.id)
+      }
+      return
+    }
+
+    if (buttonElement && onAddToCart) {
+      const buttonRect = buttonElement.getBoundingClientRect()
+      
+      // 等待一小段时间确保 DOM 已更新，然后查找购物车按钮
+      setTimeout(() => {
+        // 尝试多种方式找到购物车按钮
+        let cartButton = document.querySelector('[title*="购物车"]') as HTMLElement
+        
+        if (!cartButton) {
+          // 尝试通过 SVG 图标查找
+          const svgElements = document.querySelectorAll('svg')
+          for (const svg of svgElements) {
+            if (svg.closest('button') && svg.closest('button')?.getAttribute('title')?.includes('购物车')) {
+              cartButton = svg.closest('button') as HTMLElement
+              break
+            }
+          }
+        }
+        
+        if (cartButton) {
+          const cartRect = cartButton.getBoundingClientRect()
+          setFlyingItem({
+            startX: buttonRect.left + buttonRect.width / 2,
+            startY: buttonRect.top + buttonRect.height / 2,
+            endX: cartRect.left + cartRect.width / 2,
+            endY: cartRect.top + cartRect.height / 2
+          })
+          
+          // 动画完成后添加到购物车
+          setTimeout(() => {
+            onAddToCart(event.id)
+            setFlyingItem(null)
+          }, 800)
+        } else {
+          // 如果找不到购物车按钮，直接添加
+          onAddToCart(event.id)
+        }
+      }, 50)
+    }
+  }
+
   const handleCancelRegistration = async () => {
     if (!userRegistration) return
 
@@ -514,21 +565,15 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                 {/* 报名按钮 */}
                 {canRegister() && (
                   <div className="space-y-3 mt-4">
-                    <button
-                      onClick={() => setShowRegistrationModal(true)}
+                  <button
+                    onClick={() => setShowRegistrationModal(true)}
                       className="w-full btn-primary py-3 text-lg"
-                    >
-                      立即报名
+                  >
+                    立即报名
                     </button>
                     {onAddToCart && onRemoveFromCart && (
                       <button
-                        onClick={() => {
-                          if (eventCart.has(event.id)) {
-                            onRemoveFromCart(event.id)
-                          } else {
-                            onAddToCart(event.id)
-                          }
-                        }}
+                        onClick={(e) => handleAddToCartWithAnimation(e.currentTarget)}
                         className={`w-full py-3 text-lg rounded-lg transition-colors flex items-center justify-center gap-2 ${
                           eventCart.has(event.id)
                             ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -537,7 +582,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                       >
                         <ShoppingCart className="w-5 h-5" />
                         {eventCart.has(event.id) ? '已加入购物车' : '加入购物车'}
-                      </button>
+                  </button>
                     )}
                   </div>
                 )}
@@ -577,6 +622,8 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
             onSuccess={() => {
               setShowRegistrationModal(false)
               fetchEventData()
+              // 触发 EventList 刷新：发送自定义事件
+              window.dispatchEvent(new CustomEvent('eventRegistrationUpdated'))
             }}
           />
         )}
@@ -733,6 +780,42 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   // Modal模式（原有代码）
   return (
     <>
+      {/* 飞入购物车动画 */}
+      {flyingItem && (
+        <>
+          <div
+            className="fixed z-[9999] pointer-events-none"
+            style={{
+              left: `${flyingItem.startX}px`,
+              top: `${flyingItem.startY}px`,
+              transform: 'translate(-50%, -50%)',
+              animation: `flyToCart 0.8s ease-in-out forwards`,
+              '--end-x': `${flyingItem.endX}px`,
+              '--end-y': `${flyingItem.endY}px`
+            } as React.CSSProperties}
+          >
+            <div className="w-12 h-12 bg-[#F15B98] rounded-full flex items-center justify-center shadow-lg">
+              <ShoppingCart className="w-6 h-6 text-white" />
+            </div>
+          </div>
+          <style>{`
+            @keyframes flyToCart {
+              0% {
+                left: ${flyingItem.startX}px;
+                top: ${flyingItem.startY}px;
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+              }
+              100% {
+                left: ${flyingItem.endX}px;
+                top: ${flyingItem.endY}px;
+                transform: translate(-50%, -50%) scale(0.3);
+                opacity: 0;
+              }
+            }
+          `}</style>
+        </>
+      )}
     <div 
         className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-0 sm:p-4 overflow-hidden transition-opacity duration-200 ${
           isClosing ? 'opacity-0' : 'opacity-100'
@@ -909,21 +992,15 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                 {/* 报名按钮 */}
                 {canRegister() && (
                   <div className="space-y-3 mt-4">
-                    <button
-                      onClick={() => setShowRegistrationModal(true)}
+                  <button
+                    onClick={() => setShowRegistrationModal(true)}
                       className="w-full btn-primary py-3 text-lg"
-                    >
-                      立即报名
+                  >
+                    立即报名
                     </button>
                     {onAddToCart && onRemoveFromCart && (
                       <button
-                        onClick={() => {
-                          if (eventCart.has(event.id)) {
-                            onRemoveFromCart(event.id)
-                          } else {
-                            onAddToCart(event.id)
-                          }
-                        }}
+                        onClick={(e) => handleAddToCartWithAnimation(e.currentTarget)}
                         className={`w-full py-3 text-lg rounded-lg transition-colors flex items-center justify-center gap-2 ${
                           eventCart.has(event.id)
                             ? 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -932,7 +1009,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                       >
                         <ShoppingCart className="w-5 h-5" />
                         {eventCart.has(event.id) ? '已加入购物车' : '加入购物车'}
-                      </button>
+                  </button>
                     )}
                   </div>
                 )}

@@ -261,6 +261,12 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
 
       showSuccess(`成功报名 ${events.length} 个活动！`)
       
+      // 延迟发送刷新事件，确保数据库写入完成
+      setTimeout(() => {
+        console.log('EventCartModal: 发送报名更新事件')
+        window.dispatchEvent(new CustomEvent('eventRegistrationUpdated'))
+      }, 500)
+      
       setTimeout(() => {
         if (onSuccess) onSuccess()
         onClose()

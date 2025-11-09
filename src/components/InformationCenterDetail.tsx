@@ -204,13 +204,13 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
         const { data, error: updateError } = await supabase
           .from('information_items')
           .update({ view_count: (item.view_count || 0) + 1 })
-          .eq('id', item.id)
-          .select('view_count')
+        .eq('id', item.id)
+        .select('view_count')
         .single()
 
       if (!updateError && data) {
         setViewCount(data.view_count)
-        }
+      }
       } catch (updateErr) {
         console.error('更新浏览次数失败:', updateErr)
       }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun, ShoppingCart } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun, ShoppingCart, AlertCircle, Archive } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import ProfileModal from './ProfileModal'
@@ -951,6 +951,9 @@ export default function Dashboard() {
           .dashboard-background::before {
             display: none !important;
           }
+          .dashboard-background {
+            background: linear-gradient(to bottom, #f8f8f8, #f5f5f5) !important;
+          }
         }
       `}</style>
       {/* Header */}
@@ -1305,12 +1308,10 @@ export default function Dashboard() {
                       : 'text-gray-700 hover:bg-gray-50 hover:text-[#F15B98]'
                   }`}
                 >
-                  <Bell 
+                  <Archive 
                     className="w-5 h-5" 
                     style={{ 
-                      color: currentView === 'information' ? '#FFFFFF' : '#1F2937',
-                      animation: unreadInformationCount > 0 ? 'bell-shake 0.5s ease-in-out 0s, bell-shake 0.5s ease-in-out 2s infinite' : 'none',
-                      transformOrigin: 'top center'
+                      color: currentView === 'information' ? '#FFFFFF' : '#1F2937'
                     }} 
                     strokeWidth={2} 
                   />
@@ -1793,6 +1794,56 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
+              
+              {/* 铃铛图标 - 左下角 */}
+              {unreadInformationCount > 0 && (
+                <div 
+                  style={{
+                    position: 'absolute',
+                    bottom: '12px',
+                    left: '12px',
+                    zIndex: 20,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onClick={() => {
+                    setCurrentView('information')
+                    navigate('/dashboard?view=information')
+                  }}
+                >
+                  <div 
+                    style={{
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Bell 
+                      className="w-6 h-6 sm:w-7 sm:h-7"
+                      style={{ 
+                        color: '#FFFFFF',
+                        fill: 'rgba(255, 255, 255, 0.9)',
+                        animation: 'bell-shake 0.5s ease-in-out 0s, bell-shake 0.5s ease-in-out 2s infinite',
+                        transformOrigin: 'top center',
+                        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                      }} 
+                      strokeWidth={2.5} 
+                    />
+                    <span 
+                      className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center min-w-[18px] h-4.5 px-1 shadow-lg"
+                      style={{ 
+                        fontSize: '10px',
+                        lineHeight: '1'
+                      }}
+                    >
+                      {unreadInformationCount > 99 ? '99+' : unreadInformationCount}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* 添加hover效果的样式 */}
@@ -1895,13 +1946,11 @@ export default function Dashboard() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 max-w-[60%] sm:max-w-[65%] ml-2 sm:ml-4">
                       <div className="flex items-center justify-start mb-2 sm:mb-3 lg:mb-4 relative">
-                        <Bell 
-                          className={`w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4 ${unreadInformationCount > 0 ? 'bell-shake-animation' : ''}`}
+                        <Archive 
+                          className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ml-3 sm:ml-4"
                           style={{ 
                             color: '#4B5563', 
-                            fill: '#92c648',
-                            animation: unreadInformationCount > 0 ? 'bell-shake 0.5s ease-in-out 0s, bell-shake 0.5s ease-in-out 2s infinite' : 'none',
-                            transformOrigin: 'top center'
+                            fill: '#92c648'
                           }} 
                           strokeWidth={2} 
                         />
@@ -2313,15 +2362,7 @@ export default function Dashboard() {
             {/* Main Content Sections */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-3">
               {/* 即将举行的活动 */}
-              <div className="relative p-5 sm:p-7 bg-white/20 backdrop-blur-md border-2 border-white/40 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden" style={{ 
-                boxShadow: '0 8px 24px 0 rgba(31, 38, 135, 0.15), 0 2px 8px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.6)',
-                WebkitBackdropFilter: 'blur(12px)',
-                backdropFilter: 'blur(12px)'
-              }}>
-                {/* 装饰性背景元素 */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F15B98]/5 to-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-golf-400/5 to-transparent rounded-full blur-2xl -ml-12 -mb-12"></div>
-                
+              <div className="relative p-5 sm:p-7 bg-white border border-gray-200 rounded-3xl transition-all duration-300 overflow-hidden" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.06)' }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)' }}>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-5 sm:mb-7">
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
@@ -2339,7 +2380,10 @@ export default function Dashboard() {
                     {upcomingEvents.map((event) => (
                       <div 
                         key={event.id} 
-                          className="group relative p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                          className="group relative p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-300/80 rounded-2xl hover:bg-white hover:border-[#F15B98]/40 hover:shadow-sm transition-all duration-300 cursor-pointer"
+                          style={{
+                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)'
+                          }}
                         onClick={() => navigate(`/event/${event.id}`)}
                           onMouseDown={(e) => {
                             e.currentTarget.style.background = 'linear-gradient(to bottom right, rgba(240, 253, 244, 0.95), rgba(220, 252, 231, 0.85), rgba(187, 247, 208, 0.75))'
@@ -2366,7 +2410,7 @@ export default function Dashboard() {
                           {/* 使用grid布局，确保右侧内容占满剩余空间 */}
                           <div className="relative z-10 grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-3 sm:gap-4">
                             {/* 左侧图片容器 */}
-                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md transition-shadow duration-300">
                           {event.image_url || event.article_featured_image_url ? (
                                 <>
                             <img
@@ -2409,7 +2453,7 @@ export default function Dashboard() {
                       <div className="text-center pt-3">
                       <button 
                         onClick={() => setCurrentView('events')}
-                          className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 overflow-hidden"
+                          className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm rounded-xl transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105 overflow-hidden"
                       >
                           <span className="relative z-10">查看更多活动</span>
                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -2424,7 +2468,7 @@ export default function Dashboard() {
                       <p className="text-gray-500 mb-4 text-sm sm:text-base">暂无即将举行的活动</p>
                     <button 
                       onClick={() => setCurrentView('events')}
-                        className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm sm:text-base rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 overflow-hidden"
+                        className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm sm:text-base rounded-xl transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105 overflow-hidden"
                     >
                         <span className="relative z-10">查看更多活动</span>
                         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -2435,15 +2479,7 @@ export default function Dashboard() {
               </div>
 
               {/* 最新发布的成绩活动 */}
-              <div className="relative p-5 sm:p-7 bg-white/20 backdrop-blur-md border-2 border-white/40 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden" style={{ 
-                boxShadow: '0 8px 24px 0 rgba(31, 38, 135, 0.15), 0 2px 8px 0 rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.6)',
-                WebkitBackdropFilter: 'blur(12px)',
-                backdropFilter: 'blur(12px)'
-              }}>
-                {/* 装饰性背景元素 */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#F15B98]/5 to-transparent rounded-full blur-3xl -mr-16 -mt-16"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-golf-400/5 to-transparent rounded-full blur-2xl -ml-12 -mb-12"></div>
-                
+              <div className="relative p-5 sm:p-7 bg-white border border-gray-200 rounded-3xl transition-all duration-300 overflow-hidden" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.06)' }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)' }}>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-5 sm:mb-7">
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center">
@@ -2461,7 +2497,10 @@ export default function Dashboard() {
                     {recentScores.map((result, index) => (
                         <div 
                           key={index} 
-                          className="group relative p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-2xl hover:bg-white hover:border-[#F15B98]/30 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                          className="group relative p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-300/80 rounded-2xl hover:bg-white hover:border-[#F15B98]/40 hover:shadow-sm transition-all duration-300 cursor-pointer"
+                          style={{
+                            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)'
+                          }}
                           onClick={() => {
                             if (result.event_id) {
                               // 切换到成绩查询视图并传递 eventId 参数
@@ -2500,7 +2539,7 @@ export default function Dashboard() {
                           {/* 使用grid布局，确保右侧内容占满剩余空间 */}
                           <div className="relative z-10 grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-3 sm:gap-4">
                             {/* 左侧图片容器 */}
-                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden shadow-sm group-hover:shadow-md transition-shadow duration-300">
                           {result.image_url ? (
                                 <>
                             <img
@@ -2592,7 +2631,7 @@ export default function Dashboard() {
                       <div className="text-center pt-3">
                       <button 
                         onClick={() => setCurrentView('scores')}
-                          className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 overflow-hidden"
+                          className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm rounded-xl transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105 overflow-hidden"
                       >
                           <span className="relative z-10">查看完整成绩单</span>
                           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>

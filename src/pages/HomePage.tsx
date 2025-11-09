@@ -153,7 +153,7 @@ export default function HomePage() {
                   currentIndexRef.current = 0
                   setCarouselIndex(0)
                 }
-              } else {
+    } else {
                 // Normal detection - find which image is closest to center
                 const container = carouselTrackRef.current.parentElement
                 if (container) {
@@ -201,7 +201,7 @@ export default function HomePage() {
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current)
         animationFrameRef.current = null
-      }
+    }
     }
   }, [windowWidth, galleryImages.length, isMarqueePaused])
 
@@ -289,7 +289,7 @@ export default function HomePage() {
       if (distance > 0) {
         // 向左滑动，显示下一张
         nextSlide()
-      } else {
+        } else {
         // 向右滑动，显示上一张
         prevSlide()
       }
@@ -615,7 +615,7 @@ export default function HomePage() {
         style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
       >
         <div className="flex items-center gap-2 sm:gap-[15px] flex-1 min-w-0" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '16px sm:text-[20px]', fontWeight: 700, letterSpacing: '1px', color: 'var(--light)' }}>
-          <img src="/vcl_sample/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain flex-shrink-0" />
+          <img src="/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain flex-shrink-0" />
           <div className="flex flex-col gap-[1px] sm:gap-[2px] min-w-0 flex-1">
             <span className="text-xl sm:text-[22px] font-semibold leading-tight truncate" style={{ color: 'var(--light)', letterSpacing: '1px' }}>溫哥華華人女子高爾夫俱樂部</span>
             <span className="text-[9px] sm:text-[11px] uppercase leading-tight break-words" style={{ color: 'var(--accent)', letterSpacing: '1.5px', fontWeight: 400, fontFamily: 'sans-serif' }}>Vancouver Chinese Women's Golf Club</span>
@@ -751,11 +751,11 @@ export default function HomePage() {
       <section id="hero" className="relative h-screen flex items-center overflow-hidden pt-16 sm:pt-0">
         <div 
           className="absolute inset-0 w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: 'url(/vcl_sample/hero_photo.jpg)' }}
+          style={{ backgroundImage: 'url(/homepage_image.jpg)' }}
         >
           <div 
             className="absolute inset-0 hero-gradient-animate"
-            style={{
+          style={{
               background: 'linear-gradient(to right, rgba(26, 26, 26, 0.8) 0%, rgba(26, 26, 26, 0.65) 16.66%, rgba(26, 26, 26, 0.5) 33.33%, rgba(26, 26, 26, 0.25) 50%, rgba(26, 26, 26, 0.5) 66.66%, rgba(26, 26, 26, 0.65) 83.33%, rgba(26, 26, 26, 0.8) 100%)',
               backgroundSize: '300% 100%'
             }}
@@ -876,8 +876,8 @@ export default function HomePage() {
               alt="Golf Course"
               className="w-full h-full object-cover rounded-lg"
             />
-          </div>
-        </div>
+                      </div>
+                  </div>
       </section>
 
       {/* Activities Section */}
@@ -898,7 +898,7 @@ export default function HomePage() {
           {/* 装饰线条 */}
           <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
           <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-        </div>
+                      </div>
         <div 
           ref={activitiesTitleRef}
           data-animate-id="activities-title"
@@ -906,20 +906,20 @@ export default function HomePage() {
         >
           <div className="text-sm sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
             Recent Highlights
-          </div>
+                      </div>
           <h2 
             className="font-light leading-[1.2] mb-6 sm:mb-10 text-white text-4xl sm:text-5xl lg:text-[64px]"
             style={{ fontFamily: '"Cormorant Garamond", serif' }}
           >
             精彩<strong className="font-bold" style={{ color: 'var(--accent)' }}>活動回顧</strong>
           </h2>
-          </div>
+                    </div>
 
         <div className="relative z-10 max-w-[1400px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
           {loading ? (
             <div className="col-span-3 text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-            </div>
+        </div>
           ) : events.length > 0 ? (
             events.map((event, idx) => (
                 <div
@@ -941,10 +941,10 @@ export default function HomePage() {
                     padding: '40px'
                   }}
                 >
-                  <div>
+                <div>
                     <div className="text-[13px] uppercase mb-[15px]" style={{ letterSpacing: '2px', color: 'var(--pink)', fontWeight: 500 }}>
                       {new Date(event.start_time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </div>
+                </div>
                     <h3 
                       className="mb-3 leading-[1.3] text-white"
                       style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '24px', fontWeight: 600 }}
@@ -960,10 +960,10 @@ export default function HomePage() {
                         <i className="fas fa-users mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
                         {event.max_participants}
                       </span>
-                    </div>
-                  </div>
+              </div>
                 </div>
-                      </div>
+              </div>
+                  </div>
             ))
           ) : (
             activityImages.map((activity, idx) => (
@@ -987,7 +987,7 @@ export default function HomePage() {
                   <div>
                     <div className="text-[13px] uppercase mb-[15px]" style={{ letterSpacing: '2px', color: 'var(--pink)', fontWeight: 500 }}>
                       {activity.date}
-                    </div>
+                  </div>
                     <h3 
                       className="mb-3 leading-[1.3] text-white"
                       style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '24px', fontWeight: 600 }}
@@ -998,14 +998,14 @@ export default function HomePage() {
                       <span className="flex items-center">
                         <i className="fas fa-map-marker-alt mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
                         {activity.location}
-                      </span>
+                    </span>
                       <span className="flex items-center">
                         <i className="fas fa-users mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
                         {activity.participants.replace(' Participants', '').replace(' Members', '').replace(' Players', '')}
                       </span>
-                    </div>
-                  </div>
                 </div>
+                  </div>
+                  </div>
                               </div>
             ))
                             )}
@@ -1024,7 +1024,7 @@ export default function HomePage() {
           >
             <span>View All Events</span>
           </button>
-                                    </div>
+                            </div>
       </section>
 
       {/* Members Gallery Section */}
@@ -1081,8 +1081,8 @@ export default function HomePage() {
             right: '30%',
             animation: 'cloudMove5 9s ease-in-out infinite 1.5s'
           }}></div>
-        </div>
-        
+                            </div>
+                            
         <div className="relative z-10 max-w-[1400px] mx-auto">
           <div 
             ref={galleryTitleRef}
@@ -1091,7 +1091,7 @@ export default function HomePage() {
           >
             <div className="text-sm sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
               Members Moments
-                                          </div>
+                                    </div>
             <h2 
               className="font-light leading-[1.2] mb-6 sm:mb-10 text-4xl sm:text-5xl lg:text-[64px]"
               style={{ fontFamily: '"Cormorant Garamond", serif', color: 'var(--dark)' }}
@@ -1101,7 +1101,7 @@ export default function HomePage() {
             <p className="text-base sm:text-base lg:text-lg text-[#666] px-4">
               記錄每一個精彩瞬間，分享高爾夫的快樂時光
             </p>
-                                      </div>
+                                </div>
 
           {/* Main Image Display */}
           <div className="relative overflow-hidden mb-6 sm:mb-8 bg-transparent" style={{ padding: '20px 0 sm:40px 0', height: windowWidth <= 768 ? '300px' : windowWidth <= 1024 ? '400px' : '500px', backgroundColor: 'transparent' }}>
@@ -1116,8 +1116,8 @@ export default function HomePage() {
             >
               {/* Duplicate images for seamless loop */}
               {[...galleryImages, ...galleryImages].map((img, idx) => (
-                <div
-                  key={idx}
+                                                <div
+                                                  key={idx}
                   className="flex-shrink-0 rounded-2xl overflow-hidden relative bg-transparent"
                   style={{ 
                     width: windowWidth <= 768 ? 'calc(100vw - 80px)' : windowWidth <= 1024 ? 'calc((100vw - 120px) / 2)' : 'calc((100vw - 240px) / 3)',
@@ -1125,16 +1125,16 @@ export default function HomePage() {
                     boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
                     backgroundColor: 'transparent'
                   }}
-                >
-                  <img
+                                                >
+                                                  <img
                     src={img}
                     alt="Golf moment"
                     className="w-full h-full object-cover object-center"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+                                                  />
+                                                </div>
+                                              ))}
+                                            </div>
+                                      </div>
 
           {/* Thumbnail Gallery */}
           <div className="flex justify-center gap-2 sm:gap-3 overflow-x-auto pt-2 pb-2 px-4 bg-transparent" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', backgroundColor: 'transparent' }}>
@@ -1145,7 +1145,7 @@ export default function HomePage() {
             `}</style>
             <div className="flex gap-2 sm:gap-3 thumbnail-scroll py-1">
               {galleryImages.map((img, idx) => (
-                <button
+                          <button
                   key={idx}
                   onClick={() => goToIndex(idx)}
                   className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
@@ -1153,7 +1153,7 @@ export default function HomePage() {
                       ? 'border-[var(--accent)] scale-110 shadow-lg' 
                       : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'
                   }`}
-                  style={{ 
+                                style={{
                     width: windowWidth <= 768 ? '60px' : windowWidth <= 1024 ? '80px' : '100px',
                     height: windowWidth <= 768 ? '60px' : windowWidth <= 1024 ? '80px' : '100px'
                   }}
@@ -1163,11 +1163,11 @@ export default function HomePage() {
                     alt={`Thumbnail ${idx + 1}`}
                     className="w-full h-full object-cover rounded-lg"
                   />
-                </button>
-              ))}
-            </div>
-          </div>
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
+                          </div>
       </section>
 
       {/* Footer */}
@@ -1177,12 +1177,12 @@ export default function HomePage() {
             {/* Left Column - About */}
             <div>
               <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
-                <img src="/vcl_sample/logo.png" alt="VCL Logo" className="h-12 sm:h-14 w-auto" />
+                <img src="/logo.png" alt="VCL Logo" className="h-12 sm:h-14 w-auto" />
                 <div className="flex flex-col gap-1">
                   <span className="text-sm sm:text-base font-medium" style={{ color: 'var(--primary)' }}>溫哥華華人女子高爾夫俱樂部</span>
                   <span className="text-[10px] sm:text-xs uppercase" style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1px' }}>Vancouver Chinese Women's Golf Club</span>
-                </div>
-              </div>
+                              </div>
+                          </div>
               <p className="text-sm sm:text-[15px] leading-[1.8] mb-6 sm:mb-8" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 致力於為熱愛高爾夫的女性打造專屬平台，在優雅運動中建立終身友誼。
               </p>
@@ -1203,8 +1203,8 @@ export default function HomePage() {
                     <i className={social.icon} style={{ fontSize: '18px' }}></i>
                   </a>
                 ))}
-              </div>
-            </div>
+                        </div>
+                      </div>
 
             {/* Right Column - Contact */}
             <div>
@@ -1214,19 +1214,19 @@ export default function HomePage() {
                   <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--primary)' }} />
                   <div className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>
                     Vancouver, BC<br />Canada
+                    </div>
                   </div>
-                </div>
                 <div className="flex items-start gap-3">
                   <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>@</span>
                   <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>info@vclgolf.com</span>
-                </div>
+                  </div>
                 <div className="flex items-start gap-3">
                   <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>📞</span>
                   <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>+1 (604) 123-4567</span>
-                </div>
               </div>
             </div>
           </div>
+        </div>
 
           {/* Bottom Section - Copyright and Legal */}
           <div className="border-t border-white/10 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -1235,8 +1235,8 @@ export default function HomePage() {
               <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Privacy Policy</a>
               <span className="text-[var(--accent)]">·</span>
               <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Terms of Service</a>
-            </div>
           </div>
+            </div>
         </div>
       </footer>
     </div>
