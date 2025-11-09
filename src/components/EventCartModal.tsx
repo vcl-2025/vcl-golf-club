@@ -192,10 +192,10 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
       return
     }
 
-    // 检查是否有已报名的活动
-    const alreadyRegistered = events.filter(e => userRegistrations[e.id])
-    if (alreadyRegistered.length > 0) {
-      showError(`您已报名以下活动：${alreadyRegistered.map(e => e.title).join('、')}`)
+    // 检查是否有已报名的活动，如果有则不允许提交
+    const alreadyRegisteredInCart = events.filter(e => userRegistrations[e.id])
+    if (alreadyRegisteredInCart.length > 0) {
+      showError(`购物车中有已报名的活动，请先移除后再提交：${alreadyRegisteredInCart.map(e => e.title).join('、')}`)
       return
     }
 
@@ -261,6 +261,11 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
 
       showSuccess(`成功报名 ${events.length} 个活动！`)
       
+      // 从购物车中移除已成功报名的活动
+      events.forEach(event => {
+        onRemoveFromCart(event.id)
+      })
+      
       // 延迟发送刷新事件，确保数据库写入完成
       setTimeout(() => {
         console.log('EventCartModal: 发送报名更新事件')
@@ -282,6 +287,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
   const total = calculateTotal()
   const hasAlreadyRegistered = events.some(e => userRegistrations[e.id])
   const availableEvents = events.filter(e => !userRegistrations[e.id])
+  const alreadyRegistered = events.filter(e => userRegistrations[e.id])
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[80] overflow-y-auto">
@@ -512,7 +518,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                     <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-yellow-800">
-                        您已报名部分活动，请先取消已报名的活动后再进行批量报名。
+                        购物车中有 {alreadyRegistered.length} 个活动您已报名，请先移除这些活动后才能继续报名。
                       </p>
                     </div>
                   </div>
@@ -530,7 +536,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
           >
             取消
           </button>
-          {!hasAlreadyRegistered && availableEvents.length > 0 && (
+          {!hasAlreadyRegistered && events.length > 0 && (
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || events.length === 0 || !paymentProof}
@@ -544,7 +550,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
               ) : (
                 <>
                   <CheckCircle className="w-5 h-5" />
-                  确认报名 ({availableEvents.length} 个活动)
+                  确认报名 ({events.length} 个活动)
                 </>
               )}
             </button>
