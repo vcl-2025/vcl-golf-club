@@ -259,23 +259,22 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
         throw error
       }
 
-      showSuccess(`成功报名 ${events.length} 个活动！`)
+      showSuccess(`成功报名 ${events.length} 个活动！报名申请已提交，等待管理员审核。审核通过后您将收到通知。`)
       
       // 从购物车中移除已成功报名的活动
       events.forEach(event => {
         onRemoveFromCart(event.id)
       })
       
+      // 立即关闭购物车modal，成功提示已经显示在上方
+      if (onSuccess) onSuccess()
+      onClose()
+      
       // 延迟发送刷新事件，确保数据库写入完成
       setTimeout(() => {
         console.log('EventCartModal: 发送报名更新事件')
         window.dispatchEvent(new CustomEvent('eventRegistrationUpdated'))
-      }, 500)
-      
-      setTimeout(() => {
-        if (onSuccess) onSuccess()
-        onClose()
-      }, 1000)
+      }, 100)
     } catch (error: any) {
       console.error('报名失败:', error)
       showError('报名失败: ' + (error.message || '未知错误'))
@@ -431,31 +430,29 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                                     </div>
                                   )}
                                   
-                                  {/* 删除按钮 - 邮箱下方 */}
-                                  {!isRegistered && (
-                                    <div className="flex justify-end mt-2">
-                                      <button
-                                        onClick={() => removeEvent(event.id)}
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                      >
-                                        <Trash2 className="w-5 h-5" />
-                                      </button>
-                                    </div>
-                                  )}
+                                  {/* 删除按钮 - 邮箱下方（已报名的活动也需要显示，让用户可以从购物车移除） */}
+                                  <div className="flex justify-end mt-2">
+                                    <button
+                                      onClick={() => removeEvent(event.id)}
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title={isRegistered ? "从购物车移除（活动已报名）" : "从购物车移除"}
+                                    >
+                                      <Trash2 className="w-5 h-5" />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             ) : (
-                              /* 如果没有支付信息，删除按钮显示在基本信息下方 */
-                              !isRegistered && (
-                                <div className="flex justify-end mt-3">
-                                  <button
-                                    onClick={() => removeEvent(event.id)}
-                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  >
-                                    <Trash2 className="w-5 h-5" />
-                                  </button>
-                                </div>
-                              )
+                              /* 如果没有支付信息，删除按钮显示在基本信息下方（已报名的活动也需要显示） */
+                              <div className="flex justify-end mt-3">
+                                <button
+                                  onClick={() => removeEvent(event.id)}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title={isRegistered ? "从购物车移除（活动已报名）" : "从购物车移除"}
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>

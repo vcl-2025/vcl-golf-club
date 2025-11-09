@@ -281,7 +281,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
       }
 
       console.log('✅ 报名成功!')
-      showSuccess(`成功报名 ${selectedEvents.length} 个活动！`)
+      showSuccess(`成功报名 ${selectedEvents.length} 个活动！报名申请已提交，等待管理员审核。审核通过后您将收到通知。`)
       
       // 发送刷新事件，确保 EventList 刷新
       window.dispatchEvent(new CustomEvent('eventRegistrationUpdated'))

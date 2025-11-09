@@ -41,7 +41,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[90]">
       <div className={`bg-white rounded-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto`}>
         {title && (
           <div className="flex items-center justify-between p-6 border-b border-gray-200">

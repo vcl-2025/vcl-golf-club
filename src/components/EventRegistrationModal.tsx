@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { X, User, Phone, CreditCard, QrCode, Clock, CheckCircle, XCircle, AlertCircle, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
+import { useModal } from './ModalProvider'
 
 interface EventRegistrationModalProps {
   event: Event
@@ -11,6 +12,7 @@ interface EventRegistrationModalProps {
 }
 
 export default function EventRegistrationModal({ event, user, onClose, onSuccess }: EventRegistrationModalProps) {
+  const { showSuccess, showError } = useModal()
   const [step, setStep] = useState<'info' | 'payment'>('info')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -219,9 +221,10 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         throw insertError
       }
 
-      setMessage('报名申请已提交，等待管理员审核。审核通过后您将收到通知。')
+      // 显示成功提示
+      showSuccess('报名申请已提交，等待管理员审核。审核通过后您将收到通知。')
       
-      // 立即关闭，不等待用户看完
+      // 立即关闭modal，成功提示已经显示在上方
       onSuccess()
       onClose()
     } catch (error: any) {
