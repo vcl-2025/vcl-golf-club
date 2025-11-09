@@ -751,7 +751,7 @@ export default function HomePage() {
       <section id="hero" className="relative h-screen flex items-center overflow-hidden pt-16 sm:pt-0">
         <div 
           className="absolute inset-0 w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: 'url(/homepage_image.jpg)' }}
+          style={{ backgroundImage: 'url(/hero_photo.jpg)' }}
         >
           <div 
             className="absolute inset-0 hero-gradient-animate"
