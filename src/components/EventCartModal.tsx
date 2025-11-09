@@ -329,7 +329,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                             : 'border-gray-200 bg-white'
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4">
                           {/* 活动图片 */}
                           <div className="flex-shrink-0">
                             {imageUrl && !hasImageError ? (
@@ -372,7 +372,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                             </div>
                             
                             {/* 支付信息 */}
-                            {(event.payment_qr_code || event.payment_emt_email || event.payment_instructions) && (
+                            {(event.payment_qr_code || event.payment_emt_email || event.payment_instructions) ? (
                               <div className="mt-3 pt-3 border-t border-gray-200">
                                 <div className="text-xs font-medium text-gray-700 mb-2">支付方式：</div>
                                 <div className="space-y-2">
@@ -418,18 +418,34 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                                       {event.payment_instructions}
                                     </div>
                                   )}
+                                  
+                                  {/* 删除按钮 - 邮箱下方 */}
+                                  {!isRegistered && (
+                                    <div className="flex justify-end mt-2">
+                                      <button
+                                        onClick={() => removeEvent(event.id)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      >
+                                        <Trash2 className="w-5 h-5" />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
+                            ) : (
+                              /* 如果没有支付信息，删除按钮显示在基本信息下方 */
+                              !isRegistered && (
+                                <div className="flex justify-end mt-3">
+                                  <button
+                                    onClick={() => removeEvent(event.id)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 className="w-5 h-5" />
+                                  </button>
+                                </div>
+                              )
                             )}
                           </div>
-                          {!isRegistered && (
-                            <button
-                              onClick={() => removeEvent(event.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          )}
                         </div>
                       </div>
                     )

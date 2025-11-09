@@ -28,8 +28,8 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
   const [isMobile, setIsMobile] = useState(false)
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null)
   
-  // 根据屏幕尺寸确定每页数量：手机20个，非手机8个
-  const membersPerPage = isMobile ? 20 : 8
+  // 固定每页8个（一行4个，两行）
+  const membersPerPage = 8
 
   useEffect(() => {
     fetchMembers()
@@ -71,8 +71,8 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
     const next = currentPage >= totalPages ? 1 : currentPage + 1
     animatePageChange(next)
     setIsAutoPlaying(false) // 暂停自动播放
-    // 5秒后恢复自动播放
-    setTimeout(() => setIsAutoPlaying(true), 5000)
+    // 7秒后恢复自动播放
+    setTimeout(() => setIsAutoPlaying(true), 7000)
   }
 
   // 手动切换到上一页
@@ -81,8 +81,8 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
     const prevPage = currentPage <= 1 ? totalPages : currentPage - 1
     animatePageChange(prevPage)
     setIsAutoPlaying(false) // 暂停自动播放
-    // 5秒后恢复自动播放
-    setTimeout(() => setIsAutoPlaying(true), 5000)
+    // 7秒后恢复自动播放
+    setTimeout(() => setIsAutoPlaying(true), 7000)
   }
 
   // 触摸事件处理
@@ -124,7 +124,7 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
         animatePageChange(next)
         return next
       })
-    }, 5000) // 每5秒切换一次
+    }, 7000) // 每7秒切换一次
 
     return () => {
       if (autoPlayIntervalRef.current) {
@@ -211,16 +211,16 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
         </div>
         {/* Logo和俱乐部名称 - 手机端隐藏 */}
         <div className="mb-8 -mt-6 sm:-mt-8 hidden sm:flex items-center gap-4">
-          <div className="bg-white rounded-full p-2 sm:p-3 border-2 border-white">
+          <div className="bg-white rounded-full p-1.5 sm:p-2 border-2 border-white">
             <img 
               src="/logo-192x192.png" 
               alt="VCL Golf Club" 
-              className="w-16 h-16 sm:w-20 sm:h-20"
+              className="w-12 h-12 sm:w-14 sm:h-14"
             />
           </div>
           <div className="text-white">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">溫哥華華人女子高爾夫俱樂部</h1>
-            <p className="text-base sm:text-lg lg:text-xl text-white/90">Vancouver Chinese Women's Golf Club</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">溫哥華華人女子高爾夫俱樂部</h1>
+            <p className="text-sm sm:text-base lg:text-lg text-white/90">Vancouver Chinese Women's Golf Club</p>
           </div>
         </div>
 
@@ -252,7 +252,7 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
 
               <div className="flex-1 relative min-h-[600px] sm:min-h-[600px] flex items-center justify-center overflow-hidden px-1 sm:px-0">
                 <div 
-                  className="w-full grid grid-cols-4 gap-1 sm:gap-6 transition-opacity duration-[1500ms] ease-in-out"
+                  className="w-full max-w-[1100px] mx-auto grid grid-cols-4 gap-1 sm:gap-4 lg:gap-6 transition-opacity duration-[1500ms] ease-in-out"
                   style={{
                     opacity: isFading ? 0 : 1
                   }}
@@ -349,7 +349,7 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
                     onClick={() => {
                       animatePageChange(page)
                       setIsAutoPlaying(false)
-                      setTimeout(() => setIsAutoPlaying(true), 5000)
+                      setTimeout(() => setIsAutoPlaying(true), 7000)
                     }}
                     className={`w-2 h-2 sm:w-2 sm:h-2 rounded-full transition-all ${
                       page === currentPage
