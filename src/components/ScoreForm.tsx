@@ -2138,7 +2138,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                       className="mr-3"
                     />
                     <div>
-                      <div className="font-semibold text-gray-900">团体赛（莱德杯模式）</div>
+                      <div className="font-semibold text-gray-900">团体赛 (比洞模式)</div>
                       <div className="text-sm text-gray-600 mt-1">按洞比较，每洞获胜的团队得1分（或平局时平分）</div>
                     </div>
                   </div>

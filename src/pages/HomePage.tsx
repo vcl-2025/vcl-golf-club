@@ -288,10 +288,12 @@ export default function HomePage() {
     if (Math.abs(distance) > minSwipeDistance) {
       if (distance > 0) {
         // 向左滑动，显示下一张
-        nextSlide()
+        const nextIndex = carouselIndex >= maxIndex ? 0 : carouselIndex + 1
+        goToIndex(nextIndex)
         } else {
         // 向右滑动，显示上一张
-        prevSlide()
+        const prevIndex = carouselIndex <= 0 ? maxIndex : carouselIndex - 1
+        goToIndex(prevIndex)
       }
     }
 
@@ -471,7 +473,6 @@ export default function HomePage() {
 
         .hero-btn-secondary:hover {
           border-color: var(--accent);
-          color: var(--accent);
         }
 
         .activity-card {
@@ -588,19 +589,42 @@ export default function HomePage() {
 
         @keyframes gradientSweep {
           0% {
-            background-position: 0% 50%;
+            background-position: 0% 0%;
           }
           50% {
-            background-position: 100% 50%;
+            background-position: 100% 100%;
           }
           100% {
-            background-position: 0% 50%;
+            background-position: 0% 0%;
+          }
+        }
+
+        @keyframes lightGlow {
+          0%, 100% {
+            opacity: 0.6;
+            transform: translateX(-50%) translateY(-50%) scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-50%) scale(1.2);
           }
         }
 
         .hero-gradient-animate {
-          background-size: 300% 100%;
-          animation: gradientSweep 10s ease-in-out infinite;
+          background-size: 500% 500% !important;
+          animation: gradientSweep 12s ease-in-out infinite;
+        }
+
+        .hero-light-glow {
+          position: absolute;
+          width: 200%;
+          height: 200%;
+          top: 50%;
+          left: 50%;
+          background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 30%, transparent 70%);
+          transform: translateX(-50%) translateY(-50%) rotate(45deg);
+          animation: lightGlow 8s ease-in-out infinite;
+          pointer-events: none;
         }
 
       `}</style>
@@ -609,16 +633,16 @@ export default function HomePage() {
       <nav 
         className={`fixed top-0 left-0 right-0 z-[1000] flex justify-between items-center transition-all duration-[400ms] ${
           navScrolled 
-            ? 'bg-[rgba(30,60,35,0.95)] backdrop-blur-[20px] py-3 sm:py-5 px-4 sm:px-[60px] shadow-[0_10px_40px_rgba(0,0,0,0.3)]' 
-            : 'bg-transparent py-4 sm:py-[30px] px-4 sm:px-[60px]'
+            ? 'bg-[rgba(30,60,35,0.95)] backdrop-blur-[20px] py-3 sm:py-5 px-2 sm:px-[60px] shadow-[0_10px_40px_rgba(0,0,0,0.3)]' 
+            : 'bg-transparent py-4 sm:py-[30px] px-2 sm:px-[60px]'
         }`}
         style={{ transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)' }}
       >
         <div className="flex items-center gap-2 sm:gap-[15px] flex-1 min-w-0" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '16px sm:text-[20px]', fontWeight: 700, letterSpacing: '1px', color: 'var(--light)' }}>
           <img src="/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain flex-shrink-0" />
           <div className="flex flex-col gap-[1px] sm:gap-[2px] min-w-0 flex-1">
-            <span className="text-xl sm:text-[22px] font-semibold leading-tight truncate" style={{ color: 'var(--light)', letterSpacing: '1px' }}>溫哥華華人女子高爾夫俱樂部</span>
-            <span className="text-[9px] sm:text-[11px] uppercase leading-tight break-words" style={{ color: 'var(--accent)', letterSpacing: '1.5px', fontWeight: 400, fontFamily: 'sans-serif' }}>Vancouver Chinese Women's Golf Club</span>
+            <span className="font-semibold leading-tight" style={{ color: 'var(--light)', letterSpacing: '0px', fontSize: 'clamp(12px, 5vw, 22px)' }}>溫哥華華人女子高爾夫俱樂部</span>
+            <span className="uppercase leading-tight break-words" style={{ color: 'var(--accent)', letterSpacing: '0.2px', fontWeight: 700, fontFamily: 'sans-serif', fontSize: 'clamp(10px, 2.8vw, 13px)' }}>Vancouver Chinese Women's Golf Club</span>
               </div>
               </div>
         
@@ -753,19 +777,26 @@ export default function HomePage() {
           className="absolute inset-0 w-full h-full bg-cover bg-center"
           style={{ backgroundImage: 'url(/hero_photo.jpg)' }}
         >
+          {/* 主光影渐变层 */}
           <div 
             className="absolute inset-0 hero-gradient-animate"
-          style={{
-              background: 'linear-gradient(to right, rgba(26, 26, 26, 0.8) 0%, rgba(26, 26, 26, 0.65) 16.66%, rgba(26, 26, 26, 0.5) 33.33%, rgba(26, 26, 26, 0.25) 50%, rgba(26, 26, 26, 0.5) 66.66%, rgba(26, 26, 26, 0.65) 83.33%, rgba(26, 26, 26, 0.8) 100%)',
-              backgroundSize: '300% 100%'
+            style={{
+              background: 'linear-gradient(45deg, rgba(20, 20, 20, 0.92) 0%, rgba(20, 20, 20, 0.85) 12%, rgba(20, 20, 20, 0.65) 25%, rgba(20, 20, 20, 0.35) 40%, rgba(20, 20, 20, 0.1) 48%, rgba(20, 20, 20, 0.05) 50%, rgba(20, 20, 20, 0.1) 52%, rgba(20, 20, 20, 0.35) 60%, rgba(20, 20, 20, 0.65) 75%, rgba(20, 20, 20, 0.85) 88%, rgba(20, 20, 20, 0.92) 100%)'
             }}
           />
-              </div>
+          {/* 光晕层 */}
+          <div className="hero-light-glow" />
+          {/* 顶部高光层 */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.05) 100%)',
+              mixBlendMode: 'overlay'
+            }}
+          />
+        </div>
               
-        <div className="relative z-[2] max-w-[1400px] mx-auto px-8 sm:px-8 lg:px-[60px] w-full flex flex-col items-start">
-          <div className="text-sm sm:text-base uppercase mb-4 sm:mb-[30px] font-medium opacity-0 animate-fade-in" style={{ letterSpacing: '4px', color: 'var(--accent)' }}>
-            Vancouver Chinese Ladies' Golf Club
-          </div>
+        <div className="relative z-[2] max-w-[1400px] mx-auto px-8 sm:px-8 lg:px-[60px] w-full flex flex-col items-start pt-[154px] sm:pt-24">
           <h1 
             className="font-light leading-[1.3] mb-6 sm:mb-10 opacity-0 animate-fade-in-delay max-w-[900px]"
             style={{ 
@@ -775,7 +806,7 @@ export default function HomePage() {
             }}
           >
             歡迎來到<br />
-            <strong className="font-bold block" style={{ background: 'linear-gradient(135deg, var(--accent), var(--pink))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            <strong className="font-bold block whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--primary)', fontSize: 'clamp(24px, 6.4vw, 60px)' }}>
               溫哥華華人女子高爾夫俱樂部
             </strong>
           </h1>
@@ -806,12 +837,21 @@ export default function HomePage() {
               className="px-6 sm:px-[45px] py-3 sm:py-[18px] text-sm sm:text-sm font-semibold uppercase text-center hero-btn-secondary"
               style={{ 
                 background: 'transparent',
-                color: '#fff',
+                color: '#fff !important',
                 border: '1px solid rgba(255,255,255,0.3)',
-                textDecoration: 'none'
+                textDecoration: 'none',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--accent)'
+                e.currentTarget.style.color = '#fff'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
+                e.currentTarget.style.color = '#fff'
               }}
             >
-              <span>精彩回顧</span>
+              <span style={{ color: '#fff' }}>精彩回顧</span>
             </a>
               </div>
             </div>
@@ -1173,9 +1213,9 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="relative overflow-hidden" style={{ background: '#0f0f0f', color: 'rgba(255,255,255,0.7)' }}>
         <div className="max-w-[1400px] mx-auto px-8 sm:px-8 lg:px-[60px] pt-16 sm:pt-20 lg:pt-24 pb-6 sm:pb-8 lg:pb-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 sm:gap-16 lg:gap-20 mb-12 sm:mb-16 lg:mb-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 sm:gap-16 lg:gap-20 mb-12 sm:mb-16 lg:mb-20">
             {/* Left Column - About */}
-            <div>
+            <div className="flex flex-col">
               <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
                 <img src="/logo.png" alt="VCL Logo" className="h-12 sm:h-14 w-auto" />
                 <div className="flex flex-col gap-1">
@@ -1206,8 +1246,8 @@ export default function HomePage() {
                         </div>
                       </div>
 
-            {/* Right Column - Contact */}
-            <div>
+            {/* Middle Column - Contact */}
+            <div className="flex flex-col">
               <h4 className="text-base sm:text-lg font-semibold text-white mb-5 sm:mb-6 uppercase" style={{ letterSpacing: '1px' }}>聯繫我們</h4>
               <div className="space-y-4 sm:space-y-5">
                 <div className="flex items-start gap-3">
@@ -1219,14 +1259,23 @@ export default function HomePage() {
                 <div className="flex items-start gap-3">
                   <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>@</span>
                   <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>info@vclgolf.com</span>
-                  </div>
+                </div>
                 <div className="flex items-start gap-3">
                   <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>📞</span>
                   <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>+1 (604) 123-4567</span>
+                </div>
               </div>
             </div>
+
+            {/* Right Column - QR Code */}
+            <div className="flex flex-col items-start md:items-center justify-start">
+              <img 
+                src="/vcl_QR_code.jpg" 
+                alt="VCL QR Code" 
+                className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 object-contain rounded-lg border border-white/10"
+              />
+            </div>
           </div>
-        </div>
 
           {/* Bottom Section - Copyright and Legal */}
           <div className="border-t border-white/10 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -1235,8 +1284,8 @@ export default function HomePage() {
               <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Privacy Policy</a>
               <span className="text-[var(--accent)]">·</span>
               <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Terms of Service</a>
-          </div>
             </div>
+          </div>
         </div>
       </footer>
     </div>

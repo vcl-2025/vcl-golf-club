@@ -1048,7 +1048,7 @@ export default function UserScoreQuery() {
                       // 根据比赛模式确定标题
                       const titleText = isTotalStrokesMode
                         ? '团体赛（总杆数模式）' 
-                        : '团体赛（莱德杯模式）'
+                        : '团体赛 (比洞模式)'
                       
                       return (
                         <div className="space-y-4 sm:space-y-6 mt-4">
