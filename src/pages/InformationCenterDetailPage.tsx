@@ -253,17 +253,6 @@ export default function InformationCenterDetailPage() {
             </div>
           </div>
 
-          {/* 图片 */}
-          {item.image_url && (
-            <div className="aspect-[16/9] bg-gray-100 overflow-hidden">
-              <img
-                src={item.image_url}
-                alt={item.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-
           {/* 正文内容 */}
           <div className="p-6 sm:p-8">
             <div className="prose max-w-none">

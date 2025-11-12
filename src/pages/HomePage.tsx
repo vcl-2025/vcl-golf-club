@@ -780,7 +780,7 @@ export default function HomePage() {
           {/* 主光影渐变层 */}
           <div 
             className="absolute inset-0 hero-gradient-animate"
-            style={{
+          style={{
               background: 'linear-gradient(45deg, rgba(20, 20, 20, 0.92) 0%, rgba(20, 20, 20, 0.85) 12%, rgba(20, 20, 20, 0.65) 25%, rgba(20, 20, 20, 0.35) 40%, rgba(20, 20, 20, 0.1) 48%, rgba(20, 20, 20, 0.05) 50%, rgba(20, 20, 20, 0.1) 52%, rgba(20, 20, 20, 0.35) 60%, rgba(20, 20, 20, 0.65) 75%, rgba(20, 20, 20, 0.85) 88%, rgba(20, 20, 20, 0.92) 100%)'
             }}
           />
@@ -794,7 +794,7 @@ export default function HomePage() {
               mixBlendMode: 'overlay'
             }}
           />
-        </div>
+              </div>
               
         <div className="relative z-[2] max-w-[1400px] mx-auto px-8 sm:px-8 lg:px-[60px] w-full flex flex-col items-start pt-[154px] sm:pt-24">
           <h1 
@@ -1259,13 +1259,13 @@ export default function HomePage() {
                 <div className="flex items-start gap-3">
                   <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>@</span>
                   <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>info@vclgolf.com</span>
-                </div>
+                  </div>
                 <div className="flex items-start gap-3">
                   <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>📞</span>
                   <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>+1 (604) 123-4567</span>
-                </div>
               </div>
             </div>
+          </div>
 
             {/* Right Column - QR Code */}
             <div className="flex flex-col items-start md:items-center justify-start">
@@ -1275,7 +1275,7 @@ export default function HomePage() {
                 className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 object-contain rounded-lg border border-white/10"
               />
             </div>
-          </div>
+        </div>
 
           {/* Bottom Section - Copyright and Legal */}
           <div className="border-t border-white/10 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -1284,8 +1284,8 @@ export default function HomePage() {
               <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Privacy Policy</a>
               <span className="text-[var(--accent)]">·</span>
               <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Terms of Service</a>
-            </div>
           </div>
+            </div>
         </div>
       </footer>
     </div>

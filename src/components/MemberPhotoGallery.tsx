@@ -26,25 +26,46 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<MemberProfile | null>(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [screenHeight, setScreenHeight] = useState(window.innerHeight)
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null)
   
-  // 固定每页8个（一行4个，两行）
-  const membersPerPage = 8
-
   useEffect(() => {
     fetchMembers()
   }, [])
 
-  // 监听窗口大小变化，判断是否为手机端
+  // 监听窗口大小变化，判断是否为手机端，并记录屏幕高度
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 640) // sm breakpoint
+      setScreenHeight(window.innerHeight)
     }
     
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  // 根据屏幕高度动态计算每页显示数量
+  // 手机模式：一行4个，根据屏幕高度计算能显示多少行
+  // 大屏幕：固定每页8个（一行4个，两行）
+  const membersPerPage = React.useMemo(() => {
+    if (isMobile) {
+      // 手机模式：根据屏幕高度动态计算行数
+      // 照片是 aspect-[3/4]，一行4个
+      // 每个卡片宽度 = 屏幕宽度 / 4
+      // 每个卡片高度 = 宽度 * 4/3 = (屏幕宽度 / 4) * 4/3 = 屏幕宽度 / 3
+      // 可用高度 = 屏幕高度 - 顶部提示(约40px) - 底部空间(约60px) = 屏幕高度 - 100px
+      const availableHeight = screenHeight - 100
+      const screenWidth = window.innerWidth
+      const cardWidth = screenWidth / 4 // 一行4个
+      const cardHeight = cardWidth * (4/3) // aspect-[3/4]，所以高度 = 宽度 * 4/3
+      const rows = Math.floor(availableHeight / cardHeight) || 2 // 至少2行
+      return Math.max(4, rows * 4) // 每行4个，至少4个
+    } else {
+      // 大屏幕：固定每页8个（一行4个，两行）
+      return 8
+    }
+  }, [isMobile, screenHeight])
 
   // 计算总页数（使用 useMemo 确保在 isMobile 变化时重新计算）
   const totalPages = React.useMemo(() => Math.ceil(members.length / membersPerPage), [members.length, membersPerPage])
@@ -250,9 +271,9 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
                 </button>
               )}
 
-              <div className="flex-1 relative min-h-[600px] sm:min-h-[600px] flex items-center justify-center overflow-hidden px-1 sm:px-0">
+              <div className="flex-1 relative min-h-[600px] sm:min-h-[600px] flex items-center justify-center overflow-hidden px-0 sm:px-0">
                 <div 
-                  className="w-full max-w-[1100px] mx-auto grid grid-cols-4 gap-1 sm:gap-4 lg:gap-6 transition-opacity duration-[1500ms] ease-in-out"
+                  className="w-full max-w-full sm:max-w-[1100px] mx-auto grid grid-cols-4 gap-0.5 sm:gap-4 lg:gap-6 transition-opacity duration-[1500ms] ease-in-out"
                   style={{
                     opacity: isFading ? 0 : 1
                   }}
@@ -260,14 +281,14 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
                 {currentMembers.map((member) => (
                             <div
                               key={member.id}
-                              className="bg-white/20 backdrop-blur-sm rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 flex flex-col cursor-pointer"
+                              className="bg-white/20 backdrop-blur-sm rounded-none sm:rounded-xl overflow-hidden transition-all duration-300 transform hover:-translate-y-1 flex flex-col cursor-pointer"
                               onClick={() => {
                                 setSelectedMember(member)
                                 setModalOpen(true)
                               }}
                             >
               {/* 照片容器 */}
-              <div className="relative aspect-[3/4] bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg overflow-hidden">
+              <div className="relative aspect-[3/4] bg-gradient-to-br from-green-50 to-emerald-50 rounded-none sm:rounded-lg overflow-hidden">
                 {member.member_photo_url ? (
                   <img
                     src={member.member_photo_url}

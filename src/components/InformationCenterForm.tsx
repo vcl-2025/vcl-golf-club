@@ -6,6 +6,7 @@ import TinyMCEEditor from './TinyMCEEditor'
 import { useAuth } from '../hooks/useAuth'
 import { useModal } from './ModalProvider'
 import { canRegister, getEventStatus } from '../utils/eventStatus'
+import { insertWithAudit, updateWithAudit, createAuditContext, type UserRole } from '../lib/audit'
 
 interface InformationCenterFormProps {
   item?: InformationItem | null
@@ -312,19 +313,95 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
         itemData.expires_at = null
       }
 
-      if (item) {
-        // 更新
-        const { error } = await supabase
-          .from('information_items')
-          .update(itemData)
-          .eq('id', item.id)
+      if (!user || !supabase) {
+        showError('请先登录')
+        return
+      }
 
-        if (error) throw error
-      } else {
-        // 创建
-        const { error } = await supabase
+      // 获取用户角色
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = (profile?.role || 'member') as UserRole
+
+      // 创建审计上下文
+      const context = await createAuditContext(user.id)
+
+      if (item) {
+        // 更新模式：只包含实际修改的字段
+        const { data: oldItemData } = await supabase
           .from('information_items')
-          .insert([itemData])
+          .select('*')
+          .eq('id', item.id)
+          .single()
+
+        if (oldItemData) {
+          // 辅助函数：比较值是否相等
+          const valuesEqual = (oldVal: any, newVal: any): boolean => {
+            if (oldVal === null || oldVal === undefined) {
+              return newVal === null || newVal === undefined
+            }
+            if (newVal === null || newVal === undefined) {
+              return false
+            }
+            
+            // 处理日期字符串
+            if (typeof oldVal === 'string' && typeof newVal === 'string') {
+              const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+              if (isoDateRegex.test(oldVal) && isoDateRegex.test(newVal)) {
+                return oldVal.substring(0, 19) === newVal.substring(0, 19)
+              }
+            }
+            
+            // 处理数组/对象
+            if (Array.isArray(oldVal) && Array.isArray(newVal)) {
+              return JSON.stringify(oldVal) === JSON.stringify(newVal)
+            }
+            
+            return JSON.stringify(oldVal) === JSON.stringify(newVal)
+          }
+
+          // 只包含实际发生变化的字段
+          const updateData: any = {}
+          Object.keys(itemData).forEach((key) => {
+            const oldValue = oldItemData[key]
+            const newValue = itemData[key]
+            
+            if (!valuesEqual(oldValue, newValue)) {
+              updateData[key] = newValue
+            }
+          })
+
+          // 如果没有字段被修改，直接返回
+          if (Object.keys(updateData).length === 0) {
+            showSuccess('草稿已保存')
+            onSuccess?.()
+            onClose()
+            return
+          }
+
+          // 使用审计功能更新
+          const { error } = await updateWithAudit(
+            'information_items',
+            item.id,
+            updateData,
+            context,
+            userRole
+          )
+
+          if (error) throw error
+        }
+      } else {
+        // 创建模式：使用审计功能插入
+        const { data: newData, error } = await insertWithAudit(
+          'information_items',
+          itemData,
+          context,
+          userRole
+        )
 
         if (error) throw error
       }

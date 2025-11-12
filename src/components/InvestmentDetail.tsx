@@ -7,7 +7,7 @@ interface InvestmentProject {
   id: string
   title: string
   description: string
-  target_amount: number
+  target_amount: number | null
   current_amount: number
   payment_method: string | null
   payment_qrcode_url: string | null
@@ -31,7 +31,9 @@ export default function InvestmentDetail({ project, onClose, user }: InvestmentD
   const [loading, setLoading] = useState(false)
   const { showError, showSuccess } = useModal()
 
-  const progress = Math.min((project.current_amount / project.target_amount) * 100, 100)
+  const progress = project.target_amount && project.target_amount > 0
+    ? Math.min((project.current_amount / project.target_amount) * 100, 100)
+    : 0
   const daysLeft = Math.ceil((new Date(project.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
 
   const formatAmount = (amount: number) => {

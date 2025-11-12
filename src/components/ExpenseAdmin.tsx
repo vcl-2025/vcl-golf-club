@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, Upload, X, Check, FileImage, Search, Filter, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
+import { insertWithAudit, updateWithAudit, deleteWithAudit, createAuditContext, type UserRole } from '../lib/audit'
+import { useAuth } from '../hooks/useAuth'
 
 interface Expense {
   id: string
@@ -35,6 +37,7 @@ interface UploadedFile {
 }
 
 export default function ExpenseAdmin() {
+  const { user } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -183,7 +186,24 @@ export default function ExpenseAdmin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!user || !supabase) {
+      showError('请先登录')
+      return
+    }
+
     try {
+      // 获取用户角色
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = (profile?.role || 'member') as UserRole
+
+      // 创建审计上下文
+      const context = await createAuditContext(user.id)
+
       const expenseData = {
         expense_type: formData.expense_type,
         transaction_type: formData.transaction_type,
@@ -197,19 +217,84 @@ export default function ExpenseAdmin() {
       }
 
       if (editingExpense) {
-        const { error } = await supabase
+        // 更新模式：只包含实际修改的字段
+        const { data: oldExpenseData } = await supabase
           .from('expenses')
-          .update(expenseData)
+          .select('*')
           .eq('id', editingExpense.id)
+          .single()
 
-        if (error) throw error
-        showSuccess('费用记录已更新！')
+        if (oldExpenseData) {
+          // 辅助函数：比较值是否相等
+          const valuesEqual = (oldVal: any, newVal: any): boolean => {
+            if (oldVal === null || oldVal === undefined) {
+              return newVal === null || newVal === undefined
+            }
+            if (newVal === null || newVal === undefined) {
+              return false
+            }
+
+            // 处理日期时间字符串
+            if ((typeof oldVal === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(oldVal)) &&
+                (typeof newVal === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(newVal))) {
+              try {
+                const oldDate = new Date(oldVal).toISOString().substring(0, 19)
+                const newDate = new Date(newVal).toISOString().substring(0, 19)
+                return oldDate === newDate
+              } catch (e) {
+                // Fallback to stringify
+              }
+            }
+
+            // 处理数字
+            if (typeof oldVal === 'number' && typeof newVal === 'number') {
+              return Math.abs(oldVal - newVal) < 0.0001
+            }
+
+            // 深度比较
+            try {
+              return JSON.stringify(oldVal) === JSON.stringify(newVal)
+            } catch {
+              return oldVal === newVal
+            }
+          }
+
+          // 只包含实际发生变化的字段
+          const updateData: any = {}
+          Object.keys(expenseData).forEach((key) => {
+            const oldValue = oldExpenseData[key]
+            const newValue = expenseData[key as keyof typeof expenseData]
+            
+            if (!valuesEqual(oldValue, newValue)) {
+              updateData[key] = newValue
+            }
+          })
+
+          if (Object.keys(updateData).length > 0) {
+            const result = await updateWithAudit(
+              'expenses',
+              editingExpense.id,
+              updateData,
+              context,
+              userRole
+            )
+
+            if (result.error) throw result.error
+            showSuccess('费用记录已更新！')
+          } else {
+            showSuccess('费用记录无变化')
+          }
+        }
       } else {
-        const { error } = await supabase
-          .from('expenses')
-          .insert([expenseData])
+        // 插入模式：使用审计功能
+        const result = await insertWithAudit(
+          'expenses',
+          expenseData,
+          context,
+          userRole
+        )
 
-        if (error) throw error
+        if (result.error) throw result.error
         showSuccess('费用记录已添加！')
       }
 
@@ -270,17 +355,37 @@ export default function ExpenseAdmin() {
   const handleDelete = async (id: string) => {
     confirmDelete('确定要删除这条费用记录吗？', async () => {
       try {
-        const { error } = await supabase
-          .from('expenses')
-          .delete()
-          .eq('id', id)
+        if (!user || !supabase) {
+          showError('请先登录')
+          return
+        }
+
+        // 获取用户角色
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = (profile?.role || 'member') as UserRole
+
+        // 创建审计上下文
+        const context = await createAuditContext(user.id)
+
+        // 使用审计功能删除
+        const { error } = await deleteWithAudit(
+          'expenses',
+          id,
+          context,
+          userRole
+        )
 
         if (error) throw error
         showSuccess('费用记录已删除')
         fetchExpenses()
-      } catch (error) {
+      } catch (error: any) {
         console.error('删除失败:', error)
-        showError('删除失败，请重试')
+        showError(`删除失败: ${error.message || '请重试'}`)
       }
     })
   }

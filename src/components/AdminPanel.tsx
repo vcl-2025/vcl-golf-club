@@ -14,10 +14,13 @@ import ExpenseAdmin from './ExpenseAdmin'
 import MemberAdmin from './MemberAdmin'
 import AdminAnalytics from './AdminAnalytics'
 import InformationCenterForm from './InformationCenterForm'
+import AuditLogViewer from './AuditLogViewer'
 import { useModal } from './ModalProvider'
 import { getEventStatus, getEventStatusText, getEventStatusStyles } from '../utils/eventStatus'
 import { InformationItem } from '../types'
-import { FileText as FileTextIcon } from 'lucide-react'
+import { FileText as FileTextIcon, Shield } from 'lucide-react'
+import { deleteWithAudit, updateWithAudit, createAuditContext, logBatchOperation, type UserRole } from '../lib/audit'
+import { useAuth } from '../hooks/useAuth'
 
 interface AdminStats {
   // 活动统计
@@ -75,7 +78,8 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps) {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information'>('dashboard')
+  const { user } = useAuth()
+  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information' | 'audit'>('dashboard')
   const [selectedEventForRegistration, setSelectedEventForRegistration] = useState<Event | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [posters, setPosters] = useState<Poster[]>([])
@@ -421,28 +425,69 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   const handleDeleteEvent = async (eventId: string) => {
     confirmDelete('确定要删除这个活动吗？这将同时删除所有相关的报名记录。', async () => {
       try {
-        const { error } = await supabase
-          .from('events')
-          .delete()
-          .eq('id', eventId)
+        if (!user || !supabase) {
+          showError('请先登录')
+          return
+        }
+
+        // 获取用户角色
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = (profile?.role || 'member') as UserRole
+
+        // 创建审计上下文
+        const context = await createAuditContext(user.id)
+
+        // 使用审计功能删除
+        const { error } = await deleteWithAudit(
+          'events',
+          eventId,
+          context,
+          userRole
+        )
 
         if (error) throw error
 
         setEvents(events.filter(e => e.id !== eventId))
         showSuccess('活动删除成功')
-      } catch (error) {
+      } catch (error: any) {
         console.error('删除活动失败:', error)
-        showError('删除失败，请重试')
+        showError(`删除失败: ${error.message || '请重试'}`)
       }
     })
   }
 
   const handleUpdateEventStatus = async (eventId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from('events')
-        .update({ status })
-        .eq('id', eventId)
+      if (!user || !supabase) {
+        showError('请先登录')
+        return
+      }
+
+      // 获取用户角色
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = (profile?.role || 'member') as UserRole
+
+      // 创建审计上下文
+      const context = await createAuditContext(user.id)
+
+      // 使用审计功能更新
+      const { error } = await updateWithAudit(
+        'events',
+        eventId,
+        { status },
+        context,
+        userRole
+      )
 
       if (error) throw error
 
@@ -450,27 +495,47 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
         e.id === eventId ? { ...e, status } : e
       ))
       showSuccess('状态更新成功')
-    } catch (error) {
+    } catch (error: any) {
       console.error('更新状态失败:', error)
-      showError('更新失败，请重试')
+      showError(`更新失败: ${error.message || '请重试'}`)
     }
   }
 
   const handleDeletePoster = async (posterId: string) => {
     confirmDelete('确定要删除这张海报吗？', async () => {
       try {
-        const { error } = await supabase
-          .from('posters')
-          .delete()
-          .eq('id', posterId)
+        if (!user || !supabase) {
+          showError('请先登录')
+          return
+        }
+
+        // 获取用户角色
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = (profile?.role || 'member') as UserRole
+
+        // 创建审计上下文
+        const context = await createAuditContext(user.id)
+
+        // 使用审计功能删除
+        const { error } = await deleteWithAudit(
+          'posters',
+          posterId,
+          context,
+          userRole
+        )
 
         if (error) throw error
 
         setPosters(posters.filter(p => p.id !== posterId))
         showSuccess('海报删除成功')
-      } catch (error) {
+      } catch (error: any) {
         console.error('删除海报失败:', error)
-        showError('删除失败，请重试')
+        showError(`删除失败: ${error.message || '请重试'}`)
       }
     })
   }
@@ -478,6 +543,12 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   const handleDeleteScore = async (scoreId: string) => {
     confirmDelete('确定要删除这条成绩记录吗？', async () => {
       try {
+        if (!user || !supabase) {
+          showError('请先登录')
+          return
+        }
+
+        // 成绩管理删除不记录审计日志
         const { error } = await supabase
           .from('scores')
           .delete()
@@ -487,9 +558,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
         setScores(scores.filter(s => s.id !== scoreId))
         showSuccess('成绩删除成功')
-      } catch (error) {
+      } catch (error: any) {
         console.error('删除成绩失败:', error)
-        showError('删除失败，请重试')
+        showError(`删除失败: ${error.message || '请重试'}`)
       }
     })
   }
@@ -503,26 +574,87 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       try {
         setLoading(true)
         
-        // 删除会员成绩
-        const { error: scoresError } = await supabase
-          .from('scores')
-          .delete()
-          .eq('event_id', eventId)
-
-        if (scoresError) {
-          console.error('删除会员成绩失败:', scoresError)
-          throw scoresError
+        if (!user || !supabase) {
+          showError('请先登录')
+          return
         }
 
-        // 删除访客成绩
-        const { error: guestScoresError } = await supabase
-          .from('guest_scores')
-          .delete()
+        // 获取用户角色
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = (profile?.role || 'member') as UserRole
+
+        // 创建审计上下文
+        const context = await createAuditContext(user.id)
+
+        // 先获取所有要删除的记录数量（用于审计日志）
+        const { data: scoresToDelete, error: fetchScoresError } = await supabase
+          .from('scores')
+          .select('id')
           .eq('event_id', eventId)
 
-        if (guestScoresError) {
-          console.error('删除访客成绩失败:', guestScoresError)
-          throw guestScoresError
+        if (fetchScoresError) {
+          console.error('获取会员成绩失败:', fetchScoresError)
+          throw fetchScoresError
+        }
+
+        const { data: guestScoresToDelete, error: fetchGuestScoresError } = await supabase
+          .from('guest_scores')
+          .select('id')
+          .eq('event_id', eventId)
+
+        if (fetchGuestScoresError) {
+          console.error('获取访客成绩失败:', fetchGuestScoresError)
+          throw fetchGuestScoresError
+        }
+
+        const memberScoreCount = scoresToDelete?.length || 0
+        const guestScoreCount = guestScoresToDelete?.length || 0
+
+        // 批量删除会员成绩（不逐条记录审计）
+        if (memberScoreCount > 0) {
+          const { error: deleteScoresError } = await supabase
+            .from('scores')
+            .delete()
+            .eq('event_id', eventId)
+
+          if (deleteScoresError) {
+            console.error('删除会员成绩失败:', deleteScoresError)
+            throw deleteScoresError
+          }
+        }
+
+        // 批量删除访客成绩（不逐条记录审计）
+        if (guestScoreCount > 0) {
+          const { error: deleteGuestScoresError } = await supabase
+            .from('guest_scores')
+            .delete()
+            .eq('event_id', eventId)
+
+          if (deleteGuestScoresError) {
+            console.error('删除访客成绩失败:', deleteGuestScoresError)
+            throw deleteGuestScoresError
+          }
+        }
+
+        // 记录批量删除操作审计日志（只记录一条）
+        if (memberScoreCount > 0 || guestScoreCount > 0) {
+          await logBatchOperation(
+            'scores',
+            'BATCH_DELETE',
+            memberScoreCount + guestScoreCount,
+            context,
+            {
+              event_id: eventId,
+              event_title: eventTitle,
+              member_count: memberScoreCount,
+              guest_count: guestScoreCount,
+            }
+          )
         }
 
         // 更新本地状态
@@ -532,9 +664,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
         await fetchAdminData()
         
         showSuccess('所有成绩记录已删除，可以重新导入')
-      } catch (error) {
+      } catch (error: any) {
         console.error('删除成绩失败:', error)
-        showError('删除失败，请重试')
+        showError(`删除失败: ${error.message || '请重试'}`)
       } finally {
         setLoading(false)
       }
@@ -544,18 +676,38 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   const handleDeleteInformation = async (itemId: string) => {
     confirmDelete('确定要删除这条信息吗？', async () => {
       try {
-        const { error } = await supabase
-          .from('information_items')
-          .delete()
-          .eq('id', itemId)
+        if (!user || !supabase) {
+          showError('请先登录')
+          return
+        }
+
+        // 获取用户角色
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = (profile?.role || 'member') as UserRole
+
+        // 创建审计上下文
+        const context = await createAuditContext(user.id)
+
+        // 使用审计功能删除
+        const { error } = await deleteWithAudit(
+          'information_items',
+          itemId,
+          context,
+          userRole
+        )
 
         if (error) throw error
 
         setInformationItems(informationItems.filter(item => item.id !== itemId))
         showSuccess('信息删除成功')
-      } catch (error) {
+      } catch (error: any) {
         console.error('删除信息失败:', error)
-        showError('删除失败，请重试')
+        showError(`删除失败: ${error.message || '请重试'}`)
       }
     })
   }
@@ -694,6 +846,17 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
               <Users className="w-4 h-4 mr-2" />
               会员管理
             </button>
+            <button
+              onClick={() => setCurrentView('audit')}
+              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                currentView === 'audit'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+              }`}
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              审计日志
+            </button>
           </div>
         </div>
         
@@ -818,6 +981,23 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                 会员管理
               </div>
               {currentView === 'members' && <ChevronRight className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                setCurrentView('audit')
+                setMobileMenuOpen(false)
+              }}
+              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                currentView === 'audit'
+                  ? 'bg-green-500/40 text-white shadow-lg'
+                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <Shield className="w-4 h-4 mr-2" />
+                审计日志
+              </div>
+              {currentView === 'audit' && <ChevronRight className="w-4 h-4" />}
             </button>
           </div>
         )}
@@ -1649,6 +1829,13 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       {currentView === 'members' && (
         <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
           <MemberAdmin />
+        </div>
+      )}
+
+      {/* 审计日志 */}
+      {currentView === 'audit' && (
+        <div className="p-[5px] lg:p-6 m-0.5 lg:m-0">
+          <AuditLogViewer />
         </div>
       )}
 

@@ -96,7 +96,7 @@ export default function TinyMCEEditor({
           promotion: false,
           content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; }',
           font_family_formats: '微软雅黑=Microsoft YaHei,Helvetica Neue,PingFang SC,sans-serif;苹果苹方=PingFang SC,Microsoft YaHei,sans-serif;宋体=simsun,serif;仿宋体=FangSong,serif;黑体=SimHei,sans-serif;Arial=arial,helvetica,sans-serif;Arial Black=arial black,avant garde;Times New Roman=times new roman,times;Courier New=courier new,courier;',
-          fontsize_formats: '8px 10px 12px 14px 16px 18px 20px 24px 28px 32px 36px 48px 64px 72px 96px',
+          fontsize_formats: '8pt 9pt 10pt 11pt 12pt 13pt 14pt 15pt 16pt 17pt 18pt 19pt 20pt 21pt 22pt 23pt 24pt 25pt 26pt 27pt 28pt 29pt 30pt 32pt 34pt 36pt 38pt 40pt 42pt 44pt 46pt 48pt 50pt 52pt 54pt 56pt 58pt 60pt 62pt 64pt 66pt 68pt 70pt 72pt 74pt 76pt 78pt 80pt 82pt 84pt 86pt 88pt 90pt 92pt 94pt 96pt 98pt 100pt',
           image_advtab: true,
           image_caption: true,
           image_title: true,
@@ -230,7 +230,7 @@ export default function TinyMCEEditor({
             ] : [
               'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
               'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-              'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
+              'insertdatetime', 'media', 'table', 'wordcount', 'emoticons',
               'template', 'codesample', 'hr', 'pagebreak', 'nonbreaking', 'toc',
               'imagetools', 'textpattern', 'noneditable', 'quickbars', 'accordion'
             ],
@@ -242,12 +242,26 @@ export default function TinyMCEEditor({
             ],
             toolbar_mode: isMobileDevice ? 'scrolling' : 'sliding',
             ...mobileConfig,
+            contextmenu: 'link image imagetools table spellchecker configurepermanentpen',
+            menubar: 'file edit view insert format tools table help',
+            menu: {
+              file: { title: '文件', items: 'newdocument restoredraft | preview | export print | deleteallconversations' },
+              edit: { title: '编辑', items: 'undo redo | cut copy paste pastetext | selectall | searchreplace' },
+              view: { title: '视图', items: 'code | visualaid visualchars visualblocks | spellchecker | preview fullscreen | showcomments' },
+              insert: { title: '插入', items: 'image link media template codesample inserttable | charmap emoticons hr | pagebreak nonbreaking anchor toc | insertdatetime' },
+              format: { title: '格式', items: 'bold italic underline strikethrough superscript subscript codeformat | blocks fontfamily fontsize align lineheight | forecolor backcolor removeformat' },
+              tools: { title: '工具', items: 'spellchecker spellcheckerlanguage | a11ycheck code wordcount' },
+              table: { title: '表格', items: 'inserttable | cell row column | tableprops deletetable' },
+              help: { title: '帮助', items: 'help' }
+            },
             placeholder: placeholder,
             branding: false,
             statusbar: true,
             promotion: false,
             license_key: 'gpl',
             language: 'zh_CN',
+            font_family_formats: '微软雅黑=Microsoft YaHei,Helvetica Neue,PingFang SC,sans-serif;苹果苹方=PingFang SC,Microsoft YaHei,sans-serif;宋体=simsun,serif;仿宋体=FangSong,serif;黑体=SimHei,sans-serif;Arial=arial,helvetica,sans-serif;Arial Black=arial black,avant garde;Times New Roman=times new roman,times;Courier New=courier new,courier;',
+            fontsize_formats: '8pt 9pt 10pt 11pt 12pt 13pt 14pt 15pt 16pt 17pt 18pt 19pt 20pt 21pt 22pt 23pt 24pt 25pt 26pt 27pt 28pt 29pt 30pt 32pt 34pt 36pt 38pt 40pt 42pt 44pt 46pt 48pt 50pt 52pt 54pt 56pt 58pt 60pt 62pt 64pt 66pt 68pt 70pt 72pt 74pt 76pt 78pt 80pt 82pt 84pt 86pt 88pt 90pt 92pt 94pt 96pt 98pt 100pt',
             setup: (editor: any) => {
               editor.on('init', () => {
                 console.log('TinyMCE CDN 初始化成功');

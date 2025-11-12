@@ -374,17 +374,6 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                 )}
         </div>
 
-          {/* 封面图 */}
-          {item.featured_image_url && (
-            <div className="mb-6">
-              <img
-                src={item.featured_image_url}
-                alt={item.title}
-                className="w-full h-auto rounded-xl shadow-md"
-              />
-            </div>
-          )}
-
           {/* 正文内容 */}
           <div className="prose max-w-none mb-6">
             {item.content ? (

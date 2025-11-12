@@ -8,7 +8,7 @@ interface InvestmentProject {
   id: string
   title: string
   description: string
-  target_amount: number
+  target_amount: number | null
   current_amount: number
   payment_method: string | null
   payment_qrcode_url: string | null
@@ -193,7 +193,9 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {projects.map((project) => {
               const actualAmount = calculateProjectAmount(project.id)
-              const progress = calculateProgress(actualAmount, project.target_amount)
+              const progress = project.target_amount && project.target_amount > 0
+                ? calculateProgress(actualAmount, project.target_amount)
+                : 0
               const daysLeft = Math.ceil((new Date(project.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
 
               return (
@@ -205,7 +207,7 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
                   <div className="flex items-start justify-between mb-3 sm:mb-4">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1 sm:mb-2">{project.title}</h3>
-                      <p className="text-gray-600 text-sm line-clamp-2">{project.description}</p>
+                      <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">{project.description}</p>
                     </div>
                     <div className="flex items-center justify-center ml-3 sm:ml-4 flex-shrink-0">
                       <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-golf-400" style={{ fill: 'none' }} />
@@ -241,7 +243,7 @@ export default function InvestmentList({ onProjectSelect, userId }: InvestmentLi
                         <span className="text-[10px] sm:text-xs font-medium">目标金额</span>
                       </div>
                       <div className="text-sm sm:text-base font-bold text-gray-900 leading-tight">
-                        {formatAmount(project.target_amount)}
+                        {project.target_amount ? formatAmount(project.target_amount) : '不设目标'}
                       </div>
                     </div>
                   </div>

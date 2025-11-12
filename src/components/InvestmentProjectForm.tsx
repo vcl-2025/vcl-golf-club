@@ -99,11 +99,20 @@ export default function InvestmentProjectForm({ project, onClose, onSuccess }: I
         qrcodeUrl = publicUrl
       }
 
+      // 处理目标金额：如果为空字符串或无效值，则设为 null
+      let targetAmount = null
+      if (formData.target_amount && formData.target_amount.trim() !== '') {
+        const parsed = parseFloat(formData.target_amount.trim())
+        if (!isNaN(parsed) && parsed > 0) {
+          targetAmount = parsed
+        }
+      }
+
       const projectData = {
         title: formData.title,
         description: formData.description,
-        target_amount: parseFloat(formData.target_amount),
-        current_amount: parseFloat(formData.current_amount),
+        target_amount: targetAmount,
+        current_amount: parseFloat(formData.current_amount) || 0,
         payment_method: formData.payment_method,
         payment_qrcode_url: qrcodeUrl,
         emt_email: formData.emt_email || null,
@@ -183,7 +192,7 @@ export default function InvestmentProjectForm({ project, onClose, onSuccess }: I
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                目标金额 (CAD) *
+                目标金额 (CAD)
               </label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -198,9 +207,8 @@ export default function InvestmentProjectForm({ project, onClose, onSuccess }: I
                     }
                   }}
                   onWheel={(e) => e.currentTarget.blur()}
-                  required
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="100000"
+                  placeholder="不设目标可不填写"
                 />
               </div>
             </div>

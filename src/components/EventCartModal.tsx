@@ -431,28 +431,28 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                                   )}
                                   
                                   {/* 删除按钮 - 邮箱下方（已报名的活动也需要显示，让用户可以从购物车移除） */}
-                                  <div className="flex justify-end mt-2">
-                                    <button
-                                      onClick={() => removeEvent(event.id)}
-                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    <div className="flex justify-end mt-2">
+                                      <button
+                                        onClick={() => removeEvent(event.id)}
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                       title={isRegistered ? "从购物车移除（活动已报名）" : "从购物车移除"}
-                                    >
-                                      <Trash2 className="w-5 h-5" />
-                                    </button>
-                                  </div>
+                                      >
+                                        <Trash2 className="w-5 h-5" />
+                                      </button>
+                                    </div>
                                 </div>
                               </div>
                             ) : (
                               /* 如果没有支付信息，删除按钮显示在基本信息下方（已报名的活动也需要显示） */
-                              <div className="flex justify-end mt-3">
-                                <button
-                                  onClick={() => removeEvent(event.id)}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                <div className="flex justify-end mt-3">
+                                  <button
+                                    onClick={() => removeEvent(event.id)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                   title={isRegistered ? "从购物车移除（活动已报名）" : "从购物车移除"}
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
-                              </div>
+                                  >
+                                    <Trash2 className="w-5 h-5" />
+                                  </button>
+                                </div>
                             )}
                           </div>
                         </div>

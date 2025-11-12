@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import { Event } from '../types'
 import TinyMCEEditor from './TinyMCEEditor'
 import { getEventStatus, getEventStatusText, getEventStatusStyles } from '../utils/eventStatus'
+import { updateWithAudit, insertWithAudit, createAuditContext, type UserRole } from '../lib/audit'
+import { useAuth } from '../hooks/useAuth'
 
 interface EventFormProps {
   event?: Event | null
@@ -12,6 +14,7 @@ interface EventFormProps {
 }
 
 export default function EventForm({ event, onClose, onSuccess }: EventFormProps) {
+  const { user } = useAuth()
   const [qrCodeFile, setQrCodeFile] = useState<File | null>(null)
   const [qrCodePreview, setQrCodePreview] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -214,7 +217,8 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
       // console.log('提交时的 formData.description:', formData.description);
       // console.log('提交时的 formData.description 长度:', formData.description?.length);
       
-      const eventData = {
+      // 构建完整的事件数据（用于插入）
+      const fullEventData = {
         title: formData.title,
         description: formData.description,
         start_time: formData.start_time ? new Date(formData.start_time + ':00').toISOString() : null,
@@ -232,42 +236,120 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         status: formData.status === 'cancelled' ? 'cancelled' : 'active'
       }
 
+      // 如果是编辑模式，只包含实际修改的字段（用于审计）
+      let eventData = fullEventData
+      if (event) {
+        // 获取旧数据用于比较
+        const { data: oldEventData } = await supabase
+          .from('events')
+          .select('*')
+          .eq('id', event.id)
+          .single()
 
-      // 插入或更新事件数据
+        if (oldEventData) {
+          // 只包含实际发生变化的字段
+          eventData = {} as any
+          
+          // 辅助函数：比较值是否相等（处理日期格式）
+          const valuesEqual = (oldVal: any, newVal: any): boolean => {
+            if (oldVal === null || oldVal === undefined) {
+              return newVal === null || newVal === undefined
+            }
+            if (newVal === null || newVal === undefined) {
+              return false
+            }
+            
+            // 处理日期字符串（ISO格式）
+            if (typeof oldVal === 'string' && typeof newVal === 'string') {
+              const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+              if (isoDateRegex.test(oldVal) && isoDateRegex.test(newVal)) {
+                // 比较到秒级精度
+                return oldVal.substring(0, 19) === newVal.substring(0, 19)
+              }
+            }
+            
+            // 处理数字
+            if (typeof oldVal === 'number' && typeof newVal === 'number') {
+              return Math.abs(oldVal - newVal) < 0.0001
+            }
+            
+            return JSON.stringify(oldVal) === JSON.stringify(newVal)
+          }
+
+          // 检查每个字段是否发生变化
+          Object.keys(fullEventData).forEach((key) => {
+            const oldValue = oldEventData[key]
+            const newValue = fullEventData[key as keyof typeof fullEventData]
+            
+            if (!valuesEqual(oldValue, newValue)) {
+              eventData[key as keyof typeof eventData] = newValue
+            }
+          })
+        }
+      }
+
+      // 如果是编辑模式且没有字段被修改，直接返回
+      if (event && Object.keys(eventData).length === 0) {
+        onSuccess?.()
+        onClose()
+        return
+      }
+
+      // 插入或更新事件数据（使用审计功能）
       if (!supabase) {
         throw new Error('Supabase未初始化')
       }
 
+      if (!user) {
+        throw new Error('请先登录')
+      }
+
+      // 获取用户角色
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = (profile?.role || 'member') as UserRole
+
+      // 创建审计上下文
+      const context = await createAuditContext(user.id)
+
       let data, error
 
       if (event) {
-        // 编辑模式 - 更新事件
-        const { data: updateData, error: updateError } = await supabase
-          .from('events')
-          .update(eventData)
-          .eq('id', event.id)
-          .select()
+        // 编辑模式 - 使用审计功能更新事件
+        const result = await updateWithAudit(
+          'events',
+          event.id,
+          eventData,
+          context,
+          userRole
+        )
 
-        data = updateData
-        error = updateError
+        data = result.data
+        error = result.error
 
         if (error) {
           console.error('更新事件失败:', error)
-          throw new Error('更新事件失败')
+          throw new Error(`更新事件失败: ${error.message || '未知错误'}`)
         }
       } else {
-        // 创建模式 - 插入事件
-        const { data: insertData, error: insertError } = await supabase
-          .from('events')
-          .insert([eventData])
-          .select()
+        // 创建模式 - 使用审计功能插入事件
+        const result = await insertWithAudit(
+          'events',
+          eventData,
+          context,
+          userRole
+        )
 
-        data = insertData
-        error = insertError
+        data = result.data ? [result.data] : null
+        error = result.error
 
         if (error) {
           console.error('创建事件失败:', error)
-          throw new Error('创建事件失败')
+          throw new Error(`创建事件失败: ${error.message || '未知错误'}`)
         }
       }
       onSuccess?.()

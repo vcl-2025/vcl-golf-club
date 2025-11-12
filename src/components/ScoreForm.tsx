@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import { getEventStatus, getEventStatusText, getEventStatusStyles, canEnterScores } from '../utils/eventStatus'
 import * as XLSX from 'xlsx'
+import { updateWithAudit, createAuditContext, logBatchOperation, type UserRole } from '../lib/audit'
+import { useAuth } from '../hooks/useAuth'
 
 interface ScoreFormProps {
   onClose: () => void
@@ -39,6 +41,7 @@ interface ScoreData {
 }
 
 export default function ScoreForm({ onClose, onSuccess, preselectedEvent, preselectedScore }: ScoreFormProps) {
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [events, setEvents] = useState<any[]>([])
@@ -420,6 +423,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     setError('')
     setLoading(true)
 
+    // 提升变量作用域，确保在所有分支中都能访问
+    let insertData: any = null
+    let existingScore: any = null
+
     try {
       if (!scoreData.total_strokes) {
         throw new Error('请填写总杆数')
@@ -432,7 +439,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
       if (selectedParticipant.isGuest) {
         // 保存访客成绩
-        const insertData = {
+        insertData = {
           event_id: selectedEvent.id,
           player_name: playerName.trim(),
           total_strokes: parseInt(scoreData.total_strokes),
@@ -450,7 +457,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         const participantKey = `guest_${selectedParticipant.guest_score_id || selectedParticipant.id}`
         
         // 检查是否已存在记录
-        let existingScore: any = null
+        existingScore = null
         if (selectedParticipant.guest_score_id) {
           const { data } = await supabase
             .from('guest_scores')
@@ -460,22 +467,70 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
           existingScore = data
         }
 
+        if (!user || !supabase) {
+          throw new Error('请先登录')
+        }
+
+        // 获取用户角色
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = (profile?.role || 'member') as UserRole
+
+        // 创建审计上下文
+        const context = await createAuditContext(user.id)
+
         let error
+        let insertData_result: any = null
         if (existingScore) {
-          // 更新已存在的记录
-          const { error: updateError } = await supabase
+          // 更新已存在的记录（使用审计功能）
+          // 获取旧数据用于比较
+          const { data: oldScoreData } = await supabase
             .from('guest_scores')
-            .update(insertData)
+            .select('*')
             .eq('id', existingScore.id)
-          error = updateError
+            .single()
+
+          if (oldScoreData) {
+            // 只包含实际发生变化的字段
+            const updateData: any = {}
+            Object.keys(insertData).forEach((key) => {
+              const oldValue = oldScoreData[key]
+              const newValue = insertData[key as keyof typeof insertData]
+              
+              if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                updateData[key] = newValue
+              }
+            })
+
+            if (Object.keys(updateData).length > 0) {
+              const result = await updateWithAudit(
+                'guest_scores',
+                existingScore.id,
+                updateData,
+                context,
+                userRole
+              )
+              error = result.error
+            }
+          }
         } else {
-          // 插入新记录
-          const { data: insertData_result, error: insertError } = await supabase
+          // 插入新记录（成绩管理不记录插入审计）
+          const { data: insertData_result_data, error: insertError } = await supabase
             .from('guest_scores')
             .insert([insertData])
             .select()
             .single()
+          
           error = insertError
+          
+          // 获取插入的数据
+          if (!error && insertData_result_data) {
+            insertData_result = insertData_result_data
+          }
           
           // 更新 participant 的 guest_score_id
           if (!error && insertData_result) {
@@ -491,7 +546,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         setSavedParticipants(new Set([...savedParticipants, participantKey]))
       } else {
         // 保存会员成绩
-        const insertData = {
+        insertData = {
           user_id: selectedParticipant.user_id,
           event_id: selectedEvent.id,
           total_strokes: parseInt(scoreData.total_strokes),
@@ -506,27 +561,70 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
           team_name: scoreData.team_name || null
         }
 
+        if (!user || !supabase) {
+          throw new Error('请先登录')
+        }
+
+        // 获取用户角色
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const userRole = (profile?.role || 'member') as UserRole
+
+        // 创建审计上下文
+        const context = await createAuditContext(user.id)
+
         // 检查是否已存在记录
-        const { data: existingScore } = await supabase
+        const { data: existingScoreData } = await supabase
           .from('scores')
           .select('id')
           .eq('user_id', selectedParticipant.user_id!)
           .eq('event_id', selectedEvent.id)
           .single()
 
+        existingScore = existingScoreData
         let error
         if (existingScore) {
-          // 更新已存在的记录
-          const { error: updateError } = await supabase
+          // 更新已存在的记录（使用审计功能）
+          // 获取旧数据用于比较
+          const { data: oldScoreData } = await supabase
             .from('scores')
-            .update(insertData)
+            .select('*')
             .eq('id', existingScore.id)
-          error = updateError
+            .single()
+
+          if (oldScoreData) {
+            // 只包含实际发生变化的字段
+            const updateData: any = {}
+            Object.keys(insertData).forEach((key) => {
+              const oldValue = oldScoreData[key]
+              const newValue = insertData[key as keyof typeof insertData]
+              
+              if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                updateData[key] = newValue
+              }
+            })
+
+            if (Object.keys(updateData).length > 0) {
+              const result = await updateWithAudit(
+                'scores',
+                existingScore.id,
+                updateData,
+                context,
+                userRole
+              )
+              error = result.error
+            }
+          }
         } else {
-          // 插入新记录
+          // 插入新记录（成绩管理不记录插入审计）
           const { error: insertError } = await supabase
             .from('scores')
             .insert([insertData])
+          
           error = insertError
         }
 
@@ -539,17 +637,19 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       }
 
       // 立即更新左侧列表中的成绩信息
-      setParticipants(prevParticipants => 
-        prevParticipants.map(participant => 
-          participant.user_id === selectedParticipant.user_id
-            ? {
-                ...participant,
-                total_strokes: insertData.total_strokes,
-                rank: insertData.rank
-              }
-            : participant
+      if (insertData) {
+        setParticipants(prevParticipants => 
+          prevParticipants.map(participant => 
+            participant.user_id === selectedParticipant.user_id
+              ? {
+                  ...participant,
+                  total_strokes: insertData.total_strokes,
+                  rank: insertData.rank
+                }
+              : participant
+          )
         )
-      )
+      }
 
       showSuccess(existingScore ? '成绩更新成功' : '成绩保存成功')
       
@@ -1261,6 +1361,22 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       // 检查当前用户权限
       const { data: currentUserData } = await supabase.auth.getUser()
       
+      if (!user || !supabase) {
+        throw new Error('请先登录')
+      }
+
+      // 获取用户角色
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = (profile?.role || 'member') as UserRole
+
+      // 创建审计上下文
+      const context = await createAuditContext(user.id)
+      
       // 批量获取所有用户姓名
       const { data: allUsers } = await supabase
         .from('user_profiles')
@@ -1337,27 +1453,57 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
             }
 
             if (existingGuest) {
-              // 更新访客成绩
+              // 更新访客成绩（使用审计功能）
               console.log(`[导入] 更新访客成绩:`, existingGuest.id)
-              const { error: updateGuestError } = await supabase
+              
+              // 获取旧数据用于比较
+              const { data: oldGuestData } = await supabase
                 .from('guest_scores')
-                .update(guestScoreData)
+                .select('*')
                 .eq('id', existingGuest.id)
+                .single()
 
-              if (updateGuestError) {
-                console.error(`[导入] 更新访客成绩失败:`, updateGuestError)
-                failed.push(player.name)
-                errors.push(`${player.name}: 更新访客成绩失败 - ${updateGuestError.message}`)
-              } else {
-                console.log(`[导入] 访客成绩更新成功:`, player.name)
-                success.push(player.name)
-                guestSuccessCount++
+              if (oldGuestData) {
+                // 只包含实际发生变化的字段
+                const updateData: any = {}
+                Object.keys(guestScoreData).forEach((key) => {
+                  const oldValue = oldGuestData[key]
+                  const newValue = guestScoreData[key as keyof typeof guestScoreData]
+                  
+                  if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                    updateData[key] = newValue
+                  }
+                })
+
+                if (Object.keys(updateData).length > 0) {
+                  const result = await updateWithAudit(
+                    'guest_scores',
+                    existingGuest.id,
+                    updateData,
+                    context,
+                    userRole
+                  )
+
+                  if (result.error) {
+                    console.error(`[导入] 更新访客成绩失败:`, result.error)
+                    failed.push(player.name)
+                    errors.push(`${player.name}: 更新访客成绩失败 - ${result.error.message}`)
+                  } else {
+                    console.log(`[导入] 访客成绩更新成功:`, player.name)
+                    success.push(player.name)
+                    guestSuccessCount++
+                  }
+                } else {
+                  // 没有变化，直接标记为成功
+                  success.push(player.name)
+                  guestSuccessCount++
+                }
               }
             } else {
-              // 插入访客成绩
+              // 插入访客成绩（批量导入不逐条记录审计）
               const { error: insertGuestError } = await supabase
                 .from('guest_scores')
-                .insert(guestScoreData)
+                .insert([guestScoreData])
 
               if (insertGuestError) {
                 console.error(`[导入] 插入访客成绩失败:`, insertGuestError)
@@ -1437,53 +1583,59 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
           }
 
           if (existing) {
-            // 更新
+            // 更新（使用审计功能）
             console.log(`[导入] 更新现有记录:`, existing.id)
-            const { data: updateData, error: updateError } = await supabase
+            
+            // 获取旧数据用于比较
+            const { data: oldScoreData } = await supabase
               .from('scores')
-              .update(scoreData)
+              .select('*')
               .eq('id', existing.id)
-              .select()
+              .single()
 
-            console.log(`[导入] 更新结果:`, { 
-              updateData, 
-              updateError,
-              updateDataLength: updateData?.length,
-              updatedRecord: updateData?.[0]
-            })
-            if (updateError) {
-              console.error(`[导入] 更新失败:`, updateError)
-              throw updateError
+            if (oldScoreData) {
+              // 只包含实际发生变化的字段
+              const updateData: any = {}
+              Object.keys(scoreData).forEach((key) => {
+                const oldValue = oldScoreData[key]
+                const newValue = scoreData[key as keyof typeof scoreData]
+                
+                if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                  updateData[key] = newValue
+                }
+              })
+
+              if (Object.keys(updateData).length > 0) {
+                const result = await updateWithAudit(
+                  'scores',
+                  existing.id,
+                  updateData,
+                  context,
+                  userRole
+                )
+
+                if (result.error) {
+                  console.error(`[导入] 更新失败:`, result.error)
+                  throw result.error
+                }
+                console.log(`[导入] ${player.name}: 更新成功`)
+              } else {
+                console.log(`[导入] ${player.name}: 数据无变化，跳过更新`)
+              }
             }
-            if (!updateData || updateData.length === 0) {
-              console.error(`[导入] 更新后未返回数据`)
-              throw new Error('更新后未返回数据，可能更新失败')
-            }
-            console.log(`[导入] ${player.name}: 更新成功，更新后的记录:`, updateData[0])
           } else {
-            // 插入
+            // 插入（批量导入不逐条记录审计）
             console.log(`[导入] 插入新记录，数据:`, JSON.stringify(scoreData, null, 2))
-            const { data: insertData, error: insertError } = await supabase
+            
+            const { error: insertError } = await supabase
               .from('scores')
               .insert([scoreData])
-              .select()
 
-            console.log(`[导入] 插入结果:`, { 
-              insertData, 
-              insertError,
-              insertDataLength: insertData?.length,
-              insertedRecord: insertData?.[0]
-            })
             if (insertError) {
               console.error(`[导入] 插入失败:`, insertError)
-              console.error(`[导入] 插入失败的完整错误:`, JSON.stringify(insertError, null, 2))
               throw insertError
             }
-            if (!insertData || insertData.length === 0) {
-              console.error(`[导入] 插入后未返回数据`)
-              throw new Error('插入后未返回数据，可能插入失败或RLS策略阻止')
-            }
-            console.log(`[导入] ${player.name}: 插入成功，插入的记录:`, insertData[0])
+            console.log(`[导入] ${player.name}: 插入成功`)
           }
 
           success.push(player.name)
@@ -1498,6 +1650,23 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       console.log(`[导入] 处理完成 - 成功: ${success.length}, 失败: ${failed.length}`)
       console.log(`[导入] 成功列表:`, success)
       console.log(`[导入] 失败列表:`, failed)
+
+      // 记录批量操作审计日志（只记录一条，不逐条记录）
+      const totalInserted = success.length
+      if (totalInserted > 0) {
+        await logBatchOperation(
+          'scores',
+          'BATCH_IMPORT',
+          totalInserted,
+          context,
+          {
+            event_id: selectedEvent.id,
+            event_title: selectedEvent.title,
+            member_count: success.length - guestSuccessCount,
+            guest_count: guestSuccessCount,
+          }
+        )
+      }
 
       // 从数据库重新读取该活动的所有成绩数据（包括刚导入的和之前已存在的）
       // 包括会员成绩和访客成绩，用于团队统计

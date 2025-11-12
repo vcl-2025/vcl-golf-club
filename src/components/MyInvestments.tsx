@@ -223,22 +223,17 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-xl font-bold text-gray-900">
-                          {project?.title || '项目已删除'}
-                        </h3>
-                        <div className={`flex items-center px-3 py-1 rounded-full border ${statusInfo.color}`}>
-                          <StatusIcon className={`w-4 h-4 mr-1 ${statusInfo.iconColor}`} />
-                          <span className="text-sm font-medium">{statusInfo.label}</span>
-                        </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {project?.title || '项目已删除'}
+                      </h3>
+                      <div className={`inline-flex items-center px-3 py-1 rounded-full border ${statusInfo.color}`}>
+                        <StatusIcon className={`w-4 h-4 mr-1 ${statusInfo.iconColor}`} />
+                        <span className="text-sm font-medium">{statusInfo.label}</span>
                       </div>
-                      {project?.description && (
-                        <p className="text-gray-600 mb-3">{project.description}</p>
-                      )}
                     </div>
                     <div className="text-right ml-4">
                       <div className="text-sm text-gray-500 mb-1">我的捐赠</div>
-                      <div className="text-2xl font-bold text-[#F15B98]">
+                      <div className="text-lg font-bold text-[#F15B98]">
                         {formatAmount(investment.amount)}
                       </div>
                     </div>
