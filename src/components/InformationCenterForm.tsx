@@ -392,7 +392,7 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
             userRole
           )
 
-          if (error) throw error
+        if (error) throw error
         }
       } else {
         // 创建模式：使用审计功能插入

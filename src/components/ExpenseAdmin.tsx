@@ -47,6 +47,7 @@ export default function ExpenseAdmin() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   // 凭证查看modal状态
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
@@ -160,9 +161,11 @@ export default function ExpenseAdmin() {
   // 获取可用年份
   useEffect(() => {
     if (expenses.length > 0) {
-      const years = [...new Set(expenses.map(expense => 
-        new Date(expense.expense_date).getFullYear()
-      ))].sort((a, b) => b - a)
+      const years = [...new Set(expenses.map(expense => {
+        // 避免时区问题：直接解析年份
+        const dateStr = expense.expense_date.split('T')[0]
+        return parseInt(dateStr.split('-')[0])
+      }))].sort((a, b) => b - a)
       setAvailableYears(years)
     }
   }, [expenses])
@@ -185,13 +188,13 @@ export default function ExpenseAdmin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!user || !supabase) {
-      showError('请先登录')
-      return
-    }
+    setIsSubmitting(true)
 
     try {
+      if (!user || !supabase) {
+        showError('请先登录')
+        return
+      }
       // 获取用户角色
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -306,23 +309,77 @@ export default function ExpenseAdmin() {
       console.error('保存费用记录失败:', error)
       const errorMessage = error?.message || error?.error?.message || '保存失败，请重试'
       showError(`保存失败: ${errorMessage}`)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense)
     
-    // 检查是否是旧分类值，如果是则需要用户重新选择
-    const oldTypes = ['equipment', 'maintenance', 'activity', 'salary', 'other']
-    const isOldType = oldTypes.includes(expense.expense_type)
-    
     const transactionType = expense.transaction_type || 'expense'
     
     // 先设置ref，避免useEffect清空费用类型
     prevTransactionTypeRef.current = transactionType
     
+    // 映射旧分类到新大类（兼容旧数据）
+    let expenseType = expense.expense_type
+    if (transactionType === 'income') {
+      // 收入：映射旧大类到新大类
+      if (expense.expense_type === 'membership_sponsorship') {
+        expenseType = expense.title?.includes('会费') ? 'membership_income' : 
+                     expense.title?.includes('赞助') ? 'sponsorship_support' : 'membership_income'
+      } else if (expense.expense_type === 'collection') {
+        expenseType = 'activity_related_income'
+      } else if (expense.expense_type === 'investment_finance') {
+        expenseType = 'investment_income'
+      } else if (expense.expense_type === 'other_income') {
+        expenseType = 'other_income'
+      } else if (expense.expense_type === 'membership_fee') {
+        expenseType = 'membership_income'
+      } else if (expense.expense_type === 'sponsorship_fee') {
+        expenseType = 'sponsorship_support'
+      } else if (['collected_competition_ball_fee', 'collected_handicap_fee', 'collected_meal_fee'].includes(expense.expense_type)) {
+        expenseType = 'activity_related_income'
+      } else if (['interest_income', 'gic_redemption'].includes(expense.expense_type)) {
+        expenseType = 'investment_income'
+      } else if (expense.expense_type === 'other') {
+        expenseType = 'other_income'
+      }
+      // 如果已经是新大类，保持不变
+      if (!['membership_income', 'sponsorship_support', 'activity_related_income', 'investment_income', 'other_income'].includes(expenseType)) {
+        expenseType = expense.expense_type
+      }
+    } else {
+      // 支出：映射旧大类到新大类
+      if (expense.expense_type === 'event_activity' || expense.expense_type === 'payment_on_behalf') {
+        expenseType = 'activity_expense'
+      } else if (expense.expense_type === 'finance_deposit') {
+        expenseType = 'investment_savings'
+      } else if (expense.expense_type === 'other_misc') {
+        expenseType = 'other_expense'
+      } else if (['competition_prizes_misc', 'event_meal_beverage', 'paid_competition_fee', 
+                   'paid_handicap_fee', 'photographer_fee', 'refund'].includes(expense.expense_type)) {
+        expenseType = 'activity_expense'
+      } else if (expense.expense_type === 'gic_deposit') {
+        expenseType = 'investment_savings'
+      } else if (expense.expense_type === 'bank_fee') {
+        expenseType = 'operating_expense'
+      } else if (expense.expense_type === 'other') {
+        expenseType = 'other_expense'
+      } else if (['equipment', 'maintenance', 'salary'].includes(expense.expense_type)) {
+        expenseType = 'other_expense'
+      } else if (expense.expense_type === 'activity') {
+        expenseType = 'activity_expense'
+      }
+      // 如果已经是新大类，保持不变
+      if (!['activity_expense', 'investment_savings', 'operating_expense', 'other_expense'].includes(expenseType)) {
+        expenseType = expense.expense_type
+      }
+    }
+    
     setFormData({
-      expense_type: isOldType ? '' : expense.expense_type, // 旧分类清空，让用户重新选择
+      expense_type: expenseType || '',
       transaction_type: transactionType,
       title: expense.title,
       amount: expense.amount.toString(),
@@ -332,11 +389,6 @@ export default function ExpenseAdmin() {
       notes: expense.notes || '',
       status: expense.status
     })
-    
-    // 如果是旧分类，提示用户需要更新
-    if (isOldType) {
-      showWarning('此记录使用了旧的分类，请重新选择费用类型')
-    }
 
     if (expense.receipt_url) {
       const urls = expense.receipt_url.split(',')
@@ -497,95 +549,113 @@ export default function ExpenseAdmin() {
   }
 
   const getExpenseTypeText = (type: string) => {
-    // 收入分类（新版本：4个大类）
+    // 收入大类
     const incomeTypes: { [key: string]: string } = {
-      'membership_sponsorship': '会费及赞助类',
-      'collection': '代收类',
-      'investment_finance': '投资及理财类',
-      'other_income': '其他杂项',
-      // 保留旧分类用于兼容
-      'membership_fee': '会费',
-      'sponsorship_fee': '赞助费',
-      'collected_competition_ball_fee': '代收比赛球费',
-      'collected_handicap_fee': '代收差点费',
-      'interest_income': '利息收入',
-      'collected_meal_fee': '代收餐费',
-      'gic_redemption': 'GIC 赎回',
-      'other': '其他'
+      // 新大类
+      'membership_income': '会员收入',
+      'sponsorship_support': '赞助与支持',
+      'activity_related_income': '活动相关收入',
+      'investment_income': '投资收益',
+      'other_income': '其他收入',
+      // 旧大类（兼容，映射到新大类）
+      'membership_sponsorship': '会员收入',
+      'collection': '活动相关收入',
+      'investment_finance': '投资收益',
+      // 旧具体分类（兼容，映射到对应大类）
+      'membership_fee': '会员收入',
+      'sponsorship_fee': '赞助与支持',
+      'collected_competition_ball_fee': '活动相关收入',
+      'collected_handicap_fee': '活动相关收入',
+      'collected_meal_fee': '活动相关收入',
+      'interest_income': '投资收益',
+      'gic_redemption': '投资收益',
+      'other': '其他收入'
     }
     
-    // 支出分类（新版本：4个大类）
+    // 支出大类
     const expenseTypes: { [key: string]: string } = {
-      'event_activity': '赛事与活动支出',
-      'payment_on_behalf': '代付类',
-      'finance_deposit': '理财存款',
-      'other_misc': '其他杂费',
-      // 保留旧分类用于兼容
-      'competition_prizes_misc': '比赛奖品及杂费',
-      'event_meal_beverage': '活动餐费及酒水',
-      'photographer_fee': '摄影师费用',
-      'paid_handicap_fee': '代付差点费',
-      'gic_deposit': '存GIC',
-      'bank_fee': '银行费',
-      'paid_competition_fee': '代付比赛费用 (含联赛及Zone4 费用)',
-      'refund': '退费'
+      // 新大类
+      'activity_expense': '活动支出',
+      'investment_savings': '投资与储蓄',
+      'operating_expense': '运营支出',
+      'other_expense': '其它支出',
+      // 旧大类（兼容，映射到新大类）
+      'event_activity': '活动支出',
+      'payment_on_behalf': '活动支出',
+      'finance_deposit': '投资与储蓄',
+      'other_misc': '其它支出',
+      // 旧具体分类（兼容，映射到对应大类）
+      'competition_prizes_misc': '活动支出',
+      'event_meal_beverage': '活动支出',
+      'paid_competition_fee': '活动支出',
+      'paid_handicap_fee': '活动支出',
+      'photographer_fee': '活动支出',
+      'refund': '活动支出',
+      'gic_deposit': '投资与储蓄',
+      'bank_fee': '运营支出',
+      'other': '其它支出',
+      // 最旧分类（兼容）
+      'equipment': '其它支出',
+      'maintenance': '其它支出',
+      'activity': '活动支出',
+      'salary': '其它支出'
     }
     
-    // 旧分类映射（用于兼容旧数据）
-    const oldTypes: { [key: string]: string } = {
-      'equipment': '设备采购（旧分类）',
-      'maintenance': '场地维护（旧分类）',
-      'activity': '活动支出（旧分类）',
-      'salary': '人员工资（旧分类）'
-    }
-    
-    return incomeTypes[type] || expenseTypes[type] || oldTypes[type] || type
+    return incomeTypes[type] || expenseTypes[type] || type
   }
 
   const getExpenseTypeColor = (type: string) => {
-    // 收入分类颜色（新版本：4个大类）
+    // 收入大类颜色
     const incomeColors: { [key: string]: string } = {
-      'membership_sponsorship': 'bg-green-100 text-green-800',
-      'collection': 'bg-blue-100 text-blue-800',
-      'investment_finance': 'bg-indigo-100 text-indigo-800',
-      'other_income': 'bg-gray-100 text-gray-800',
-      // 保留旧分类颜色用于兼容
-      'membership_fee': 'bg-green-100 text-green-800',
-      'sponsorship_fee': 'bg-blue-100 text-blue-800',
-      'collected_competition_ball_fee': 'bg-purple-100 text-purple-800',
-      'collected_handicap_fee': 'bg-yellow-100 text-yellow-800',
-      'interest_income': 'bg-indigo-100 text-indigo-800',
-      'collected_meal_fee': 'bg-pink-100 text-pink-800',
-      'gic_redemption': 'bg-teal-100 text-teal-800',
-      'other': 'bg-gray-100 text-gray-800'
+      'membership_income': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'sponsorship_support': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'activity_related_income': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'investment_income': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'other_income': 'bg-[#F15B98]/20 text-[#F15B98]',
+      // 旧大类（兼容）
+      'membership_sponsorship': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'collection': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'investment_finance': 'bg-[#F15B98]/20 text-[#F15B98]',
+      // 旧具体分类（兼容）
+      'membership_fee': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'sponsorship_fee': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'collected_competition_ball_fee': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'collected_handicap_fee': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'collected_meal_fee': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'interest_income': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'gic_redemption': 'bg-[#F15B98]/20 text-[#F15B98]',
+      'other': 'bg-[#F15B98]/20 text-[#F15B98]'
     }
     
-    // 支出分类颜色（新版本：4个大类）
+    // 支出大类颜色
     const expenseColors: { [key: string]: string } = {
+      'activity_expense': 'bg-red-100 text-red-800',
+      'investment_savings': 'bg-purple-100 text-purple-800',
+      'operating_expense': 'bg-orange-100 text-orange-800',
+      'other_expense': 'bg-gray-100 text-gray-800',
+      // 旧大类（兼容）
       'event_activity': 'bg-red-100 text-red-800',
-      'payment_on_behalf': 'bg-orange-100 text-orange-800',
+      'payment_on_behalf': 'bg-red-100 text-red-800',
       'finance_deposit': 'bg-purple-100 text-purple-800',
       'other_misc': 'bg-gray-100 text-gray-800',
-      // 保留旧分类颜色用于兼容
+      // 旧具体分类（兼容）
       'competition_prizes_misc': 'bg-red-100 text-red-800',
-      'event_meal_beverage': 'bg-orange-100 text-orange-800',
-      'photographer_fee': 'bg-purple-100 text-purple-800',
-      'paid_handicap_fee': 'bg-yellow-100 text-yellow-800',
-      'gic_deposit': 'bg-blue-100 text-blue-800',
-      'bank_fee': 'bg-gray-100 text-gray-800',
-      'paid_competition_fee': 'bg-indigo-100 text-indigo-800',
-      'refund': 'bg-pink-100 text-pink-800'
+      'event_meal_beverage': 'bg-red-100 text-red-800',
+      'paid_competition_fee': 'bg-red-100 text-red-800',
+      'paid_handicap_fee': 'bg-red-100 text-red-800',
+      'photographer_fee': 'bg-red-100 text-red-800',
+      'refund': 'bg-red-100 text-red-800',
+      'gic_deposit': 'bg-purple-100 text-purple-800',
+      'bank_fee': 'bg-orange-100 text-orange-800',
+      'other': 'bg-gray-100 text-gray-800',
+      // 最旧分类（兼容）
+      'equipment': 'bg-gray-100 text-gray-800',
+      'maintenance': 'bg-gray-100 text-gray-800',
+      'activity': 'bg-red-100 text-red-800',
+      'salary': 'bg-gray-100 text-gray-800'
     }
     
-    // 旧分类颜色
-    const oldColors: { [key: string]: string } = {
-      'equipment': 'bg-blue-100 text-blue-800',
-      'maintenance': 'bg-green-100 text-green-800',
-      'activity': 'bg-purple-100 text-purple-800',
-      'salary': 'bg-orange-100 text-orange-800'
-    }
-    
-    return incomeColors[type] || expenseColors[type] || oldColors[type] || 'bg-gray-100 text-gray-800'
+    return incomeColors[type] || expenseColors[type] || 'bg-gray-100 text-gray-800'
   }
 
   const getPaymentMethodText = (method: string) => {
@@ -627,12 +697,14 @@ export default function ExpenseAdmin() {
     // 费用类型筛选
     const matchesType = typeFilter === 'all' || expense.expense_type === typeFilter
     
-    // 年份筛选
-    const expenseYear = new Date(expense.expense_date).getFullYear()
+    // 年份筛选（避免时区问题：直接解析日期字符串）
+    const dateStr = expense.expense_date.split('T')[0]
+    const [year, month] = dateStr.split('-')
+    const expenseYear = parseInt(year)
     const matchesYear = yearFilter === 'all' || expenseYear.toString() === yearFilter
     
-    // 月份筛选
-    const expenseMonth = new Date(expense.expense_date).getMonth() + 1
+    // 月份筛选（避免时区问题：直接解析日期字符串）
+    const expenseMonth = parseInt(month)
     const matchesMonth = monthFilter === 'all' || expenseMonth.toString() === monthFilter
     
     return matchesSearch && matchesTransactionType && matchesType && matchesYear && matchesMonth
@@ -671,8 +743,9 @@ export default function ExpenseAdmin() {
           bValue = parseFloat(b.amount.toString())
           break
         case 'expense_date':
-          aValue = new Date(a.expense_date).getTime()
-          bValue = new Date(b.expense_date).getTime()
+          // 避免时区问题：直接比较日期字符串
+          aValue = a.expense_date.split('T')[0]
+          bValue = b.expense_date.split('T')[0]
           break
         case 'expense_type':
           aValue = a.expense_type
@@ -686,6 +759,13 @@ export default function ExpenseAdmin() {
           return 0
       }
 
+      // 对于日期字段，使用字符串比较
+      if (sortField === 'expense_date') {
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+        return 0
+      }
+      // 其他字段使用数值比较
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
       return 0
@@ -693,6 +773,20 @@ export default function ExpenseAdmin() {
   }
 
   const formatDate = (dateString: string) => {
+    // 避免时区问题：直接解析日期字符串的年月日，不使用 Date 对象解析
+    // 这样可以避免 UTC 时区转换导致的日期偏移（如 2025-07-31 变成 2025-07-30）
+    if (dateString) {
+      // 提取日期部分（去掉时间部分）
+      const dateOnly = dateString.split('T')[0].split(' ')[0]
+      const [year, month, day] = dateOnly.split('-')
+      
+      if (year && month && day) {
+        // 使用本地时间构造 Date 对象，避免时区转换
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        return date.toLocaleDateString('zh-CN')
+      }
+    }
+    // 如果解析失败，使用原来的方式（但可能会有时区问题）
     return new Date(dateString).toLocaleDateString('zh-CN')
   }
 
@@ -1144,7 +1238,9 @@ export default function ExpenseAdmin() {
                     </label>
                     <select
                       value={formData.expense_type}
-                      onChange={(e) => setFormData({ ...formData, expense_type: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, expense_type: e.target.value, title: '' })
+                      }}
                       disabled={!formData.transaction_type}
                       className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
                         !formData.transaction_type ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
@@ -1154,17 +1250,18 @@ export default function ExpenseAdmin() {
                       <option value="">请选择</option>
                       {formData.transaction_type === 'income' ? (
                         <>
-                          <option value="membership_sponsorship">会费及赞助类</option>
-                          <option value="collection">代收类</option>
-                          <option value="investment_finance">投资及理财类</option>
-                          <option value="other_income">其他杂项</option>
+                          <option value="membership_income">会员收入</option>
+                          <option value="sponsorship_support">赞助与支持</option>
+                          <option value="activity_related_income">活动相关收入</option>
+                          <option value="investment_income">投资收益</option>
+                          <option value="other_income">其他收入</option>
                         </>
                       ) : formData.transaction_type === 'expense' ? (
                         <>
-                          <option value="event_activity">赛事与活动支出</option>
-                          <option value="payment_on_behalf">代付类</option>
-                          <option value="finance_deposit">理财存款</option>
-                          <option value="other_misc">其他杂费</option>
+                          <option value="activity_expense">活动支出</option>
+                          <option value="investment_savings">投资与储蓄</option>
+                          <option value="operating_expense">运营支出</option>
+                          <option value="other_expense">其它支出</option>
                         </>
                       ) : null}
                     </select>
@@ -1175,13 +1272,73 @@ export default function ExpenseAdmin() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {formData.transaction_type === 'income' ? '收入标题' : '费用标题'} *
                   </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      list={`title-options-${formData.expense_type}`}
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder={formData.expense_type ? "选择或输入标题" : "请先选择类型"}
+                      disabled={!formData.expense_type}
+                      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                        !formData.expense_type ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                      }`}
+                      required
+                    />
+                    {formData.expense_type && (
+                      <datalist id={`title-options-${formData.expense_type}`}>
+                        {formData.transaction_type === 'income' ? (
+                          formData.expense_type === 'membership_income' ? (
+                            <>
+                              <option value="会费" />
+                            </>
+                          ) : formData.expense_type === 'sponsorship_support' ? (
+                            <>
+                              <option value="赞助费" />
+                            </>
+                          ) : formData.expense_type === 'activity_related_income' ? (
+                            <>
+                              <option value="代收比赛球费" />
+                              <option value="代收差点费" />
+                              <option value="代收餐费" />
+                            </>
+                          ) : formData.expense_type === 'investment_income' ? (
+                            <>
+                              <option value="利息收入" />
+                              <option value="GIC 赎回" />
+                            </>
+                          ) : formData.expense_type === 'other_income' ? (
+                            <>
+                              <option value="其他" />
+                            </>
+                          ) : null
+                        ) : formData.transaction_type === 'expense' ? (
+                          formData.expense_type === 'activity_expense' ? (
+                            <>
+                              <option value="比赛奖品及杂费" />
+                              <option value="活动餐费及酒水" />
+                              <option value="代付比赛费用 (含Zone4费用)" />
+                              <option value="代付差点费" />
+                              <option value="摄影师费用" />
+                              <option value="退费" />
+                            </>
+                          ) : formData.expense_type === 'investment_savings' ? (
+                            <>
+                              <option value="存GIC" />
+                            </>
+                          ) : formData.expense_type === 'operating_expense' ? (
+                            <>
+                              <option value="银行费" />
+                            </>
+                          ) : formData.expense_type === 'other_expense' ? (
+                            <>
+                              <option value="其他" />
+                            </>
+                          ) : null
+                        ) : null}
+                      </datalist>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -1357,9 +1514,14 @@ export default function ExpenseAdmin() {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    disabled={isSubmitting}
+                    className={`flex-1 px-6 py-3 rounded-lg transition-colors font-medium ${
+                      isSubmitting 
+                        ? 'bg-gray-400 cursor-not-allowed text-white' 
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
                   >
-                    {editingExpense ? '更新费用' : '添加费用'}
+                    {isSubmitting ? '保存中...' : (editingExpense ? '更新费用' : '添加费用')}
                   </button>
                   <button
                     type="button"

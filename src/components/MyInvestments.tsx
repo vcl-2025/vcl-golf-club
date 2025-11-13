@@ -224,11 +224,11 @@ export default function MyInvestments({ userId }: MyInvestmentsProps) {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-900 mb-2">
-                        {project?.title || '项目已删除'}
-                      </h3>
+                          {project?.title || '项目已删除'}
+                        </h3>
                       <div className={`inline-flex items-center px-3 py-1 rounded-full border ${statusInfo.color}`}>
-                        <StatusIcon className={`w-4 h-4 mr-1 ${statusInfo.iconColor}`} />
-                        <span className="text-sm font-medium">{statusInfo.label}</span>
+                          <StatusIcon className={`w-4 h-4 mr-1 ${statusInfo.iconColor}`} />
+                          <span className="text-sm font-medium">{statusInfo.label}</span>
                       </div>
                     </div>
                     <div className="text-right ml-4">

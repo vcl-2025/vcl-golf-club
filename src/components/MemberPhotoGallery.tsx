@@ -28,7 +28,7 @@ export default function MemberPhotoGallery({ onClose }: MemberPhotoGalleryProps 
   const [isMobile, setIsMobile] = useState(false)
   const [screenHeight, setScreenHeight] = useState(window.innerHeight)
   const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  
+
   useEffect(() => {
     fetchMembers()
   }, [])

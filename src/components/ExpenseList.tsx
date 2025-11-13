@@ -64,10 +64,10 @@ export default function ExpenseList() {
     const grouped: GroupedExpenses = {}
     
     filteredExpenses.forEach(expense => {
-      const date = new Date(expense.expense_date)
-      const year = date.getFullYear()
-      const month = date.getMonth() + 1
-      const key = `${year}年${month}月`
+      // 避免时区问题：直接解析日期字符串，不使用 Date 对象
+      const dateStr = expense.expense_date.split('T')[0] // 只取日期部分
+      const [year, month] = dateStr.split('-')
+      const key = `${year}年${parseInt(month)}月`
       
       if (!grouped[key]) {
         grouped[key] = []
@@ -75,11 +75,14 @@ export default function ExpenseList() {
       grouped[key].push(expense)
     })
     
-    // 对每个月份内的记录按日期倒序排列
+    // 对每个月份内的记录按日期倒序排列（避免时区问题）
     Object.keys(grouped).forEach(key => {
-      grouped[key].sort((a, b) => 
-        new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
-      )
+      grouped[key].sort((a, b) => {
+        // 直接比较日期字符串，避免时区转换
+        const dateA = a.expense_date.split('T')[0]
+        const dateB = b.expense_date.split('T')[0]
+        return dateB.localeCompare(dateA)
+      })
     })
     
     return grouped
@@ -107,69 +110,116 @@ export default function ExpenseList() {
   }
 
   const getExpenseTypeText = (type: string) => {
-    // 新收入分类（4个大类）
+    // 收入大类
     const incomeTypes: { [key: string]: string } = {
-      'membership_sponsorship': '会费及赞助类',
-      'collection': '代收类',
-      'investment_finance': '投资及理财类',
-      'other_income': '其他杂项',
-      // 旧分类
-      'membership_fee': '会费',
-      'sponsorship_fee': '赞助费',
-      'collected_competition_ball_fee': '代收比赛球费',
-      'collected_handicap_fee': '代收差点费',
-      'interest_income': '利息收入',
-      'collected_meal_fee': '代收餐费',
-      'gic_redemption': 'GIC 赎回',
-      'other': '其他'
+      // 新大类
+      'membership_income': '会员收入',
+      'sponsorship_support': '赞助与支持',
+      'activity_related_income': '活动相关收入',
+      'investment_income': '投资收益',
+      'other_income': '其他收入',
+      // 旧大类（兼容，映射到新大类）
+      'membership_sponsorship': '会员收入',
+      'collection': '活动相关收入',
+      'investment_finance': '投资收益',
+      // 旧具体分类（兼容，映射到对应大类）
+      'membership_fee': '会员收入',
+      'sponsorship_fee': '赞助与支持',
+      'collected_competition_ball_fee': '活动相关收入',
+      'collected_handicap_fee': '活动相关收入',
+      'collected_meal_fee': '活动相关收入',
+      'interest_income': '投资收益',
+      'gic_redemption': '投资收益',
+      'other': '其他收入'
     }
     
-    // 新支出分类（4个大类）
+    // 支出大类
     const expenseTypes: { [key: string]: string } = {
-      'event_activity': '赛事与活动支出',
-      'payment_on_behalf': '代付类',
-      'finance_deposit': '理财存款',
-      'other_misc': '其他杂费',
-      // 旧分类
-      'competition_prizes_misc': '比赛奖品及杂费',
-      'event_meal_beverage': '活动餐费及酒水',
-      'photographer_fee': '摄影师费用',
-      'paid_handicap_fee': '代付差点费',
-      'gic_deposit': '存GIC',
-      'bank_fee': '银行费',
-      'paid_competition_fee': '代付比赛费用',
-      'refund': '退费',
-      // 最旧分类
-      'equipment': '设备采购',
-      'maintenance': '场地维护',
+      // 新大类
+      'activity_expense': '活动支出',
+      'investment_savings': '投资与储蓄',
+      'operating_expense': '运营支出',
+      'other_expense': '其它支出',
+      // 旧大类（兼容，映射到新大类）
+      'event_activity': '活动支出',
+      'payment_on_behalf': '活动支出',
+      'finance_deposit': '投资与储蓄',
+      'other_misc': '其它支出',
+      // 旧具体分类（兼容，映射到对应大类）
+      'competition_prizes_misc': '活动支出',
+      'event_meal_beverage': '活动支出',
+      'paid_competition_fee': '活动支出',
+      'paid_handicap_fee': '活动支出',
+      'photographer_fee': '活动支出',
+      'refund': '活动支出',
+      'gic_deposit': '投资与储蓄',
+      'bank_fee': '运营支出',
+      'other': '其它支出',
+      // 最旧分类（兼容）
+      'equipment': '其它支出',
+      'maintenance': '其它支出',
       'activity': '活动支出',
-      'salary': '人员工资'
+      'salary': '其它支出'
     }
     
     return incomeTypes[type] || expenseTypes[type] || type
   }
 
   const getExpenseTypeColor = (type: string, transactionType: string | null) => {
-    // 收入类型颜色
+    // 收入大类颜色 - 使用柔绿色 (#4CAF50)
     const incomeColors: { [key: string]: string } = {
-      'membership_sponsorship': 'bg-[#F15B98]/20 text-[#F15B98]',
-      'collection': 'bg-[#F15B98]/20 text-[#F15B98]',
-      'investment_finance': 'bg-[#F15B98]/20 text-[#F15B98]',
-      'other_income': 'bg-[#F15B98]/20 text-[#F15B98]'
+      'membership_income': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'sponsorship_support': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'activity_related_income': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'investment_income': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'other_income': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      // 旧大类（兼容）
+      'membership_sponsorship': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'collection': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'investment_finance': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      // 旧具体分类（兼容）
+      'membership_fee': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'sponsorship_fee': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'collected_competition_ball_fee': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'collected_handicap_fee': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'collected_meal_fee': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'interest_income': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'gic_redemption': 'bg-[#4CAF50]/20 text-[#4CAF50]',
+      'other': 'bg-[#4CAF50]/20 text-[#4CAF50]'
     }
     
-    // 支出类型颜色
+    // 支出大类颜色 - 使用柔粉红色 (#E57373)
     const expenseColors: { [key: string]: string } = {
-      'event_activity': 'bg-red-100 text-red-800',
-      'payment_on_behalf': 'bg-orange-100 text-orange-800',
-      'finance_deposit': 'bg-purple-100 text-purple-800',
-      'other_misc': 'bg-gray-100 text-gray-800'
+      'activity_expense': 'bg-[#E57373]/20 text-[#E57373]',
+      'investment_savings': 'bg-[#8E44AD]/20 text-[#8E44AD]',
+      'operating_expense': 'bg-[#E57373]/20 text-[#E57373]',
+      'other_expense': 'bg-[#E57373]/20 text-[#E57373]',
+      // 旧大类（兼容）
+      'event_activity': 'bg-[#E57373]/20 text-[#E57373]',
+      'payment_on_behalf': 'bg-[#E57373]/20 text-[#E57373]',
+      'finance_deposit': 'bg-[#8E44AD]/20 text-[#8E44AD]',
+      'other_misc': 'bg-[#E57373]/20 text-[#E57373]',
+      // 旧具体分类（兼容）
+      'competition_prizes_misc': 'bg-[#E57373]/20 text-[#E57373]',
+      'event_meal_beverage': 'bg-[#E57373]/20 text-[#E57373]',
+      'paid_competition_fee': 'bg-[#E57373]/20 text-[#E57373]',
+      'paid_handicap_fee': 'bg-[#E57373]/20 text-[#E57373]',
+      'photographer_fee': 'bg-[#E57373]/20 text-[#E57373]',
+      'refund': 'bg-[#E57373]/20 text-[#E57373]',
+      'gic_deposit': 'bg-[#8E44AD]/20 text-[#8E44AD]',
+      'bank_fee': 'bg-[#E57373]/20 text-[#E57373]',
+      'other': 'bg-[#E57373]/20 text-[#E57373]',
+      // 最旧分类（兼容）
+      'equipment': 'bg-[#E57373]/20 text-[#E57373]',
+      'maintenance': 'bg-[#E57373]/20 text-[#E57373]',
+      'activity': 'bg-[#E57373]/20 text-[#E57373]',
+      'salary': 'bg-[#E57373]/20 text-[#E57373]'
     }
     
     if (transactionType === 'income') {
-      return incomeColors[type] || 'bg-[#F15B98]/20 text-[#F15B98]'
+      return incomeColors[type] || 'bg-[#4CAF50]/20 text-[#4CAF50]'
     }
-    return expenseColors[type] || 'bg-red-100 text-red-800'
+    return expenseColors[type] || 'bg-[#E57373]/20 text-[#E57373]'
   }
 
   const getPaymentMethodText = (method: string) => {
@@ -189,6 +239,24 @@ export default function ExpenseList() {
   }
 
   const formatDate = (dateString: string) => {
+    // 避免时区问题：直接解析日期字符串的年月日，不使用 Date 对象解析
+    // 这样可以避免 UTC 时区转换导致的日期偏移（如 2025-07-31 变成 2025-07-30）
+    if (dateString) {
+      // 提取日期部分（去掉时间部分）
+      const dateOnly = dateString.split('T')[0].split(' ')[0]
+      const [year, month, day] = dateOnly.split('-')
+      
+      if (year && month && day) {
+        // 使用本地时间构造 Date 对象，避免时区转换
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        return date.toLocaleDateString('zh-CN', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      }
+    }
+    // 如果解析失败，使用原来的方式（但可能会有时区问题）
     return new Date(dateString).toLocaleDateString('zh-CN', {
       year: 'numeric',
       month: 'long',
@@ -210,7 +278,7 @@ export default function ExpenseList() {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="w-8 h-8 border-4 border-[#F15B98] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-[#4CAF50] border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -218,19 +286,19 @@ export default function ExpenseList() {
   return (
     <div className="space-y-6">
       {/* 统计卡片 */}
-      <div className="bg-gradient-to-br from-[#F15B98]/10 to-[#F15B98]/5 rounded-2xl p-3 sm:p-4 border border-[#F15B98]/20">
+      <div className="bg-gradient-to-br from-[#4CAF50]/10 to-[#4CAF50]/5 rounded-2xl p-3 sm:p-4 border border-[#4CAF50]/20">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
           <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
             <div className="text-xs sm:text-sm text-gray-600 mb-1">总收入</div>
-            <div className="text-lg sm:text-xl font-bold text-[#F15B98]">{formatAmount(totalStats.income)}</div>
+            <div className="text-lg sm:text-xl font-bold text-[#4CAF50]">{formatAmount(totalStats.income)}</div>
           </div>
           <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
             <div className="text-xs sm:text-sm text-gray-600 mb-1">总支出</div>
-            <div className="text-lg sm:text-xl font-bold text-red-600">{formatAmount(totalStats.expense)}</div>
+            <div className="text-lg sm:text-xl font-bold text-[#E57373]">{formatAmount(totalStats.expense)}</div>
           </div>
           <div className="bg-white rounded-xl p-2 sm:p-4 border border-gray-200">
             <div className="text-xs sm:text-sm text-gray-600 mb-1">净额</div>
-            <div className={`text-lg sm:text-xl font-bold ${totalStats.net >= 0 ? 'text-[#F15B98]' : 'text-red-600'}`}>
+            <div className={`text-lg sm:text-xl font-bold ${totalStats.net >= 0 ? 'text-[#4CAF50]' : 'text-[#E57373]'}`}>
               {formatAmount(totalStats.net)}
             </div>
           </div>
@@ -261,7 +329,7 @@ export default function ExpenseList() {
                   placeholder="搜索费用名称或备注..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98]"
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4CAF50] focus:border-[#4CAF50]"
                   autoFocus
                 />
                 <button
@@ -287,7 +355,7 @@ export default function ExpenseList() {
               placeholder="搜索费用名称或备注..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98]"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4CAF50] focus:border-[#4CAF50]"
             />
           </div>
         </div>
@@ -330,19 +398,19 @@ export default function ExpenseList() {
                     <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-[#F15B98]" />
+                          <TrendingUp className="w-4 h-4 text-[#4CAF50]" />
                           <span className="text-gray-600">收入:</span>
-                          <span className="font-semibold text-[#F15B98]">{formatAmount(stats.income)}</span>
+                          <span className="font-semibold text-[#4CAF50]">{formatAmount(stats.income)}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <TrendingDown className="w-4 h-4 text-red-600" />
+                          <TrendingDown className="w-4 h-4 text-[#E57373]" />
                           <span className="text-gray-600">支出:</span>
-                          <span className="font-semibold text-red-600">{formatAmount(stats.expense)}</span>
+                          <span className="font-semibold text-[#E57373]">{formatAmount(stats.expense)}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <DollarSign className="w-4 h-4 text-gray-600" />
                           <span className="text-gray-600">净额:</span>
-                          <span className={`font-semibold ${stats.net >= 0 ? 'text-[#F15B98]' : 'text-red-600'}`}>
+                          <span className={`font-semibold ${stats.net >= 0 ? 'text-[#4CAF50]' : 'text-[#E57373]'}`}>
                             {formatAmount(stats.net)}
                           </span>
                         </div>
@@ -360,60 +428,190 @@ export default function ExpenseList() {
 
                 {/* 该月的费用列表 */}
                 {!collapsedMonths.has(monthKey) && (
-                <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                  {monthExpenses.map((expense) => {
-                    const isIncome = expense.transaction_type === 'income'
-                    
-                    return (
-                      <div
-                        key={expense.id}
-                        className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getExpenseTypeColor(expense.expense_type, expense.transaction_type)}`}>
-                                {getExpenseTypeText(expense.expense_type)}
-                              </span>
+                  <div onClick={(e) => e.stopPropagation()}>
+                  {/* 小屏幕：单列显示 */}
+                  <div className="lg:hidden space-y-3">
+                    {monthExpenses.map((expense) => {
+                      const isIncome = expense.transaction_type === 'income'
+                      
+                      return (
+                        <div
+                          key={expense.id}
+                          className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getExpenseTypeColor(expense.expense_type, expense.transaction_type)}`}>
+                                  {getExpenseTypeText(expense.expense_type)}
+                                </span>
                               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                isIncome ? 'bg-[#F15B98]/20 text-[#F15B98]' : 'bg-red-100 text-red-800'
+                                isIncome ? 'bg-[#4CAF50]/20 text-[#4CAF50]' : 'bg-[#E57373]/20 text-[#E57373]'
                               }`}>
                                 {isIncome ? '收入' : '支出'}
                               </span>
+                              </div>
+                              <h3 className="text-lg font-bold text-gray-900 mb-1">{expense.title}</h3>
+                              {expense.notes && (
+                                <p className="text-sm text-gray-600">{expense.notes}</p>
+                              )}
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">{expense.title}</h3>
-                            {expense.notes && (
-                              <p className="text-sm text-gray-600">{expense.notes}</p>
+                            <div className="text-right ml-4 flex-shrink-0">
+                              <div className={`text-lg font-bold ${isIncome ? 'text-[#4CAF50]' : 'text-[#E57373]'}`}>
+                                {isIncome ? '+' : '-'}{formatAmount(parseFloat(expense.amount.toString()))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Calendar className="w-4 h-4 mr-2" />
+                              <span>{formatDate(expense.expense_date)}</span>
+                            </div>
+                            {expense.receipt_url && (
+                              <a
+                                href={expense.receipt_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center text-sm text-[#4CAF50] hover:text-[#4CAF50]/80 font-medium"
+                              >
+                                <Receipt className="w-4 h-4 mr-1" />
+                                查看凭证
+                              </a>
                             )}
                           </div>
-                          <div className="text-right ml-4 flex-shrink-0">
-                            <div className={`text-2xl font-bold ${isIncome ? 'text-[#F15B98]' : 'text-red-600'}`}>
-                              {isIncome ? '+' : '-'}{formatAmount(parseFloat(expense.amount.toString()))}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* 大屏幕：左右分栏显示（左边支出，右边收入） */}
+                  <div className="hidden lg:grid lg:grid-cols-2 lg:gap-6">
+                    {/* 左边：支出 */}
+                    <div className="space-y-3">
+                      <h4 className="text-lg font-semibold text-[#E57373] mb-3 flex items-center gap-2">
+                        <TrendingDown className="w-5 h-5" />
+                        支出
+                      </h4>
+                      {monthExpenses
+                        .filter(e => e.transaction_type !== 'income')
+                        .map((expense) => (
+                          <div
+                            key={expense.id}
+                            className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getExpenseTypeColor(expense.expense_type, expense.transaction_type)}`}>
+                                    {getExpenseTypeText(expense.expense_type)}
+                                  </span>
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#E57373]/20 text-[#E57373]">
+                                    支出
+                                  </span>
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">{expense.title}</h3>
+                                {expense.notes && (
+                                  <p className="text-sm text-gray-600">{expense.notes}</p>
+                                )}
+                              </div>
+                              <div className="text-right ml-4 flex-shrink-0">
+                                <div className="text-lg font-bold text-[#E57373]">
+                                  -{formatAmount(parseFloat(expense.amount.toString()))}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                <span>{formatDate(expense.expense_date)}</span>
+                              </div>
+                              {expense.receipt_url && (
+                                <a
+                                  href={expense.receipt_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center text-sm text-[#4CAF50] hover:text-[#4CAF50]/80 font-medium"
+                                >
+                                  <Receipt className="w-4 h-4 mr-1" />
+                                  查看凭证
+                                </a>
+                              )}
                             </div>
                           </div>
+                        ))}
+                      {monthExpenses.filter(e => e.transaction_type !== 'income').length === 0 && (
+                        <div className="text-center py-8 text-gray-400">
+                          <TrendingDown className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">本月无支出记录</p>
                         </div>
+                      )}
+                    </div>
 
-                        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            <span>{formatDate(expense.expense_date)}</span>
+                    {/* 右边：收入 */}
+                    <div className="space-y-3">
+                      <h4 className="text-lg font-semibold text-[#4CAF50] mb-3 flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5" />
+                        收入
+                      </h4>
+                      {monthExpenses
+                        .filter(e => e.transaction_type === 'income')
+                        .map((expense) => (
+                          <div
+                            key={expense.id}
+                            className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getExpenseTypeColor(expense.expense_type, expense.transaction_type)}`}>
+                                    {getExpenseTypeText(expense.expense_type)}
+                                  </span>
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#4CAF50]/20 text-[#4CAF50]">
+                                    收入
+                                  </span>
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">{expense.title}</h3>
+                                {expense.notes && (
+                                  <p className="text-sm text-gray-600">{expense.notes}</p>
+                                )}
+                              </div>
+                              <div className="text-right ml-4 flex-shrink-0">
+                                <div className="text-lg font-bold text-[#4CAF50]">
+                                  +{formatAmount(parseFloat(expense.amount.toString()))}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                <span>{formatDate(expense.expense_date)}</span>
+                              </div>
+                              {expense.receipt_url && (
+                                <a
+                                  href={expense.receipt_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center text-sm text-[#4CAF50] hover:text-[#4CAF50]/80 font-medium"
+                                >
+                                  <Receipt className="w-4 h-4 mr-1" />
+                                  查看凭证
+                                </a>
+                              )}
+                            </div>
                           </div>
-                          {expense.receipt_url && (
-                            <a
-                              href={expense.receipt_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center text-sm text-[#F15B98] hover:text-[#F15B98]/80 font-medium"
-                            >
-                              <Receipt className="w-4 h-4 mr-1" />
-                              查看凭证
-                            </a>
-                          )}
+                        ))}
+                      {monthExpenses.filter(e => e.transaction_type === 'income').length === 0 && (
+                        <div className="text-center py-8 text-gray-400">
+                          <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">本月无收入记录</p>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )}
+                    </div>
+                  </div>
+                  </div>
                 )}
               </div>
             )

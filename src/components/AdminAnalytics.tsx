@@ -337,40 +337,56 @@ const AdminAnalytics = () => {
           new Date(expense.created_at) >= new Date(startOfYear)
         )
 
-        // 费用类型中文映射
+        // 费用类型中文映射（大类）
         const getExpenseTypeText = (type: string) => {
           const incomeTypes: { [key: string]: string } = {
-            'membership_sponsorship': '会费及赞助类',
-            'collection': '代收类',
-            'investment_finance': '投资及理财类',
-            'other_income': '其他杂项',
-            'membership_fee': '会费',
-            'sponsorship_fee': '赞助费',
-            'collected_competition_ball_fee': '代收比赛球费',
-            'collected_handicap_fee': '代收差点费',
-            'interest_income': '利息收入',
-            'collected_meal_fee': '代收餐费',
-            'gic_redemption': 'GIC 赎回',
-            'other': '其他'
+            // 新大类
+            'membership_income': '会员收入',
+            'sponsorship_support': '赞助与支持',
+            'activity_related_income': '活动相关收入',
+            'investment_income': '投资收益',
+            'other_income': '其他收入',
+            // 旧大类（兼容）
+            'membership_sponsorship': '会员收入',
+            'collection': '活动相关收入',
+            'investment_finance': '投资收益',
+            // 旧具体分类（兼容）
+            'membership_fee': '会员收入',
+            'sponsorship_fee': '赞助与支持',
+            'collected_competition_ball_fee': '活动相关收入',
+            'collected_handicap_fee': '活动相关收入',
+            'collected_meal_fee': '活动相关收入',
+            'interest_income': '投资收益',
+            'gic_redemption': '投资收益',
+            'other': '其他收入'
           }
           
           const expenseTypes: { [key: string]: string } = {
-            'event_activity': '赛事与活动支出',
-            'payment_on_behalf': '代付类',
-            'finance_deposit': '理财存款',
-            'other_misc': '其他杂费',
-            'competition_prizes_misc': '比赛奖品及杂费',
-            'event_meal_beverage': '活动餐费及酒水',
-            'photographer_fee': '摄影师费用',
-            'paid_handicap_fee': '代付差点费',
-            'gic_deposit': '存GIC',
-            'bank_fee': '银行费',
-            'paid_competition_fee': '代付比赛费用',
-            'refund': '退费',
-            'equipment': '设备采购',
-            'maintenance': '场地维护',
+            // 新大类
+            'activity_expense': '活动支出',
+            'investment_savings': '投资与储蓄',
+            'operating_expense': '运营支出',
+            'other_expense': '其它支出',
+            // 旧大类（兼容）
+            'event_activity': '活动支出',
+            'payment_on_behalf': '活动支出',
+            'finance_deposit': '投资与储蓄',
+            'other_misc': '其它支出',
+            // 旧具体分类（兼容）
+            'competition_prizes_misc': '活动支出',
+            'event_meal_beverage': '活动支出',
+            'paid_competition_fee': '活动支出',
+            'paid_handicap_fee': '活动支出',
+            'photographer_fee': '活动支出',
+            'refund': '活动支出',
+            'gic_deposit': '投资与储蓄',
+            'bank_fee': '运营支出',
+            'other': '其它支出',
+            // 最旧分类（兼容）
+            'equipment': '其它支出',
+            'maintenance': '其它支出',
             'activity': '活动支出',
-            'salary': '人员工资'
+            'salary': '其它支出'
           }
           
           return incomeTypes[type] || expenseTypes[type] || type
@@ -484,40 +500,56 @@ const AdminAnalytics = () => {
           }
         })
 
-        // 费用类型中文映射
+        // 费用类型中文映射（大类）
         const getExpenseTypeText = (type: string) => {
           const incomeTypes: { [key: string]: string } = {
-            'membership_sponsorship': '会费及赞助类',
-            'collection': '代收类',
-            'investment_finance': '投资及理财类',
-            'other_income': '其他杂项',
-            'membership_fee': '会费',
-            'sponsorship_fee': '赞助费',
-            'collected_competition_ball_fee': '代收比赛球费',
-            'collected_handicap_fee': '代收差点费',
-            'interest_income': '利息收入',
-            'collected_meal_fee': '代收餐费',
-            'gic_redemption': 'GIC 赎回',
-            'other': '其他'
+            // 新大类
+            'membership_income': '会员收入',
+            'sponsorship_support': '赞助与支持',
+            'activity_related_income': '活动相关收入',
+            'investment_income': '投资收益',
+            'other_income': '其他收入',
+            // 旧大类（兼容）
+            'membership_sponsorship': '会员收入',
+            'collection': '活动相关收入',
+            'investment_finance': '投资收益',
+            // 旧具体分类（兼容）
+            'membership_fee': '会员收入',
+            'sponsorship_fee': '赞助与支持',
+            'collected_competition_ball_fee': '活动相关收入',
+            'collected_handicap_fee': '活动相关收入',
+            'collected_meal_fee': '活动相关收入',
+            'interest_income': '投资收益',
+            'gic_redemption': '投资收益',
+            'other': '其他收入'
           }
           
           const expenseTypes: { [key: string]: string } = {
-            'event_activity': '赛事与活动支出',
-            'payment_on_behalf': '代付类',
-            'finance_deposit': '理财存款',
-            'other_misc': '其他杂费',
-            'competition_prizes_misc': '比赛奖品及杂费',
-            'event_meal_beverage': '活动餐费及酒水',
-            'photographer_fee': '摄影师费用',
-            'paid_handicap_fee': '代付差点费',
-            'gic_deposit': '存GIC',
-            'bank_fee': '银行费',
-            'paid_competition_fee': '代付比赛费用',
-            'refund': '退费',
-            'equipment': '设备采购',
-            'maintenance': '场地维护',
+            // 新大类
+            'activity_expense': '活动支出',
+            'investment_savings': '投资与储蓄',
+            'operating_expense': '运营支出',
+            'other_expense': '其它支出',
+            // 旧大类（兼容）
+            'event_activity': '活动支出',
+            'payment_on_behalf': '活动支出',
+            'finance_deposit': '投资与储蓄',
+            'other_misc': '其它支出',
+            // 旧具体分类（兼容）
+            'competition_prizes_misc': '活动支出',
+            'event_meal_beverage': '活动支出',
+            'paid_competition_fee': '活动支出',
+            'paid_handicap_fee': '活动支出',
+            'photographer_fee': '活动支出',
+            'refund': '活动支出',
+            'gic_deposit': '投资与储蓄',
+            'bank_fee': '运营支出',
+            'other': '其它支出',
+            // 最旧分类（兼容）
+            'equipment': '其它支出',
+            'maintenance': '其它支出',
             'activity': '活动支出',
-            'salary': '人员工资'
+            'salary': '其它支出'
           }
           
           return incomeTypes[type] || expenseTypes[type] || type

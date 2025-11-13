@@ -638,17 +638,17 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
       // 立即更新左侧列表中的成绩信息
       if (insertData) {
-        setParticipants(prevParticipants => 
-          prevParticipants.map(participant => 
-            participant.user_id === selectedParticipant.user_id
-              ? {
-                  ...participant,
-                  total_strokes: insertData.total_strokes,
-                  rank: insertData.rank
-                }
-              : participant
-          )
+      setParticipants(prevParticipants => 
+        prevParticipants.map(participant => 
+          participant.user_id === selectedParticipant.user_id
+            ? {
+                ...participant,
+                total_strokes: insertData.total_strokes,
+                rank: insertData.rank
+              }
+            : participant
         )
+      )
       }
 
       showSuccess(existingScore ? '成绩更新成功' : '成绩保存成功')
@@ -1486,14 +1486,14 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
                   if (result.error) {
                     console.error(`[导入] 更新访客成绩失败:`, result.error)
-                    failed.push(player.name)
+                failed.push(player.name)
                     errors.push(`${player.name}: 更新访客成绩失败 - ${result.error.message}`)
-                  } else {
-                    console.log(`[导入] 访客成绩更新成功:`, player.name)
-                    success.push(player.name)
-                    guestSuccessCount++
-                  }
-                } else {
+              } else {
+                console.log(`[导入] 访客成绩更新成功:`, player.name)
+                success.push(player.name)
+                guestSuccessCount++
+              }
+            } else {
                   // 没有变化，直接标记为成功
                   success.push(player.name)
                   guestSuccessCount++
@@ -1617,7 +1617,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                 if (result.error) {
                   console.error(`[导入] 更新失败:`, result.error)
                   throw result.error
-                }
+            }
                 console.log(`[导入] ${player.name}: 更新成功`)
               } else {
                 console.log(`[导入] ${player.name}: 数据无变化，跳过更新`)

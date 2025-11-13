@@ -79,7 +79,75 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps) {
   const { user } = useAuth()
+  const [headerHeight, setHeaderHeight] = useState(0)
   const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information' | 'audit'>('dashboard')
+  
+  // 计算会员导航菜单的高度，用于设置管理端菜单的 top 值
+  useEffect(() => {
+    const calculateHeaderHeight = () => {
+      // 查找 Dashboard 中的 header 元素（会员导航菜单）
+      // 使用更精确的选择器：Dashboard 中的 header 有 sticky top-0 z-50
+      const header = document.querySelector('header.shadow-sm.border-b.sticky.top-0.z-50') as HTMLElement
+      if (header) {
+        setHeaderHeight(header.offsetHeight)
+      } else {
+        // 如果找不到，使用默认值（大约 80-100px）
+        setHeaderHeight(80)
+      }
+    }
+    
+    calculateHeaderHeight()
+    window.addEventListener('resize', calculateHeaderHeight)
+    
+    // 延迟计算，确保 DOM 已渲染
+    const timer = setTimeout(calculateHeaderHeight, 100)
+    const timer2 = setTimeout(calculateHeaderHeight, 500) // 再次延迟，确保完全加载
+    
+    return () => {
+      window.removeEventListener('resize', calculateHeaderHeight)
+      clearTimeout(timer)
+      clearTimeout(timer2)
+    }
+  }, [])
+
+  // 隐藏的审计日志访问方式：URL参数和快捷键
+  useEffect(() => {
+    // 检查URL参数
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('audit') === '1' || urlParams.get('view') === 'audit') {
+      setCurrentView('audit')
+    }
+
+    // 快捷键：Ctrl+Shift+A (Windows/Linux) 或 Cmd+Shift+A (Mac) - 切换显示/隐藏
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+      const modifierKey = isMac ? e.metaKey : e.ctrlKey
+      
+      if (modifierKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        // Toggle: 如果当前是审计界面，则切换回dashboard；否则切换到审计界面
+        setCurrentView(prev => {
+          const newView = prev === 'audit' ? 'dashboard' : 'audit'
+          // 更新URL但不刷新页面
+          const url = new URL(window.location.href)
+          if (newView === 'audit') {
+            url.searchParams.set('audit', '1')
+          } else {
+            url.searchParams.delete('audit')
+            url.searchParams.delete('view')
+          }
+          window.history.pushState({}, '', url.toString())
+          return newView
+        })
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [currentView])
+  
   const [selectedEventForRegistration, setSelectedEventForRegistration] = useState<Event | null>(null)
   const [events, setEvents] = useState<Event[]>([])
   const [posters, setPosters] = useState<Poster[]>([])
@@ -736,7 +804,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     <div className="space-y-6">
       {/* 管理员导航 */}
       <div 
-        className={`rounded-3xl p-4 shadow-lg sticky top-0 z-[60] transition-all duration-400 ease-in-out ${
+        className={`rounded-3xl p-4 shadow-lg sticky z-[60] transition-all duration-400 ease-in-out ${
           adminMenuVisible 
             ? 'opacity-100 transform translate-y-0 scale-100' 
             : 'opacity-0 transform -translate-y-4 scale-95 pointer-events-none'
@@ -744,7 +812,8 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
         style={{
           backgroundColor: '#619f56',
           borderColor: 'rgba(255,255,255,0.2)',
-          transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out'
+          transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out',
+          top: headerHeight > 0 ? `${headerHeight}px` : '0px'
         }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -845,17 +914,6 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             >
               <Users className="w-4 h-4 mr-2" />
               会员管理
-            </button>
-            <button
-              onClick={() => setCurrentView('audit')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'audit'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <Shield className="w-4 h-4 mr-2" />
-              审计日志
             </button>
           </div>
         </div>
@@ -981,23 +1039,6 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                 会员管理
               </div>
               {currentView === 'members' && <ChevronRight className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('audit')
-                setMobileMenuOpen(false)
-              }}
-              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
-                currentView === 'audit'
-                  ? 'bg-green-500/40 text-white shadow-lg'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center">
-                <Shield className="w-4 h-4 mr-2" />
-                审计日志
-              </div>
-              {currentView === 'audit' && <ChevronRight className="w-4 h-4" />}
             </button>
           </div>
         )}
