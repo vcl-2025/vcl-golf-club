@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage'
 import ResetPassword from './pages/ResetPassword'
 import EventDetailPage from './pages/EventDetailPage'
 import EventReviewSharePage from './pages/EventReviewSharePage'
+import EmailTestPage from './pages/EmailTestPage'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
 import { initMobileViewport } from './utils/viewport'
@@ -153,6 +154,15 @@ function App() {
           
           {/* 活动回顾分享页（公开，不需要登录，用于分享预览） */}
           <Route path="/review/:id" element={<EventReviewSharePage />} />
+          
+          {/* 邮件测试页面（需要登录） */}
+          <Route path="/test-email" element={
+            user ? (
+              <EmailTestPage />
+            ) : (
+              <NavigateWithParams to="/login" replace />
+            )
+          } />
           
           {/* 其他路由重定向到首页 */}
           <Route path="*" element={

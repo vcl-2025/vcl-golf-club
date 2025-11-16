@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { X, User, Phone, CreditCard, QrCode, Clock, CheckCircle, XCircle, AlertCircle, Upload } from 'lucide-react'
+import { X, User, Phone, CreditCard, QrCode, Clock, CheckCircle, XCircle, AlertCircle, Upload, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
 import { useModal } from './ModalProvider'
@@ -58,6 +58,26 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         setPaymentProofPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
+    }
+  }
+
+  const downloadQRCode = async (qrCodeUrl: string, eventTitle: string) => {
+    try {
+      const response = await fetch(qrCodeUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${eventTitle}-支付二维码.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('下载二维码失败:', error)
+      showError('下载二维码失败，请尝试右键保存图片')
     }
   }
 
@@ -503,15 +523,28 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                   {/* 二维码支付 */}
                   {event.payment_qr_code && (
                     <div className="p-3 bg-white rounded-lg border">
-                      <div className="flex items-center mb-2">
-                        <QrCode className="w-5 h-5 mr-2 text-gray-500" />
-                        <span className="text-sm font-medium">扫码支付</span>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <QrCode className="w-5 h-5 mr-2 text-gray-500" />
+                          <span className="text-sm font-medium">扫码支付</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => downloadQRCode(event.payment_qr_code!, event.title)}
+                          className="flex items-center gap-1 text-xs text-[#F15B98] hover:text-[#E0487A] transition-colors"
+                          title="下载二维码"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>下载</span>
+                        </button>
                       </div>
                       <div className="text-center">
                         <img 
                           src={event.payment_qr_code} 
                           alt="支付二维码" 
-                          className="w-32 h-32 mx-auto border rounded-lg"
+                          onClick={() => downloadQRCode(event.payment_qr_code!, event.title)}
+                          className="w-32 h-32 mx-auto border rounded-lg cursor-pointer hover:border-[#F15B98] transition-colors"
+                          title="点击下载二维码"
                         />
                         <p className="text-xs text-gray-500 mt-2">使用微信或支付宝扫码支付</p>
                       </div>

@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun, ShoppingCart, AlertCircle, Archive } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
+import { getUserModulePermissions, type ModuleName, type ModulePermission } from '../lib/modulePermissions'
 import ProfileModal from './ProfileModal'
 import EventList from './EventList'
 import EventDetail from './EventDetail'
@@ -103,6 +104,17 @@ export default function Dashboard() {
   const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [adminMenuVisible, setAdminMenuVisible] = useState(true)
+  // 模块权限状态
+  const [modulePermissions, setModulePermissions] = useState<Record<ModuleName, ModulePermission>>({
+    members: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    events: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    scores: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    expenses: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    information: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    posters: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    investments: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    audit: { can_access: false, can_create: false, can_update: false, can_delete: false }
+  })
   // 修改密码相关状态
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -326,6 +338,13 @@ export default function Dashboard() {
       fetchMemberCount()
       fetchDashboardData()
       fetchUnreadInformationCount()
+      
+      // 获取用户模块权限
+      getUserModulePermissions(user.id).then(permissions => {
+        setModulePermissions(permissions)
+      }).catch(error => {
+        console.error('获取模块权限失败:', error)
+      })
     }
     
   }, [user])
@@ -817,6 +836,14 @@ export default function Dashboard() {
     switch (role) {
       case 'admin':
         return '管理员'
+      case 'finance':
+        return '财务'
+      case 'editor':
+        return '编辑'
+      case 'score_manager':
+        return '成绩管理'
+      case 'viewer':
+        return '查看者'
       case 'member':
         return '会员'
       default:
@@ -905,8 +932,13 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  // 检查是否为管理员
+  // 检查是否为管理员（兼容旧逻辑）
   const isAdmin = userProfile?.role === 'admin'
+  
+  // 检查用户是否有访问管理端的权限（至少有一个模块的 can_access 为 true）
+  const hasAdminAccess = useMemo(() => {
+    return Object.values(modulePermissions).some(perm => perm.can_access === true)
+  }, [modulePermissions])
 
   // 如果是会员照片页面，直接返回全屏组件
   if (currentView === 'members') {
@@ -1054,7 +1086,7 @@ export default function Dashboard() {
               >
                 费用公示
               </button>
-              {isAdmin && (
+              {hasAdminAccess && (
                 <button 
                   onClick={() => {
                     setCurrentView('admin')
@@ -1198,7 +1230,7 @@ export default function Dashboard() {
                         <Lock className="w-4 h-4 mr-3" />
                         修改密码
                       </button>
-                      {isAdmin && (
+                      {hasAdminAccess && (
                         <button
                           onClick={(e) => {
                             e.preventDefault()
@@ -1392,7 +1424,7 @@ export default function Dashboard() {
                   <Receipt className="w-5 h-5" style={{ color: currentView === 'expenses' ? '#FFFFFF' : '#1F2937' }} strokeWidth={2} />
                   <span>费用公示</span>
                 </button>
-                {isAdmin && (
+                {hasAdminAccess && (
                   <button 
                     onClick={() => {
                       setCurrentView('admin')
@@ -1462,7 +1494,7 @@ export default function Dashboard() {
                 </button>
                 
                 {/* Mobile Admin Button */}
-                {isAdmin && (
+                {hasAdminAccess && (
                   <button
                     onClick={() => {
                       setCurrentView('admin')
@@ -1640,6 +1672,11 @@ export default function Dashboard() {
                     }}
                   >
                       欢迎回来，{userProfile?.full_name || '用户'}
+                      {userProfile?.role && (
+                        <span className="ml-2 text-lg sm:text-xl lg:text-2xl font-normal opacity-90">
+                          ({getRoleText(userProfile.role)})
+                        </span>
+                      )}
                   </h2>
                   </div>
                 </div>
@@ -2656,7 +2693,8 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* 最新费用公示 */}
+              {/* 最新费用公示 - 已隐藏 */}
+              {false && (
               <div className="rounded-2xl p-4 sm:p-6 border border-gray-300/50" style={{ backgroundColor: 'rgba(249, 246, 244, 0.75)', boxShadow: '0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 1px 4px 0 rgba(0, 0, 0, 0.04)' }}>
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                   <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 flex items-center">
@@ -2709,6 +2747,7 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+              )}
             </div>
           </>
         ) : currentView === 'events' ? (
@@ -2755,7 +2794,7 @@ export default function Dashboard() {
             </div>
             <InformationCenterList onItemSelect={setSelectedInformationItem} />
           </div>
-        ) : currentView === 'admin' && isAdmin ? (
+        ) : currentView === 'admin' && hasAdminAccess ? (
           <AdminPanel adminMenuVisible={adminMenuVisible} />
         ) : null}
       </main>

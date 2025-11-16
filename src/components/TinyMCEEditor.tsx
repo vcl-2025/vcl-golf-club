@@ -178,18 +178,17 @@ export default function TinyMCEEditor({
           },
           setup: (editor: any) => {
             editor.on('init', () => {
-              // console.log('TinyMCE 初始化成功');
-              // console.log('TinyMCE 初始化，设置内容:', content);
-              // console.log('TinyMCE 初始化，内容长度:', content?.length);
-              
               // 强制设置 LTR 方向
               editor.getBody().style.direction = 'ltr';
               editor.getBody().style.textAlign = 'left';
               
-              if (content) {
-                editor.setContent(content);
-                //console.log('初始化后编辑器内容:', editor.getContent());
-              }
+              // 初始化时立即设置内容（使用当前content值）
+              // 使用setTimeout确保编辑器完全初始化后再设置内容
+              setTimeout(() => {
+                if (content) {
+                  editor.setContent(content);
+                }
+              }, 0);
             });
             editor.on('change keyup', () => {
               onChange(editor.getContent());
@@ -198,9 +197,15 @@ export default function TinyMCEEditor({
               console.error('TinyMCE 错误:', e);
             });
           },
-              init_instance_callback: (editor: any) => {
-                console.log('TinyMCE 实例初始化完成:', editor.id);
+          init_instance_callback: (editor: any) => {
+            console.log('TinyMCE 实例初始化完成:', editor.id);
+            // 在实例完全初始化后，再次尝试设置内容
+            setTimeout(() => {
+              if (content && editor.getContent() !== content) {
+                editor.setContent(content);
               }
+            }, 100);
+          }
         });
         initialized.current = true;
         setTinymceLoaded(true);
@@ -265,9 +270,12 @@ export default function TinyMCEEditor({
             setup: (editor: any) => {
               editor.on('init', () => {
                 console.log('TinyMCE CDN 初始化成功');
-                if (content) {
-                  editor.setContent(content);
-                }
+                // 使用setTimeout确保编辑器完全初始化后再设置内容
+                setTimeout(() => {
+                  if (content) {
+                    editor.setContent(content);
+                  }
+                }, 0);
               });
               editor.on('change keyup', () => {
                 onChange(editor.getContent());
@@ -295,32 +303,43 @@ export default function TinyMCEEditor({
 
   // 监听 content 变化，更新编辑器内容
   useEffect(() => {
-    if (window.tinymce) {
+    if (!window.tinymce) return;
+    
+    const updateEditorContent = () => {
       const editor = window.tinymce.get(editorId.current);
       if (editor && editor.getContent) {
         const currentContent = editor.getContent();
         // 只有当内容真正不同时才更新，避免无限循环
         if (currentContent !== content) {
-          // console.log('TinyMCE 更新内容:', content);
-          // console.log('TinyMCE 当前编辑器内容:', currentContent);
-          editor.setContent(content);
-          // console.log('设置后编辑器内容:', editor.getContent());
+          editor.setContent(content || '');
+          return true; // 成功设置
         }
-      } else {
-        // console.log('TinyMCE 编辑器未找到或未初始化');
-        // 如果编辑器还没初始化，延迟重试
-        if (content) {
-          setTimeout(() => {
-            const retryEditor = window.tinymce.get(editorId.current);
-            if (retryEditor && retryEditor.getContent) {
-              // console.log('TinyMCE 延迟设置内容:', content);
-              retryEditor.setContent(content);
-            }
-          }, 1000);
-        }
+        return true; // 内容相同，也算成功
       }
+      return false; // 编辑器未准备好
+    };
+
+    // 立即尝试设置内容
+    if (updateEditorContent()) {
+      return; // 成功，无需重试
     }
-  }, [content]);
+
+    // 如果编辑器还没初始化，使用重试机制
+    let retryCount = 0;
+    const maxRetries = 10; // 最多重试10次
+    const retryInterval = 200; // 每次间隔200ms，总共最多2秒
+
+    const retryTimer = setInterval(() => {
+      retryCount++;
+      if (updateEditorContent() || retryCount >= maxRetries) {
+        clearInterval(retryTimer);
+      }
+    }, retryInterval);
+
+    return () => {
+      clearInterval(retryTimer);
+    };
+  }, [content, editorId]);
 
   // 移动设备使用TinyMCE的移动端配置
   const getMobileConfig = () => {

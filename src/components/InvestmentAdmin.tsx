@@ -3,6 +3,8 @@ import { Plus, Edit, Trash2, Heart, DollarSign, Calendar, Check, X, Eye, Chevron
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import InvestmentProjectForm from './InvestmentProjectForm'
+import { getUserModulePermissions } from '../lib/modulePermissions'
+import { useAuth } from '../hooks/useAuth'
 
 interface InvestmentProject {
   id: string
@@ -37,6 +39,7 @@ interface Investment {
 }
 
 export default function InvestmentAdmin() {
+  const { user } = useAuth()
   const [projects, setProjects] = useState<InvestmentProject[]>([])
   const [investments, setInvestments] = useState<Investment[]>([])
   const [selectedProject, setSelectedProject] = useState<InvestmentProject | null>(null)
@@ -44,6 +47,11 @@ export default function InvestmentAdmin() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
   const { confirmDelete, showSuccess, showError } = useModal()
   const [loading, setLoading] = useState(true)
+  const [modulePermissions, setModulePermissions] = useState({
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  })
   
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('')
@@ -52,7 +60,15 @@ export default function InvestmentAdmin() {
 
   useEffect(() => {
     fetchData()
-  }, [])
+    // 获取模块权限
+    if (user?.id) {
+      getUserModulePermissions(user.id).then(permissions => {
+        setModulePermissions(permissions.investments)
+      }).catch(error => {
+        console.error('获取模块权限失败:', error)
+      })
+    }
+  }, [user])
 
   // 筛选项目
   useEffect(() => {
@@ -226,16 +242,18 @@ export default function InvestmentAdmin() {
             <Heart className="w-7 h-7 text-red-500 mr-3" />
             捐赠管理
           </h2>
-          <button
-            onClick={() => {
-              setSelectedProject(null)
-              setShowProjectForm(true)
-            }}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            创建捐赠项目
-          </button>
+          {modulePermissions.can_create && (
+            <button
+              onClick={() => {
+                setSelectedProject(null)
+                setShowProjectForm(true)
+              }}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              创建捐赠项目
+            </button>
+          )}
         </div>
 
         <div className="flex items-center justify-between mb-4">
@@ -368,27 +386,31 @@ export default function InvestmentAdmin() {
                       </div>
 
                       <div className="flex space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedProject(project)
-                            setShowProjectForm(true)
-                          }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="编辑"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteProject(project.id)
-                          }}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="删除"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        {modulePermissions.can_update && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedProject(project)
+                              setShowProjectForm(true)
+                            }}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="编辑"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                        )}
+                        {modulePermissions.can_delete && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteProject(project.id)
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="删除"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

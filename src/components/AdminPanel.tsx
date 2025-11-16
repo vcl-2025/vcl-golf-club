@@ -15,12 +15,14 @@ import MemberAdmin from './MemberAdmin'
 import AdminAnalytics from './AdminAnalytics'
 import InformationCenterForm from './InformationCenterForm'
 import AuditLogViewer from './AuditLogViewer'
+import RolePermissionsManager from './RolePermissionsManager'
 import { useModal } from './ModalProvider'
 import { getEventStatus, getEventStatusText, getEventStatusStyles } from '../utils/eventStatus'
 import { InformationItem } from '../types'
 import { FileText as FileTextIcon, Shield } from 'lucide-react'
 import { deleteWithAudit, updateWithAudit, createAuditContext, logBatchOperation, type UserRole } from '../lib/audit'
 import { useAuth } from '../hooks/useAuth'
+import { getUserModulePermissions, type ModuleName, type ModulePermission } from '../lib/modulePermissions'
 
 interface AdminStats {
   // 活动统计
@@ -80,7 +82,22 @@ interface AdminPanelProps {
 export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps) {
   const { user } = useAuth()
   const [headerHeight, setHeaderHeight] = useState(0)
-  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information' | 'audit'>('dashboard')
+  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information' | 'audit' | 'role_permissions'>('dashboard')
+  
+  // 用户角色状态（用于检查是否为admin）
+  const [userRole, setUserRole] = useState<string | null>(null)
+  
+  // 模块权限状态
+  const [modulePermissions, setModulePermissions] = useState<Record<ModuleName, ModulePermission>>({
+    members: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    events: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    scores: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    expenses: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    information: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    posters: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    investments: { can_access: false, can_create: false, can_update: false, can_delete: false },
+    audit: { can_access: false, can_create: false, can_update: false, can_delete: false }
+  })
   
   // 计算会员导航菜单的高度，用于设置管理端菜单的 top 值
   useEffect(() => {
@@ -110,30 +127,58 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     }
   }, [])
 
-  // 隐藏的审计日志访问方式：URL参数和快捷键
+  // 隐藏的审计日志和角色权限访问方式：URL参数和快捷键（仅admin）
   useEffect(() => {
-    // 检查URL参数
+    // 检查URL参数（不依赖userRole，先检查URL）
     const urlParams = new URLSearchParams(window.location.search)
     if (urlParams.get('audit') === '1' || urlParams.get('view') === 'audit') {
-      setCurrentView('audit')
+      // 延迟检查权限，等userRole加载后再验证
+      if (userRole === 'admin') {
+        setCurrentView('audit')
+      }
+    }
+    if (urlParams.get('role_permissions') === '1' || urlParams.get('view') === 'role_permissions') {
+      // 延迟检查权限，等userRole加载后再验证
+      if (userRole === 'admin') {
+        setCurrentView('role_permissions')
+      }
     }
 
-    // 快捷键：Ctrl+Shift+A (Windows/Linux) 或 Cmd+Shift+A (Mac) - 切换显示/隐藏
+    // 快捷键处理（只有admin才能使用）
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果userRole还没加载，不处理快捷键
+      if (userRole !== 'admin') return
+      
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
       const modifierKey = isMac ? e.metaKey : e.ctrlKey
       
+      // Ctrl+Shift+A (Windows/Linux) 或 Cmd+Shift+A (Mac) - 审计日志
       if (modifierKey && e.shiftKey && e.key.toLowerCase() === 'a') {
         e.preventDefault()
-        // Toggle: 如果当前是审计界面，则切换回dashboard；否则切换到审计界面
         setCurrentView(prev => {
           const newView = prev === 'audit' ? 'dashboard' : 'audit'
-          // 更新URL但不刷新页面
           const url = new URL(window.location.href)
           if (newView === 'audit') {
             url.searchParams.set('audit', '1')
           } else {
             url.searchParams.delete('audit')
+            url.searchParams.delete('view')
+          }
+          window.history.pushState({}, '', url.toString())
+          return newView
+        })
+      }
+      
+      // Ctrl+Shift+R (Windows/Linux) 或 Cmd+Shift+R (Mac) - 角色权限
+      if (modifierKey && e.shiftKey && e.key.toLowerCase() === 'r') {
+        e.preventDefault()
+        setCurrentView(prev => {
+          const newView = prev === 'role_permissions' ? 'dashboard' : 'role_permissions'
+          const url = new URL(window.location.href)
+          if (newView === 'role_permissions') {
+            url.searchParams.set('role_permissions', '1')
+          } else {
+            url.searchParams.delete('role_permissions')
             url.searchParams.delete('view')
           }
           window.history.pushState({}, '', url.toString())
@@ -146,7 +191,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [currentView])
+  }, [currentView, userRole])
   
   const [selectedEventForRegistration, setSelectedEventForRegistration] = useState<Event | null>(null)
   const [events, setEvents] = useState<Event[]>([])
@@ -183,6 +228,33 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   
   const { confirmDelete, showSuccess, showError } = useModal()
 
+  // 获取用户模块权限和角色
+  useEffect(() => {
+    if (user?.id) {
+      // 获取用户角色
+      supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setUserRole(data.role || 'member')
+          }
+        })
+        .catch(error => {
+          console.error('获取用户角色失败:', error)
+        })
+      
+      // 获取模块权限
+      getUserModulePermissions(user.id).then(permissions => {
+        setModulePermissions(permissions)
+      }).catch(error => {
+        console.error('获取模块权限失败:', error)
+      })
+    }
+  }, [user])
+
   useEffect(() => {
     fetchAdminData()
     
@@ -200,6 +272,33 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       window.removeEventListener('admin-navigate', handleAdminNavigate as EventListener)
     }
   }, [])
+
+  // 获取用户模块权限和角色
+  useEffect(() => {
+    if (user?.id) {
+      // 获取用户角色
+      supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setUserRole(data.role || 'member')
+          }
+        })
+        .catch(error => {
+          console.error('获取用户角色失败:', error)
+        })
+      
+      // 获取模块权限
+      getUserModulePermissions(user.id).then(permissions => {
+        setModulePermissions(permissions)
+      }).catch(error => {
+        console.error('获取模块权限失败:', error)
+      })
+    }
+  }, [user])
 
   // 点击外部关闭操作菜单
   useEffect(() => {
@@ -841,80 +940,92 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             <button
               onClick={() => setCurrentView('dashboard')}
               className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'dashboard' 
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105' 
+                currentView === 'dashboard'
+                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
                   : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
               }`}
             >
               <BarChart3 className="w-4 h-4 mr-2" />
               数据统计
             </button>
-            <button
-              onClick={() => setCurrentView('information')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'information'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <FileTextIcon className="w-4 h-4 mr-2" />
-              信息中心管理
-            </button>
-            <button
-              onClick={() => setCurrentView('events')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'events'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              活动管理
-            </button>
-            <button
-              onClick={() => setCurrentView('scores')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'scores'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <Trophy className="w-4 h-4 mr-2" />
-              成绩管理
-            </button>
-            <button
-              onClick={() => setCurrentView('investments')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'investments'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <DollarSign className="w-4 h-4 mr-2" />
-              捐赠管理
-            </button>
-            <button
-              onClick={() => setCurrentView('expenses')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'expenses'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <Receipt className="w-4 h-4 mr-2" />
-              费用管理
-            </button>
-            <button
-              onClick={() => setCurrentView('members')}
-              className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
-                currentView === 'members'
-                  ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
-              }`}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              会员管理
-            </button>
+            {modulePermissions.information.can_access && (
+              <button
+                onClick={() => setCurrentView('information')}
+                className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                  currentView === 'information'
+                    ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+                }`}
+              >
+                <FileTextIcon className="w-4 h-4 mr-2" />
+                信息中心管理
+              </button>
+            )}
+            {modulePermissions.events.can_access && (
+              <button
+                onClick={() => setCurrentView('events')}
+                className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                  currentView === 'events'
+                    ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+                }`}
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                活动管理
+              </button>
+            )}
+            {modulePermissions.scores.can_access && (
+              <button
+                onClick={() => setCurrentView('scores')}
+                className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                  currentView === 'scores'
+                    ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+                }`}
+              >
+                <Trophy className="w-4 h-4 mr-2" />
+                成绩管理
+              </button>
+            )}
+            {modulePermissions.investments.can_access && (
+              <button
+                onClick={() => setCurrentView('investments')}
+                className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                  currentView === 'investments'
+                    ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+                }`}
+              >
+                <DollarSign className="w-4 h-4 mr-2" />
+                捐赠管理
+              </button>
+            )}
+            {modulePermissions.expenses.can_access && (
+              <button
+                onClick={() => setCurrentView('expenses')}
+                className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                  currentView === 'expenses'
+                    ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+                }`}
+              >
+                <Receipt className="w-4 h-4 mr-2" />
+                费用管理
+              </button>
+            )}
+            {modulePermissions.members.can_access && (
+              <button
+                onClick={() => setCurrentView('members')}
+                className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
+                  currentView === 'members'
+                    ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white hover:shadow-md'
+                }`}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                会员管理
+              </button>
+            )}
           </div>
         </div>
         
@@ -938,108 +1049,120 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
               </div>
               {currentView === 'dashboard' && <ChevronRight className="w-4 h-4" />}
             </button>
-            <button
-              onClick={() => {
-                setCurrentView('information')
-                setMobileMenuOpen(false)
-              }}
-              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
-                currentView === 'information'
-                  ? 'bg-green-500/40 text-white shadow-lg'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center">
-                <FileTextIcon className="w-4 h-4 mr-2" />
-                信息中心管理
-              </div>
-              {currentView === 'information' && <ChevronRight className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('events')
-                setMobileMenuOpen(false)
-              }}
-              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
-                currentView === 'events'
-                  ? 'bg-green-500/40 text-white shadow-lg'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-2" />
-                活动管理
-              </div>
-              {currentView === 'events' && <ChevronRight className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('scores')
-                setMobileMenuOpen(false)
-              }}
-              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
-                currentView === 'scores'
-                  ? 'bg-green-500/40 text-white shadow-lg'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center">
-                <Trophy className="w-4 h-4 mr-2" />
-                成绩管理
-              </div>
-              {currentView === 'scores' && <ChevronRight className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('investments')
-                setMobileMenuOpen(false)
-              }}
-              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
-                currentView === 'investments'
-                  ? 'bg-green-500/40 text-white shadow-lg'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center">
-                <DollarSign className="w-4 h-4 mr-2" />
-                捐赠管理
-              </div>
-              {currentView === 'investments' && <ChevronRight className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('expenses')
-                setMobileMenuOpen(false)
-              }}
-              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
-                currentView === 'expenses'
-                  ? 'bg-green-500/40 text-white shadow-lg'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center">
-                <Receipt className="w-4 h-4 mr-2" />
-                费用管理
-              </div>
-              {currentView === 'expenses' && <ChevronRight className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => {
-                setCurrentView('members')
-                setMobileMenuOpen(false)
-              }}
-              className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
-                currentView === 'members'
-                  ? 'bg-green-500/40 text-white shadow-lg'
-                  : 'text-white/90 hover:bg-green-500/20 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center">
-                <Users className="w-4 h-4 mr-2" />
-                会员管理
-              </div>
-              {currentView === 'members' && <ChevronRight className="w-4 h-4" />}
-            </button>
+            {modulePermissions.information.can_access && (
+              <button
+                onClick={() => {
+                  setCurrentView('information')
+                  setMobileMenuOpen(false)
+                }}
+                className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                  currentView === 'information'
+                    ? 'bg-green-500/40 text-white shadow-lg'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center">
+                  <FileTextIcon className="w-4 h-4 mr-2" />
+                  信息中心管理
+                </div>
+                {currentView === 'information' && <ChevronRight className="w-4 h-4" />}
+              </button>
+            )}
+            {modulePermissions.events.can_access && (
+              <button
+                onClick={() => {
+                  setCurrentView('events')
+                  setMobileMenuOpen(false)
+                }}
+                className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                  currentView === 'events'
+                    ? 'bg-green-500/40 text-white shadow-lg'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  活动管理
+                </div>
+                {currentView === 'events' && <ChevronRight className="w-4 h-4" />}
+              </button>
+            )}
+            {modulePermissions.scores.can_access && (
+              <button
+                onClick={() => {
+                  setCurrentView('scores')
+                  setMobileMenuOpen(false)
+                }}
+                className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                  currentView === 'scores'
+                    ? 'bg-green-500/40 text-white shadow-lg'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center">
+                  <Trophy className="w-4 h-4 mr-2" />
+                  成绩管理
+                </div>
+                {currentView === 'scores' && <ChevronRight className="w-4 h-4" />}
+              </button>
+            )}
+            {modulePermissions.investments.can_access && (
+              <button
+                onClick={() => {
+                  setCurrentView('investments')
+                  setMobileMenuOpen(false)
+                }}
+                className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                  currentView === 'investments'
+                    ? 'bg-green-500/40 text-white shadow-lg'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center">
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  捐赠管理
+                </div>
+                {currentView === 'investments' && <ChevronRight className="w-4 h-4" />}
+              </button>
+            )}
+            {modulePermissions.expenses.can_access && (
+              <button
+                onClick={() => {
+                  setCurrentView('expenses')
+                  setMobileMenuOpen(false)
+                }}
+                className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                  currentView === 'expenses'
+                    ? 'bg-green-500/40 text-white shadow-lg'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center">
+                  <Receipt className="w-4 h-4 mr-2" />
+                  费用管理
+                </div>
+                {currentView === 'expenses' && <ChevronRight className="w-4 h-4" />}
+              </button>
+            )}
+            {modulePermissions.members.can_access && (
+              <button
+                onClick={() => {
+                  setCurrentView('members')
+                  setMobileMenuOpen(false)
+                }}
+                className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
+                  currentView === 'members'
+                    ? 'bg-green-500/40 text-white shadow-lg'
+                    : 'text-white/90 hover:bg-green-500/20 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center">
+                  <Users className="w-4 h-4 mr-2" />
+                  会员管理
+                </div>
+                {currentView === 'members' && <ChevronRight className="w-4 h-4" />}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -1055,8 +1178,13 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
         </div>
       )}
 
+      {/* 角色权限管理 - 仅admin可通过URL参数或快捷键访问 */}
+      {currentView === 'role_permissions' && userRole === 'admin' && (
+        <RolePermissionsManager />
+      )}
+
       {/* 活动管理 */}
-      {currentView === 'events' && (
+      {currentView === 'events' && modulePermissions.events.can_access && (
         <div className="bg-white rounded-2xl p-[5px] lg:p-6 m-0.5 lg:m-0 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
@@ -1070,16 +1198,18 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                 ) : null
               })()}
             </div>
-            <button
-              onClick={() => {
-                setSelectedEvent(null)
-                setShowEventForm(true)
-              }}
-              className="btn-primary flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              创建活动
-            </button>
+            {modulePermissions.events.can_create && (
+              <button
+                onClick={() => {
+                  setSelectedEvent(null)
+                  setShowEventForm(true)
+                }}
+                className="btn-primary flex items-center"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                创建活动
+              </button>
+            )}
           </div>
 
           {/* 搜索和筛选 */}
@@ -1284,86 +1414,103 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                       </div>
                     </td>
                     <td className="px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium w-24 md:w-24 min-w-[50px]">
-                      {/* 桌面端：横向三个图标 */}
-                      <div className="hidden md:flex items-center justify-center space-x-2">
-                        <button
-                          onClick={() => {
-                            setSelectedEventForRegistration(event)
-                          }}
-                          className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
-                          title="报名管理"
-                        >
-                          <Users className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedEvent(event)
-                            setShowEventForm(true)
-                          }}
-                          className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
-                          title="编辑"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEvent(event.id)}
-                          className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
-                          title="删除"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      
-                      {/* 手机端：三个点菜单 */}
-                      <div className="md:hidden relative action-menu-container flex items-center justify-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setOpenActionMenuId(openActionMenuId === event.id ? null : event.id)
-                          }}
-                          className="text-gray-600 hover:text-gray-800 p-1.5 rounded hover:bg-gray-50"
-                          title="操作"
-                        >
-                          <MoreVertical className="w-5 h-5" />
-                        </button>
-                        
-                        {/* 下拉菜单 */}
-                        {openActionMenuId === event.id && (
-                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]">
-                            <button
-                              onClick={() => {
-                                setSelectedEventForRegistration(event)
-                                setOpenActionMenuId(null)
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center space-x-2"
-                            >
-                              <Users className="w-4 h-4" />
-                              <span>报名管理</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedEvent(event)
-                                setShowEventForm(true)
-                                setOpenActionMenuId(null)
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center space-x-2"
-                            >
-                              <Edit className="w-4 h-4" />
-                              <span>编辑</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                handleDeleteEvent(event.id)
-                                setOpenActionMenuId(null)
-                              }}
-                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              <span>删除</span>
-                            </button>
+                      {/* 只有有操作权限时才显示操作列 */}
+                      {(modulePermissions.events.can_update || modulePermissions.events.can_delete) && (
+                        <>
+                          {/* 桌面端：横向图标 */}
+                          <div className="hidden md:flex items-center justify-center space-x-2">
+                            {modulePermissions.events.can_update && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedEventForRegistration(event)
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
+                                  title="报名管理"
+                                >
+                                  <Users className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedEvent(event)
+                                    setShowEventForm(true)
+                                  }}
+                                  className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
+                                  title="编辑"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                            {modulePermissions.events.can_delete && (
+                              <button
+                                onClick={() => handleDeleteEvent(event.id)}
+                                className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
+                                title="删除"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
-                        )}
-                      </div>
+                          
+                          {/* 手机端：三个点菜单 */}
+                          <div className="md:hidden relative action-menu-container flex items-center justify-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenActionMenuId(openActionMenuId === event.id ? null : event.id)
+                              }}
+                              className="text-gray-600 hover:text-gray-800 p-1.5 rounded hover:bg-gray-50"
+                              title="操作"
+                            >
+                              <MoreVertical className="w-5 h-5" />
+                            </button>
+                            
+                            {/* 下拉菜单 */}
+                            {openActionMenuId === event.id && (
+                              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]">
+                                {modulePermissions.events.can_update && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedEventForRegistration(event)
+                                        setOpenActionMenuId(null)
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center space-x-2"
+                                    >
+                                      <Users className="w-4 h-4" />
+                                      <span>报名管理</span>
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedEvent(event)
+                                        setShowEventForm(true)
+                                        setOpenActionMenuId(null)
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center space-x-2"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                      <span>编辑</span>
+                                    </button>
+                                  </>
+                                )}
+                                {modulePermissions.events.can_delete && (
+                                  <button
+                                    onClick={() => {
+                                      handleDeleteEvent(event.id)
+                                      setOpenActionMenuId(null)
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>删除</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1396,7 +1543,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       )}
 
       {/* 海报管理 */}
-      {currentView === 'posters' && (
+      {currentView === 'posters' && modulePermissions.posters.can_access && (
         <div className="bg-white rounded-2xl p-[5px] lg:p-6 m-0.5 lg:m-0 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">海报管理</h2>
@@ -1428,21 +1575,25 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                     排序: {poster.display_order} | {new Date(poster.event_date).toLocaleDateString('zh-CN')}
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => {
-                        setSelectedPoster(poster)
-                        setShowPosterForm(true)
-                      }}
-                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      编辑
-                    </button>
-                    <button
-                      onClick={() => handleDeletePoster(poster.id)}
-                      className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      删除
-                    </button>
+                    {modulePermissions.posters.can_update && (
+                      <button
+                        onClick={() => {
+                          setSelectedPoster(poster)
+                          setShowPosterForm(true)
+                        }}
+                        className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        编辑
+                      </button>
+                    )}
+                    {modulePermissions.posters.can_delete && (
+                      <button
+                        onClick={() => handleDeletePoster(poster.id)}
+                        className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        删除
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1458,7 +1609,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       )}
 
       {/* 成绩管理 */}
-      {currentView === 'scores' && (
+      {currentView === 'scores' && modulePermissions.scores.can_access && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-sm p-[5px] lg:p-6 m-0.5 lg:m-0">
           <div className="flex items-center justify-between mb-6">
@@ -1653,7 +1804,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                               : '部分录入'
                             }
                           </span>
-                          {totalScoresCount > 0 && (
+                          {totalScoresCount > 0 && modulePermissions.scores.can_delete && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation() // 阻止触发卡片展开/折叠
@@ -1723,17 +1874,19 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                                             #{score.rank}
                                           </span>
                                         )}
-                                        <button
-                                          onClick={() => {
-                                            setSelectedEvent(event)
-                                            setSelectedScore(score)
-                                            setShowScoreForm(true)
-                                          }}
-                                          className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                          title="编辑成绩"
-                                        >
-                                          <Edit className="w-4 h-4" />
-                                        </button>
+                                        {modulePermissions.scores.can_update && (
+                                          <button
+                                            onClick={() => {
+                                              setSelectedEvent(event)
+                                              setSelectedScore(score)
+                                              setShowScoreForm(true)
+                                            }}
+                                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                            title="编辑成绩"
+                                          >
+                                            <Edit className="w-4 h-4" />
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                   ))
@@ -1742,22 +1895,24 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                                 <div className="text-center py-8 text-gray-500">
                                   <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                                   <p>暂无成绩记录</p>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedEvent(event)
-                                      setShowScoreForm(true)
-                                    }}
-                                    className="mt-3 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
-                                  >
-                                    开始录入成绩
-                                  </button>
+                                  {modulePermissions.scores.can_create && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedEvent(event)
+                                        setShowScoreForm(true)
+                                      }}
+                                      className="mt-3 px-4 py-2 bg-golf-600 text-white rounded-lg hover:bg-golf-700 transition-colors"
+                                    >
+                                      开始录入成绩
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
 
                             {/* 操作按钮 */}
                             <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
-                              {totalScoresCount > 0 && (
+                              {totalScoresCount > 0 && modulePermissions.scores.can_delete && (
                                 <button
                                   onClick={() => handleDeleteAllScoresForEvent(event.id)}
                                   className="flex items-center text-sm text-red-600 hover:text-red-700"
@@ -1767,16 +1922,18 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                                   删除所有成绩
                                 </button>
                               )}
-                              <button
-                                onClick={() => {
-                                  setSelectedEvent(event)
-                                  setShowScoreForm(true)
-                                }}
-                                className="flex items-center text-sm text-blue-600 hover:text-blue-700"
-                              >
-                                <Edit className="w-4 h-4 mr-2" />
-                                批量录入成绩
-                              </button>
+                              {modulePermissions.scores.can_create && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedEvent(event)
+                                    setShowScoreForm(true)
+                                  }}
+                                  className="flex items-center text-sm text-blue-600 hover:text-blue-700"
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  批量录入成绩
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1853,48 +2010,50 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       )}
 
       {/* 捐赠管理 */}
-      {currentView === 'investments' && (
+      {currentView === 'investments' && modulePermissions.investments.can_access && (
         <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
           <InvestmentAdmin />
         </div>
       )}
 
       {/* 费用管理 */}
-      {currentView === 'expenses' && (
+      {currentView === 'expenses' && modulePermissions.expenses.can_access && (
         <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
           <ExpenseAdmin />
         </div>
       )}
 
       {/* 会员管理 */}
-      {currentView === 'members' && (
+      {currentView === 'members' && modulePermissions.members.can_access && (
         <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
           <MemberAdmin />
         </div>
       )}
 
-      {/* 审计日志 */}
-      {currentView === 'audit' && (
+      {/* 审计日志 - 仅admin可通过URL参数或快捷键访问 */}
+      {currentView === 'audit' && userRole === 'admin' && (
         <div className="p-[5px] lg:p-6 m-0.5 lg:m-0">
           <AuditLogViewer />
         </div>
       )}
 
       {/* 信息中心管理 */}
-      {currentView === 'information' && (
+      {currentView === 'information' && modulePermissions.information.can_access && (
         <div className="bg-white rounded-2xl p-[5px] lg:p-6 m-0.5 lg:m-0 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">信息中心管理</h2>
-            <button
-              onClick={() => {
-                setSelectedInformationItem(null)
-                setShowInformationForm(true)
-              }}
-              className="btn-primary flex items-center"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              创建信息
-            </button>
+            {modulePermissions.information.can_create && (
+              <button
+                onClick={() => {
+                  setSelectedInformationItem(null)
+                  setShowInformationForm(true)
+                }}
+                className="btn-primary flex items-center"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                创建信息
+              </button>
+            )}
           </div>
 
           {/* 搜索和筛选 */}
@@ -2081,23 +2240,27 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium w-28">
                       <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={() => {
-                            setSelectedInformationItem(item)
-                            setShowInformationForm(true)
-                          }}
-                          className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
-                          title="编辑"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteInformation(item.id)}
-                          className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
-                          title="删除"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {modulePermissions.information.can_update && (
+                          <button
+                            onClick={() => {
+                              setSelectedInformationItem(item)
+                              setShowInformationForm(true)
+                            }}
+                            className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
+                            title="编辑"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {modulePermissions.information.can_delete && (
+                          <button
+                            onClick={() => handleDeleteInformation(item.id)}
+                            className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
+                            title="删除"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

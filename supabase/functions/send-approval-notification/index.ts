@@ -120,23 +120,71 @@ serve(async (req) => {
       
       if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY 未设置")
 
-      console.log("📤 调用 Resend API 发送邮件...")
-      const res = await fetch("https://api.resend.com/emails", {
+      // 尝试使用验证过的域名，如果失败则回退到默认地址
+      const VERIFIED_DOMAIN = "vcl-golf-club.pages.dev"
+      const REGISTERED_EMAIL = "vclgolfclub@hotmail.com"
+      
+      // 首先尝试使用验证过的域名
+      console.log("📤 调用 Resend API 发送邮件（使用域名）...")
+      let res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${RESEND_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Greenfield Golf Club <onboarding@resend.dev>",
+          from: `Greenfield Golf Club <noreply@${VERIFIED_DOMAIN}>`,
           to: [userData.email],
           subject,
           html,
         }),
       })
 
+      let data = await res.json()
+
+      // 如果域名未验证，回退到使用默认地址（只能发送到注册邮箱）
+      if (!res.ok && res.status === 403 && (data.message?.includes("not verified") || data.message?.includes("domain"))) {
+        console.warn("⚠️ 域名未验证，回退到使用默认地址（只能发送到注册邮箱）")
+        
+        // 检查收件人是否是注册邮箱
+        if (userData.email?.toLowerCase() !== REGISTERED_EMAIL.toLowerCase()) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "DOMAIN_NOT_VERIFIED",
+              message: `测试模式：域名 ${VERIFIED_DOMAIN} 尚未验证。目前只能发送邮件到注册邮箱 ${REGISTERED_EMAIL}。请在 Resend 控制台完成域名验证：https://resend.com/domains`,
+              recipient: userData.email,
+              registered_email: REGISTERED_EMAIL,
+            }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          )
+        }
+        
+        // 使用默认地址发送到注册邮箱
+        console.log("📤 使用默认地址发送到注册邮箱...")
+        res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "Greenfield Golf Club <onboarding@resend.dev>",
+            to: [userData.email],
+            subject,
+            html,
+          }),
+        })
+        
+        data = await res.json()
+      }
+
       if (!res.ok) {
         const errorText = await res.text()
+        const errorData = JSON.parse(errorText || "{}")
+        if (res.status === 403 && errorData.message?.includes("testing emails")) {
+          throw new Error(`Resend 域名未验证：${errorData.message}。请在 https://resend.com/domains 验证域名。`)
+        }
         throw new Error(`Resend API 错误: ${res.status} - ${errorText}`)
       }
 
@@ -158,25 +206,72 @@ serve(async (req) => {
     // ✅ 正式模式：发送真实邮件
     if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY 未设置")
 
-    console.log("📤 调用 Resend API 发送邮件...")
-    const res = await fetch("https://api.resend.com/emails", {
+    // 尝试使用验证过的域名，如果失败则回退到默认地址
+    const VERIFIED_DOMAIN = "vcl-golf-club.pages.dev"
+    const REGISTERED_EMAIL = "vclgolfclub@hotmail.com"
+    
+    // 首先尝试使用验证过的域名
+    console.log("📤 调用 Resend API 发送邮件（使用域名）...")
+    let res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Greenfield Golf Club <onboarding@resend.dev>",
+        from: `Greenfield Golf Club <noreply@${VERIFIED_DOMAIN}>`,
         to: [userData.email],
         subject,
         html,
       }),
     })
 
-    const data = await res.json()
+    let data = await res.json()
     console.log("📨 Resend 响应:", JSON.stringify(data, null, 2))
 
+    // 如果域名未验证，回退到使用默认地址（只能发送到注册邮箱）
+    if (!res.ok && res.status === 403 && (data.message?.includes("not verified") || data.message?.includes("domain"))) {
+      console.warn("⚠️ 域名未验证，回退到使用默认地址（只能发送到注册邮箱）")
+      
+      // 检查收件人是否是注册邮箱
+      if (userData.email?.toLowerCase() !== REGISTERED_EMAIL.toLowerCase()) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "DOMAIN_NOT_VERIFIED",
+            message: `域名 ${VERIFIED_DOMAIN} 尚未验证。目前只能发送邮件到注册邮箱 ${REGISTERED_EMAIL}。请在 Resend 控制台完成域名验证：https://resend.com/domains`,
+            recipient: userData.email,
+            registered_email: REGISTERED_EMAIL,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        )
+      }
+      
+      // 使用默认地址发送到注册邮箱
+      console.log("📤 使用默认地址发送到注册邮箱...")
+      res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "Greenfield Golf Club <onboarding@resend.dev>",
+          to: [userData.email],
+          subject,
+          html,
+        }),
+      })
+      
+      data = await res.json()
+      console.log("📨 Resend 响应（回退模式）:", JSON.stringify(data, null, 2))
+    }
+
     if (!res.ok) {
+      // 检查是否是域名验证错误
+      if (res.status === 403 && data.message?.includes("testing emails")) {
+        throw new Error(`Resend 域名未验证：${data.message}。请在 https://resend.com/domains 验证域名后，将 from 地址改为使用该域名的邮箱。`)
+      }
       throw new Error(`Resend API error: ${res.status} - ${data.message}`)
     }
 

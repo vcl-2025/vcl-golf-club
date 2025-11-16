@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Calendar, MapPin, DollarSign, Users, FileText, Image as ImageIcon, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
@@ -21,7 +21,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
   const [imageUploadMethod, setImageUploadMethod] = useState<'url' | 'upload'>('url')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string>('')
-  const isInitializing = useRef(true)
+  const [isInitializing, setIsInitializing] = useState(true)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -43,11 +43,10 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
 
   // 初始化表单数据
   useEffect(() => {
+    setIsInitializing(true)
+    
     if (event) {
       // 编辑模式 - 填充现有数据
-      // console.log('编辑事件数据:', event)
-      isInitializing.current = true
-      
       // 格式化日期为 datetime-local 格式
       const formatDateTime = (dateString: string) => {
         if (!dateString) return ''
@@ -79,17 +78,6 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         status: event.status || 'active'
       })
       
-      // console.log('EventForm 设置表单数据，description:', event.description);
-  // console.log('EventForm 设置表单数据，description 长度:', event.description?.length);
-  // console.log('EventForm 设置表单数据，description 前100字符:', event.description?.substring(0, 100));
-      
-      // 延迟设置初始化完成标志
-      setTimeout(() => {
-        isInitializing.current = false
-      }, 500)
-      
-      // 移除强制更新，避免与 onChange 循环冲突
-      
       // 如果有现有的二维码，设置预览
       if (event.payment_qr_code) {
         setQrCodePreview(event.payment_qr_code)
@@ -108,7 +96,6 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
       }
     } else {
       // 创建模式 - 重置为默认值
-      isInitializing.current = true
       setFormData({
         title: '',
         description: '',
@@ -127,12 +114,15 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         status: 'upcoming'
       })
       setQrCodePreview('')
-      
-      // 延迟设置初始化完成标志
-      setTimeout(() => {
-        isInitializing.current = false
-      }, 500)
+      setImagePreview('')
     }
+    
+    // 延迟一点确保表单数据已更新
+    const timer = setTimeout(() => {
+      setIsInitializing(false)
+    }, 300)
+    
+    return () => clearTimeout(timer)
   }, [event])
 
   const handleQRCodeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -402,16 +392,21 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                   活动描述
                 </label>
                 <div className="border border-gray-300 rounded-lg">
-                  <TinyMCEEditor
-                    content={formData.description}
-                    onChange={(content) => {
-                      // console.log('TinyMCE onChange:', content);
-                      setFormData(prevData => ({ ...prevData, description: content }))
-                    }}
-                    placeholder="请输入活动描述..."
-                    editorId="event-description-editor"
-                    height={400}
-                  />
+                  {!isInitializing ? (
+                    <TinyMCEEditor
+                      content={formData.description}
+                      onChange={(content) => {
+                        setFormData(prevData => ({ ...prevData, description: content }))
+                      }}
+                      placeholder="请输入活动描述..."
+                      editorId="event-description-editor"
+                      height={400}
+                    />
+                  ) : (
+                    <div className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-center" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      加载中...
+                    </div>
+                  )}
                   <div style={{marginTop: '10px', padding: '10px', background: '#f0f0f0', fontSize: '12px'}}>
                     调试信息: {formData.description ? `内容长度: ${formData.description.length}` : '无内容'}
                   </div>

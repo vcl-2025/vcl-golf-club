@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { 
   Trophy, Medal, Award, TrendingUp, Star, Clock,
   ChevronDown, ChevronUp, ChevronRight, User, BarChart,
-  UserCheck
+  UserCheck, Crown, Badge, UserCircle
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'

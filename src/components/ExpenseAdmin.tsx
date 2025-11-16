@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import { insertWithAudit, updateWithAudit, deleteWithAudit, createAuditContext, type UserRole } from '../lib/audit'
 import { useAuth } from '../hooks/useAuth'
+import { getUserModulePermissions, type ModuleName } from '../lib/modulePermissions'
 
 interface Expense {
   id: string
@@ -48,6 +49,11 @@ export default function ExpenseAdmin() {
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [modulePermissions, setModulePermissions] = useState({
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  })
   
   // 凭证查看modal状态
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
@@ -124,7 +130,15 @@ export default function ExpenseAdmin() {
 
   useEffect(() => {
     fetchExpenses()
-  }, [])
+    // 获取模块权限
+    if (user?.id) {
+      getUserModulePermissions(user.id).then(permissions => {
+        setModulePermissions(permissions.expenses)
+      }).catch(error => {
+        console.error('获取模块权限失败:', error)
+      })
+    }
+  }, [user])
 
   // 当交易类型改变时，清空费用类型（只在用户主动改变时，不在编辑加载数据时）
   useEffect(() => {
@@ -807,17 +821,19 @@ export default function ExpenseAdmin() {
             <h2 className="text-2xl font-bold text-gray-900">费用管理</h2>
             <p className="text-gray-600 mt-1">管理俱乐部所有费用支出记录</p>
           </div>
-          <button
-            onClick={() => {
-              setShowForm(true)
-              setEditingExpense(null)
-              resetForm()
-            }}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            添加费用
-          </button>
+          {modulePermissions.can_create && (
+            <button
+              onClick={() => {
+                setShowForm(true)
+                setEditingExpense(null)
+                resetForm()
+              }}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              添加费用
+            </button>
+          )}
         </div>
 
         {/* 统计卡片 */}
@@ -1045,7 +1061,9 @@ export default function ExpenseAdmin() {
                     )}
                   </div>
                 </th>
-                <th className="px-2 md:px-6 py-4 text-left text-base font-semibold text-gray-700 min-w-[50px]">操作</th>
+                {(modulePermissions.can_update || modulePermissions.can_delete) && (
+                  <th className="px-2 md:px-6 py-4 text-left text-base font-semibold text-gray-700 min-w-[50px]">操作</th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -1095,98 +1113,108 @@ export default function ExpenseAdmin() {
                       {expense.status === 'paid' ? '已支付' : '待支付'}
                     </span>
                   </td>
-                  <td className="px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium min-w-[50px]">
-                    {/* 桌面端：横向图标 */}
-                    <div className="hidden md:flex items-center space-x-2">
-                      {expense.receipt_url && (() => {
-                        const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
-                        return (
+                  {(modulePermissions.can_update || modulePermissions.can_delete) && (
+                    <td className="px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium min-w-[50px]">
+                      {/* 桌面端：横向图标 */}
+                      <div className="hidden md:flex items-center space-x-2">
+                        {expense.receipt_url && (() => {
+                          const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
+                          return (
+                            <button
+                              onClick={() => {
+                                setReceiptUrls(urls)
+                                setCurrentReceiptIndex(0)
+                                setReceiptModalOpen(true)
+                              }}
+                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
+                              title={urls.length > 1 ? `查看收据 (${urls.length}个文件)` : "查看收据"}
+                            >
+                              <Receipt className="w-4 h-4" />
+                            </button>
+                          )
+                        })()}
+                        {modulePermissions.can_update && (
                           <button
-                            onClick={() => {
-                              setReceiptUrls(urls)
-                              setCurrentReceiptIndex(0)
-                              setReceiptModalOpen(true)
-                            }}
-                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
-                            title={urls.length > 1 ? `查看收据 (${urls.length}个文件)` : "查看收据"}
-                          >
-                            <Receipt className="w-4 h-4" />
-                          </button>
-                        )
-                      })()}
-                      <button
-                        onClick={() => handleEdit(expense)}
-                        className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
-                        title="编辑"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(expense.id)}
-                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
-                        title="删除"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    
-                    {/* 手机端：三个点菜单 */}
-                    <div className="md:hidden relative action-menu-container flex items-center justify-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setOpenActionMenuId(openActionMenuId === expense.id ? null : expense.id)
-                        }}
-                        className="text-gray-600 hover:text-gray-800 p-1.5 rounded hover:bg-gray-50"
-                        title="操作"
-                      >
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
-                      
-                      {/* 下拉菜单 */}
-                      {openActionMenuId === expense.id && (
-                        <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]">
-                          {expense.receipt_url && (() => {
-                            const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
-                            return (
-                              <button
-                                onClick={() => {
-                                  setReceiptUrls(urls)
-                                  setCurrentReceiptIndex(0)
-                                  setReceiptModalOpen(true)
-                                  setOpenActionMenuId(null)
-                                }}
-                                className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center space-x-2"
-                              >
-                                <Receipt className="w-4 h-4" />
-                                <span>{urls.length > 1 ? `查看收据 (${urls.length}个)` : '查看收据'}</span>
-                              </button>
-                            )
-                          })()}
-                          <button
-                            onClick={() => {
-                              handleEdit(expense)
-                              setOpenActionMenuId(null)
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center space-x-2"
+                            onClick={() => handleEdit(expense)}
+                            className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
+                            title="编辑"
                           >
                             <Edit className="w-4 h-4" />
-                            <span>编辑</span>
                           </button>
+                        )}
+                        {modulePermissions.can_delete && (
                           <button
-                            onClick={() => {
-                              handleDelete(expense.id)
-                              setOpenActionMenuId(null)
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                            onClick={() => handleDelete(expense.id)}
+                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
+                            title="删除"
                           >
                             <Trash2 className="w-4 h-4" />
-                            <span>删除</span>
                           </button>
-                        </div>
-                      )}
-                    </div>
-                  </td>
+                        )}
+                      </div>
+                      
+                      {/* 手机端：三个点菜单 */}
+                      <div className="md:hidden relative action-menu-container flex items-center justify-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenActionMenuId(openActionMenuId === expense.id ? null : expense.id)
+                          }}
+                          className="text-gray-600 hover:text-gray-800 p-1.5 rounded hover:bg-gray-50"
+                          title="操作"
+                        >
+                          <MoreVertical className="w-5 h-5" />
+                        </button>
+                        
+                        {/* 下拉菜单 */}
+                        {openActionMenuId === expense.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]">
+                            {expense.receipt_url && (() => {
+                              const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
+                              return (
+                                <button
+                                  onClick={() => {
+                                    setReceiptUrls(urls)
+                                    setCurrentReceiptIndex(0)
+                                    setReceiptModalOpen(true)
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center space-x-2"
+                                >
+                                  <Receipt className="w-4 h-4" />
+                                  <span>{urls.length > 1 ? `查看收据 (${urls.length}个)` : '查看收据'}</span>
+                                </button>
+                              )
+                            })()}
+                            {modulePermissions.can_update && (
+                              <button
+                                onClick={() => {
+                                  handleEdit(expense)
+                                  setOpenActionMenuId(null)
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center space-x-2"
+                              >
+                                <Edit className="w-4 h-4" />
+                                <span>编辑</span>
+                              </button>
+                            )}
+                            {modulePermissions.can_delete && (
+                              <button
+                                onClick={() => {
+                                  handleDelete(expense.id)
+                                  setOpenActionMenuId(null)
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span>删除</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

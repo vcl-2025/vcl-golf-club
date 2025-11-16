@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import {
   Users, Search, Filter, Edit, Trash2, Download, Mail, Phone, Calendar,
-  User, Crown, Star, CheckCircle, XCircle, UserCog, ToggleLeft, ToggleRight, Upload, UserPlus, Eye, EyeOff
+  User, Crown, Star, CheckCircle, XCircle, UserCog, ToggleLeft, ToggleRight, Upload, UserPlus, Eye, EyeOff,
+  Key, Shield, Lock
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
+import { getUserModulePermissions } from '../lib/modulePermissions'
+import { useAuth } from '../hooks/useAuth'
 
 interface Member {
   id: string
@@ -32,10 +35,16 @@ interface Member {
 
 
 export default function MemberAdmin() {
+  const { user } = useAuth()
   const [members, setMembers] = useState<Member[]>([])
   const [filteredMembers, setFilteredMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const modal = useModal()
+  const [modulePermissions, setModulePermissions] = useState({
+    can_create: false,
+    can_update: false,
+    can_delete: false
+  })
   
   // 搜索和筛选状态
   const [searchTerm, setSearchTerm] = useState('')
@@ -68,12 +77,25 @@ export default function MemberAdmin() {
   const [registerLoading, setRegisterLoading] = useState(false)
   const [registerError, setRegisterError] = useState('')
 
+  // 权限管理状态
+  const [selectedMemberForPermission, setSelectedMemberForPermission] = useState<Member | null>(null)
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
+  const [showRoleModal, setShowRoleModal] = useState(false)
+
   // 获取可用年份
   const availableYears = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
 
   useEffect(() => {
     fetchMembers()
-  }, [])
+    // 获取模块权限
+    if (user?.id) {
+      getUserModulePermissions(user.id).then(permissions => {
+        setModulePermissions(permissions.members)
+      }).catch(error => {
+        console.error('获取模块权限失败:', error)
+      })
+    }
+  }, [user])
 
   // 排序函数
   const handleSort = (field: string) => {
@@ -256,6 +278,83 @@ export default function MemberAdmin() {
 
     // console.log('✅ 最终筛选结果:', filtered.length, '条')
     setFilteredMembers(filtered)
+  }
+
+  // 重置密码
+  const handleResetPassword = async (memberId: string) => {
+    try {
+      const confirmed = await modal.confirmDelete(
+        '重置密码',
+        '确定要将该用户的密码重置为 12345678 吗？用户下次登录时需要使用新密码。'
+      )
+      if (!confirmed) return
+
+      // 使用 Supabase Admin API 重置密码
+      const { error } = await supabase.auth.admin.updateUserById(memberId, {
+        password: '12345678'
+      })
+
+      if (error) throw error
+
+      modal.showSuccess('密码已重置为 12345678')
+      setShowResetPasswordModal(false)
+      setSelectedMemberForPermission(null)
+    } catch (error: any) {
+      console.error('重置密码失败:', error)
+      modal.showError('重置密码失败: ' + (error.message || '未知错误'))
+    }
+  }
+
+  // 更新用户角色
+  const handleUpdateRole = async (memberId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: newRole })
+        .eq('id', memberId)
+
+      if (error) throw error
+
+      modal.showSuccess('角色已更新')
+      setShowRoleModal(false)
+      setSelectedMemberForPermission(null)
+      await fetchMembers()
+    } catch (error: any) {
+      console.error('更新角色失败:', error)
+      modal.showError('更新角色失败: ' + (error.message || '未知错误'))
+    }
+  }
+
+
+  // 获取角色显示文本
+  const getRoleText = (role?: string) => {
+    const roleMap: Record<string, string> = {
+      'admin': '超级管理员',
+      'finance': '财务',
+      'editor': '文档编辑者',
+      'score_manager': '成绩管理员',
+      'viewer': '查看者',
+      'member': '普通会员'
+    }
+    return roleMap[role || 'member'] || '普通会员'
+  }
+
+  // 获取角色图标
+  const getRoleIcon = (role?: string) => {
+    switch (role) {
+      case 'admin':
+        return <UserCog className="w-5 h-5 text-orange-600" />
+      case 'finance':
+        return <Shield className="w-5 h-5 text-green-600" />
+      case 'editor':
+        return <Edit className="w-5 h-5 text-blue-600" />
+      case 'score_manager':
+        return <Star className="w-5 h-5 text-purple-600" />
+      case 'viewer':
+        return <Eye className="w-5 h-5 text-indigo-600" />
+      default:
+        return <User className="w-4 h-4 text-gray-600" />
+    }
   }
 
   const handleToggleMemberStatus = async (memberId: string, currentStatus: boolean) => {
@@ -633,33 +732,39 @@ export default function MemberAdmin() {
             )}
           </div>
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setShowRegisterModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-[#F15B98] text-white rounded-md hover:bg-[#E0487A] transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>注册新会员</span>
-            </button>
+            {modulePermissions.can_create && (
+              <button
+                onClick={() => setShowRegisterModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-[#F15B98] text-white rounded-md hover:bg-[#E0487A] transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>注册新会员</span>
+              </button>
+            )}
             
-            <button
-              onClick={exportToCSV}
-              className="flex items-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-md hover:bg-golf-700 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              <span>导出CSV</span>
-            </button>
+            {modulePermissions.can_update && (
+              <button
+                onClick={exportToCSV}
+                className="flex items-center space-x-2 px-4 py-2 bg-golf-600 text-white rounded-md hover:bg-golf-700 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                <span>导出CSV</span>
+              </button>
+            )}
             
-            <label className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors cursor-pointer">
-              <Upload className="w-4 h-4" />
-              <span>{isImporting ? '导入中...' : '批量导入'}</span>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                disabled={isImporting}
-                className="hidden"
-              />
-            </label>
+            {modulePermissions.can_create && (
+              <label className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors cursor-pointer">
+                <Upload className="w-4 h-4" />
+                <span>{isImporting ? '导入中...' : '批量导入'}</span>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  disabled={isImporting}
+                  className="hidden"
+                />
+              </label>
+            )}
           </div>
         </div>
 
@@ -770,7 +875,11 @@ export default function MemberAdmin() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-golf-500 focus:border-golf-500 appearance-none bg-white text-sm"
                 >
                   <option value="all">所有角色</option>
-                  <option value="admin">管理员</option>
+                  <option value="admin">超级管理员</option>
+                  <option value="finance">财务</option>
+                  <option value="editor">文档编辑者</option>
+                  <option value="score_manager">成绩管理员</option>
+                  <option value="viewer">查看者</option>
                   <option value="member">普通会员</option>
                 </select>
               </div>
@@ -875,9 +984,11 @@ export default function MemberAdmin() {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">
-                  操作
-                </th>
+                {(modulePermissions.can_update || modulePermissions.can_delete) && (
+                  <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">
+                    操作
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -957,21 +1068,19 @@ export default function MemberAdmin() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       <div className="flex items-center space-x-1">
-                        {member.role === 'admin' ? (
-                          <div className="flex items-center space-x-1">
-                            <UserCog className="w-5 h-5 text-orange-600" />
-                            <span className="text-sm font-semibold text-orange-700 bg-orange-50 px-2 py-1 rounded-full">
-                              管理员
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-1">
-                            <User className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm text-gray-900">
-                              普通会员
-                            </span>
-                          </div>
-                        )}
+                        <div className="flex items-center space-x-1">
+                          {getRoleIcon(member.role)}
+                          <span className={`text-sm font-semibold px-2 py-1 rounded-full ${
+                            member.role === 'admin' ? 'text-orange-700 bg-orange-50' :
+                            member.role === 'finance' ? 'text-green-700 bg-green-50' :
+                            member.role === 'editor' ? 'text-blue-700 bg-blue-50' :
+                            member.role === 'score_manager' ? 'text-purple-700 bg-purple-50' :
+                            member.role === 'viewer' ? 'text-indigo-700 bg-indigo-50' :
+                            'text-gray-900 bg-gray-50'
+                          }`}>
+                            {getRoleText(member.role)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     {member.main_club_membership && (
@@ -1006,31 +1115,62 @@ export default function MemberAdmin() {
                     {new Date(member.created_at).toLocaleDateString()}
                   </td>
                   
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleToggleMemberStatus(member.id, member.is_active)}
-                        className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                          member.is_active 
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                            : 'bg-red-100 text-red-700 hover:bg-red-200'
-                        }`}
-                        title={member.is_active ? '当前已启用，点击禁用' : '当前已禁用，点击启用'}
-                      >
-                        {member.is_active ? (
+                  {(modulePermissions.can_update || modulePermissions.can_delete) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2 flex-wrap gap-2">
+                        {modulePermissions.can_update && (
                           <>
-                            <ToggleRight className="w-4 h-4" />
-                            <span>已启用</span>
-                          </>
-                        ) : (
-                          <>
-                            <ToggleLeft className="w-4 h-4" />
-                            <span>已禁用</span>
+                            <button
+                              onClick={() => handleToggleMemberStatus(member.id, member.is_active)}
+                              className={`flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                                member.is_active 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              }`}
+                              title={member.is_active ? '当前已启用，点击禁用' : '当前已禁用，点击启用'}
+                            >
+                              {member.is_active ? (
+                                <>
+                                  <ToggleRight className="w-4 h-4" />
+                                  <span>已启用</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleLeft className="w-4 h-4" />
+                                  <span>已禁用</span>
+                                </>
+                              )}
+                            </button>
+                            
+                            {/* 权限管理按钮 */}
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedMemberForPermission(member)
+                                  setShowResetPasswordModal(true)
+                                }}
+                                className="flex items-center justify-center w-7 h-7 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                                title="重置密码"
+                              >
+                                <Key className="w-4 h-4" />
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  setSelectedMemberForPermission(member)
+                                  setShowRoleModal(true)
+                                }}
+                                className="flex items-center justify-center w-7 h-7 rounded bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
+                                title="分配角色"
+                              >
+                                <Shield className="w-4 h-4" />
+                              </button>
+                            </div>
                           </>
                         )}
-                      </button>
-                    </div>
-                  </td>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -1050,7 +1190,7 @@ export default function MemberAdmin() {
       {/* 注册新会员模态框 */}
       {showRegisterModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
           onClick={() => !registerLoading && setShowRegisterModal(false)}
         >
           <div 
@@ -1191,6 +1331,144 @@ export default function MemberAdmin() {
           </div>
         </div>
       )}
+
+      {/* 重置密码模态框 */}
+      {showResetPasswordModal && selectedMemberForPermission && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
+          onClick={() => setShowResetPasswordModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <Key className="w-5 h-5 text-blue-600" />
+                <span>重置密码</span>
+              </h3>
+            </div>
+            
+            <div className="px-6 py-4 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md text-sm">
+                <p><strong>用户：</strong>{selectedMemberForPermission.full_name}</p>
+                <p><strong>邮箱：</strong>{selectedMemberForPermission.email}</p>
+                <p className="mt-2">密码将被重置为：<strong>12345678</strong></p>
+                <p className="mt-1 text-xs">用户下次登录时需要使用新密码。</p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowResetPasswordModal(false)
+                  setSelectedMemberForPermission(null)
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => handleResetPassword(selectedMemberForPermission.id)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <Lock className="w-4 h-4" />
+                <span>确认重置</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 角色分配模态框 */}
+      {showRoleModal && selectedMemberForPermission && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4"
+          onClick={() => setShowRoleModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <Shield className="w-5 h-5 text-purple-600" />
+                <span>分配角色</span>
+              </h3>
+            </div>
+            
+            <div className="px-6 py-4 space-y-4">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>用户：</strong>{selectedMemberForPermission.full_name} ({selectedMemberForPermission.email})
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>当前角色：</strong>{getRoleText(selectedMemberForPermission.role)}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  选择新角色
+                </label>
+                <select
+                  value={selectedMemberForPermission.role || 'member'}
+                  onChange={(e) => {
+                    setSelectedMemberForPermission({
+                      ...selectedMemberForPermission,
+                      role: e.target.value
+                    })
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="member">普通会员</option>
+                  <option value="admin">超级管理员</option>
+                  <option value="finance">财务</option>
+                  <option value="editor">文档编辑者</option>
+                  <option value="score_manager">成绩管理员</option>
+                  <option value="viewer">查看者</option>
+                </select>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-md text-sm">
+                <p><strong>角色说明：</strong></p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li><strong>超级管理员：</strong>所有权限</li>
+                  <li><strong>财务：</strong>费用和投资管理</li>
+                  <li><strong>文档编辑者：</strong>信息中心、海报、活动内容编辑</li>
+                  <li><strong>成绩管理员：</strong>成绩管理</li>
+                  <li><strong>查看者：</strong>可查看所有模块，不能操作（适合领导）</li>
+                  <li><strong>普通会员：</strong>只读权限</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowRoleModal(false)
+                  setSelectedMemberForPermission(null)
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedMemberForPermission.role) {
+                    handleUpdateRole(selectedMemberForPermission.id, selectedMemberForPermission.role)
+                  }
+                }}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center space-x-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span>确认分配</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
     </div>
   )
