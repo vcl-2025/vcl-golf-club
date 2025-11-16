@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import { useModal } from './ModalProvider'
+import { canRegister, getEventStatus } from '../utils/eventStatus'
 
 interface BatchRegistrationCartProps {
   events: Event[]
@@ -189,6 +190,31 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
       return
     }
 
+    // 检查是否有活动已结束或报名已截止
+    const invalidEvents = selectedEvents.filter(event => !canRegister(event))
+    if (invalidEvents.length > 0) {
+      const now = new Date()
+      const reasons = invalidEvents.map(event => {
+        const status = getEventStatus(event)
+        const registrationDeadline = new Date(event.registration_deadline)
+        
+        if (status === 'completed') {
+          return `${event.title}（活动已结束）`
+        }
+        if (now >= registrationDeadline) {
+          return `${event.title}（报名已截止）`
+        }
+        if (status === 'cancelled') {
+          return `${event.title}（活动已取消）`
+        }
+        return `${event.title}（不可报名）`
+      })
+      
+      console.error('❌ 存在不可报名的活动:', reasons)
+      showError(`以下活动无法报名：${reasons.join('、')}。请从选择中移除这些活动后重试。`)
+      return
+    }
+
     console.log('4. 检查支付凭证:', { paymentProof: !!paymentProof })
     if (!paymentProof) {
       console.error('❌ 未上传支付凭证')
@@ -307,6 +333,29 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
 
   const total = calculateTotal()
   const hasAlreadyRegistered = selectedEvents.some(e => userRegistrations[e.id])
+  
+  // 检查不可报名的活动（已结束或报名已截止）
+  const invalidEvents = selectedEvents.filter(event => {
+    if (userRegistrations[event.id]) return false // 已报名的活动不算作无效
+    return !canRegister(event)
+  })
+  
+  const getEventUnavailableReason = (event: Event): string => {
+    const status = getEventStatus(event)
+    const now = new Date()
+    const registrationDeadline = new Date(event.registration_deadline)
+    
+    if (status === 'completed') {
+      return '活动已结束'
+    }
+    if (now >= registrationDeadline) {
+      return '报名已截止'
+    }
+    if (status === 'cancelled') {
+      return '活动已取消'
+    }
+    return '不可报名'
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[80] overflow-y-auto">
@@ -335,6 +384,8 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
             <div className="space-y-3">
               {selectedEvents.map((event) => {
                 const isRegistered = !!userRegistrations[event.id]
+                const isInvalid = !isRegistered && !canRegister(event)
+                const unavailableReason = isInvalid ? getEventUnavailableReason(event) : ''
                 // 获取图片 URL，确保是有效的 URL
                 const rawImageUrl = event.image_url || event.article_featured_image_url
                 const imageUrl = rawImageUrl && rawImageUrl.trim() && rawImageUrl.startsWith('http') ? rawImageUrl : null
@@ -346,6 +397,8 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
                     className={`p-4 rounded-lg border-2 ${
                       isRegistered
                         ? 'border-yellow-300 bg-yellow-50'
+                        : isInvalid
+                        ? 'border-red-300 bg-red-50'
                         : 'border-gray-200 bg-white'
                     }`}
                   >
@@ -373,6 +426,11 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
                           {isRegistered && (
                             <span className="px-2 py-1 bg-yellow-200 text-yellow-800 text-xs font-medium rounded">
                               已报名
+                            </span>
+                          )}
+                          {isInvalid && (
+                            <span className="px-2 py-1 bg-red-200 text-red-800 text-xs font-medium rounded">
+                              {unavailableReason}
                             </span>
                           )}
                         </div>
@@ -532,6 +590,29 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
               </div>
             </div>
           )}
+
+          {invalidEvents.length > 0 && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 mb-1">
+                    购物车中有 {invalidEvents.length} 个活动无法报名：
+                  </p>
+                  <ul className="text-sm text-red-700 list-disc list-inside space-y-1">
+                    {invalidEvents.map(event => (
+                      <li key={event.id}>
+                        {event.title}（{getEventUnavailableReason(event)}）
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-sm text-red-700 mt-2">
+                    请从购物车中移除这些活动后才能继续报名。
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 底部按钮 */}
@@ -545,7 +626,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
           {!hasAlreadyRegistered && (
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || selectedEvents.length === 0 || !paymentProof}
+              disabled={isSubmitting || selectedEvents.length === 0 || !paymentProof || invalidEvents.length > 0}
               className="px-6 py-2.5 text-white bg-[#F15B98] rounded-lg hover:bg-[#F15B98]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (

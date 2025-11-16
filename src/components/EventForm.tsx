@@ -6,6 +6,7 @@ import TinyMCEEditor from './TinyMCEEditor'
 import { getEventStatus, getEventStatusText, getEventStatusStyles } from '../utils/eventStatus'
 import { updateWithAudit, insertWithAudit, createAuditContext, type UserRole } from '../lib/audit'
 import { useAuth } from '../hooks/useAuth'
+import { useModal } from './ModalProvider'
 
 interface EventFormProps {
   event?: Event | null
@@ -15,6 +16,7 @@ interface EventFormProps {
 
 export default function EventForm({ event, onClose, onSuccess }: EventFormProps) {
   const { user } = useAuth()
+  const { showError, showSuccess } = useModal()
   const [qrCodeFile, setQrCodeFile] = useState<File | null>(null)
   const [qrCodePreview, setQrCodePreview] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -155,6 +157,29 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // 验证时间逻辑
+    if (formData.start_time && formData.end_time) {
+      const startTime = new Date(formData.start_time)
+      const endTime = new Date(formData.end_time)
+      
+      if (endTime <= startTime) {
+        showError('结束时间必须晚于开始时间')
+        return
+      }
+    }
+    
+    // 验证报名截止时间不能晚于活动开始时间
+    if (formData.registration_deadline && formData.start_time) {
+      const deadline = new Date(formData.registration_deadline)
+      const startTime = new Date(formData.start_time)
+      
+      if (deadline > startTime) {
+        showError('报名截止时间不能晚于活动开始时间')
+        return
+      }
+    }
+    
     setIsSubmitting(true)
 
     try {
@@ -342,11 +367,12 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
           throw new Error(`创建事件失败: ${error.message || '未知错误'}`)
         }
       }
+      showSuccess(event ? '活动更新成功！' : '活动创建成功！')
       onSuccess?.()
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error('提交失败:', error)
-      alert('创建活动失败，请重试')
+      showError(error.message || (event ? '更新活动失败，请重试' : '创建活动失败，请重试'))
     } finally {
       setIsSubmitting(false)
     }
@@ -443,9 +469,13 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                     type="datetime-local"
                     value={formData.end_time}
                     onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                    min={formData.start_time || undefined}
                     className="input-field"
                     required
                   />
+                  {formData.start_time && formData.end_time && new Date(formData.end_time) <= new Date(formData.start_time) && (
+                    <p className="mt-1 text-sm text-red-600">结束时间必须晚于开始时间</p>
+                  )}
                 </div>
               </div>
 
@@ -542,9 +572,13 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                   type="datetime-local"
                   value={formData.registration_deadline}
                   onChange={(e) => setFormData({ ...formData, registration_deadline: e.target.value })}
+                  max={formData.start_time || undefined}
                   className="input-field"
                   required
                 />
+                {formData.registration_deadline && formData.start_time && new Date(formData.registration_deadline) > new Date(formData.start_time) && (
+                  <p className="mt-1 text-sm text-red-600">报名截止时间不能晚于活动开始时间</p>
+                )}
               </div>
 
               {/* 活动图片 */}
