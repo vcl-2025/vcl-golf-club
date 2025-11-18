@@ -841,15 +841,15 @@ export default function ExpenseAdmin() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <div className="text-sm text-green-100 mb-1">总收入</div>
-              <div className="text-2xl md:text-3xl font-bold">{formatAmount(totalIncome)}</div>
+              <div className="text-lg md:text-xl font-bold">{formatAmount(totalIncome)}</div>
             </div>
             <div>
               <div className="text-sm text-green-100 mb-1">总支出</div>
-              <div className="text-2xl md:text-3xl font-bold">{formatAmount(totalExpense)}</div>
+              <div className="text-lg md:text-xl font-bold">{formatAmount(totalExpense)}</div>
             </div>
             <div>
               <div className="text-sm text-green-100 mb-1">净额</div>
-              <div className={`text-2xl md:text-3xl font-bold ${netAmount >= 0 ? 'text-white' : 'text-red-200'}`}>
+              <div className={`text-lg md:text-xl font-bold ${netAmount >= 0 ? 'text-white' : 'text-red-200'}`}>
                 {formatAmount(netAmount)}
               </div>
             </div>
@@ -862,7 +862,7 @@ export default function ExpenseAdmin() {
                   </span>
                 )}
               </div>
-              <div className="text-2xl md:text-3xl font-bold">{filteredExpenses.length}</div>
+              <div className="text-lg md:text-xl font-bold">{filteredExpenses.length}</div>
             </div>
           </div>
         </div>

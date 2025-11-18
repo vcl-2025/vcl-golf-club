@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Plus, Edit, Trash2, Users, DollarSign, Calendar, MapPin, ChevronDown, ChevronRight,
   BarChart3, Settings, Eye, Download, Image as ImageIcon, Trophy, Receipt, Clock, Search, Filter, X, Pin, User, Menu, MoreVertical
@@ -81,8 +82,25 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps) {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [headerHeight, setHeaderHeight] = useState(0)
-  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information' | 'audit' | 'role_permissions'>('dashboard')
+  
+  // 从URL参数读取视图，如果没有则使用默认值
+  const adminViewParam = searchParams.get('adminView')
+  const auditParam = searchParams.get('audit')
+  const rolePermissionsParam = searchParams.get('role_permissions')
+  
+  const [currentView, setCurrentView] = useState<'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information' | 'audit' | 'role_permissions'>(() => {
+    // 优先检查特殊参数（audit, role_permissions）
+    if (auditParam === '1') return 'audit'
+    if (rolePermissionsParam === '1') return 'role_permissions'
+    // 然后检查普通视图参数
+    if (adminViewParam && ['dashboard', 'events', 'registrations', 'posters', 'scores', 'investments', 'expenses', 'members', 'information'].includes(adminViewParam)) {
+      return adminViewParam as any
+    }
+    return 'dashboard'
+  })
   
   // 用户角色状态（用于检查是否为admin）
   const [userRole, setUserRole] = useState<string | null>(null)
@@ -127,23 +145,50 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     }
   }, [])
 
-  // 隐藏的审计日志和角色权限访问方式：URL参数和快捷键（仅admin）
-  useEffect(() => {
-    // 检查URL参数（不依赖userRole，先检查URL）
-    const urlParams = new URLSearchParams(window.location.search)
-    if (urlParams.get('audit') === '1' || urlParams.get('view') === 'audit') {
-      // 延迟检查权限，等userRole加载后再验证
-      if (userRole === 'admin') {
-        setCurrentView('audit')
-      }
+  // 切换管理后台视图的辅助函数：同时更新 state 和 URL
+  const handleAdminViewChange = useCallback((view: 'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information' | 'audit' | 'role_permissions') => {
+    setCurrentView(view)
+    const newParams = new URLSearchParams(searchParams)
+    
+    // 清除所有管理后台相关的参数
+    newParams.delete('adminView')
+    newParams.delete('audit')
+    newParams.delete('role_permissions')
+    
+    // 根据视图类型设置相应的参数
+    if (view === 'audit') {
+      newParams.set('audit', '1')
+    } else if (view === 'role_permissions') {
+      newParams.set('role_permissions', '1')
+    } else if (view === 'dashboard') {
+      // dashboard 是默认视图，可以不在 URL 中显示
+      // 但保留其他参数（如 view=admin）
+    } else {
+      newParams.set('adminView', view)
     }
-    if (urlParams.get('role_permissions') === '1' || urlParams.get('view') === 'role_permissions') {
-      // 延迟检查权限，等userRole加载后再验证
-      if (userRole === 'admin') {
-        setCurrentView('role_permissions')
-      }
+    
+    // 更新 URL
+    if (newParams.toString()) {
+      setSearchParams(newParams, { replace: true })
+    } else {
+      setSearchParams({}, { replace: true })
     }
+  }, [searchParams, setSearchParams])
 
+  // 当URL参数变化时，更新currentView（保持参数在 URL 中，以便刷新后恢复）
+  useEffect(() => {
+    // 优先检查特殊参数（audit, role_permissions）
+    if (auditParam === '1' && userRole === 'admin') {
+      setCurrentView('audit')
+    } else if (rolePermissionsParam === '1' && userRole === 'admin') {
+      setCurrentView('role_permissions')
+    } else if (adminViewParam && ['dashboard', 'events', 'registrations', 'posters', 'scores', 'investments', 'expenses', 'members', 'information'].includes(adminViewParam)) {
+      setCurrentView(adminViewParam as any)
+    }
+  }, [auditParam, rolePermissionsParam, adminViewParam, userRole])
+
+  // 隐藏的审计日志和角色权限访问方式：快捷键（仅admin）
+  useEffect(() => {
     // 快捷键处理（只有admin才能使用）
     const handleKeyDown = (e: KeyboardEvent) => {
       // 如果userRole还没加载，不处理快捷键
@@ -155,35 +200,15 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       // Ctrl+Shift+A (Windows/Linux) 或 Cmd+Shift+A (Mac) - 审计日志
       if (modifierKey && e.shiftKey && e.key.toLowerCase() === 'a') {
         e.preventDefault()
-        setCurrentView(prev => {
-          const newView = prev === 'audit' ? 'dashboard' : 'audit'
-          const url = new URL(window.location.href)
-          if (newView === 'audit') {
-            url.searchParams.set('audit', '1')
-          } else {
-            url.searchParams.delete('audit')
-            url.searchParams.delete('view')
-          }
-          window.history.pushState({}, '', url.toString())
-          return newView
-        })
+        const newView = currentView === 'audit' ? 'dashboard' : 'audit'
+        handleAdminViewChange(newView)
       }
       
       // Ctrl+Shift+R (Windows/Linux) 或 Cmd+Shift+R (Mac) - 角色权限
       if (modifierKey && e.shiftKey && e.key.toLowerCase() === 'r') {
         e.preventDefault()
-        setCurrentView(prev => {
-          const newView = prev === 'role_permissions' ? 'dashboard' : 'role_permissions'
-          const url = new URL(window.location.href)
-          if (newView === 'role_permissions') {
-            url.searchParams.set('role_permissions', '1')
-          } else {
-            url.searchParams.delete('role_permissions')
-            url.searchParams.delete('view')
-          }
-          window.history.pushState({}, '', url.toString())
-          return newView
-        })
+        const newView = currentView === 'role_permissions' ? 'dashboard' : 'role_permissions'
+        handleAdminViewChange(newView)
       }
     }
 
@@ -191,7 +216,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [currentView, userRole])
+  }, [currentView, userRole, handleAdminViewChange])
   
   const [selectedEventForRegistration, setSelectedEventForRegistration] = useState<Event | null>(null)
   const [events, setEvents] = useState<Event[]>([])
@@ -262,7 +287,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     const handleAdminNavigate = (event: CustomEvent) => {
       const { view } = event.detail
       if (view === 'events' || view === 'investments') {
-        setCurrentView(view)
+        handleAdminViewChange(view)
       }
     }
     
@@ -271,7 +296,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
     return () => {
       window.removeEventListener('admin-navigate', handleAdminNavigate as EventListener)
     }
-  }, [])
+  }, [handleAdminViewChange])
 
   // 获取用户模块权限和角色
   useEffect(() => {
@@ -938,7 +963,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
           {/* 桌面端横向菜单 */}
           <div className="hidden lg:flex space-x-3">
             <button
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => handleAdminViewChange('dashboard')}
               className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                 currentView === 'dashboard'
                   ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
@@ -950,7 +975,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             </button>
             {modulePermissions.information.can_access && (
               <button
-                onClick={() => setCurrentView('information')}
+                onClick={() => handleAdminViewChange('information')}
                 className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                   currentView === 'information'
                     ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
@@ -963,7 +988,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             )}
             {modulePermissions.events.can_access && (
               <button
-                onClick={() => setCurrentView('events')}
+                onClick={() => handleAdminViewChange('events')}
                 className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                   currentView === 'events'
                     ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
@@ -976,7 +1001,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             )}
             {modulePermissions.scores.can_access && (
               <button
-                onClick={() => setCurrentView('scores')}
+                onClick={() => handleAdminViewChange('scores')}
                 className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                   currentView === 'scores'
                     ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
@@ -989,7 +1014,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             )}
             {modulePermissions.investments.can_access && (
               <button
-                onClick={() => setCurrentView('investments')}
+                onClick={() => handleAdminViewChange('investments')}
                 className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                   currentView === 'investments'
                     ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
@@ -1002,7 +1027,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             )}
             {modulePermissions.expenses.can_access && (
               <button
-                onClick={() => setCurrentView('expenses')}
+                onClick={() => handleAdminViewChange('expenses')}
                 className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                   currentView === 'expenses'
                     ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
@@ -1015,7 +1040,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             )}
             {modulePermissions.members.can_access && (
               <button
-                onClick={() => setCurrentView('members')}
+                onClick={() => handleAdminViewChange('members')}
                 className={`px-3 py-2 rounded-xl font-medium transition-all duration-300 flex items-center ${
                   currentView === 'members'
                     ? 'bg-green-500/40 text-white shadow-lg transform scale-105'
@@ -1034,7 +1059,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
           <div className="lg:hidden mt-4 space-y-2">
             <button
               onClick={() => {
-                setCurrentView('dashboard')
+                handleAdminViewChange('dashboard')
                 setMobileMenuOpen(false)
               }}
               className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
@@ -1052,7 +1077,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             {modulePermissions.information.can_access && (
               <button
                 onClick={() => {
-                  setCurrentView('information')
+                  handleAdminViewChange('information')
                   setMobileMenuOpen(false)
                 }}
                 className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
@@ -1071,7 +1096,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             {modulePermissions.events.can_access && (
               <button
                 onClick={() => {
-                  setCurrentView('events')
+                  handleAdminViewChange('events')
                   setMobileMenuOpen(false)
                 }}
                 className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
@@ -1090,7 +1115,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             {modulePermissions.scores.can_access && (
               <button
                 onClick={() => {
-                  setCurrentView('scores')
+                  handleAdminViewChange('scores')
                   setMobileMenuOpen(false)
                 }}
                 className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
@@ -1109,7 +1134,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             {modulePermissions.investments.can_access && (
               <button
                 onClick={() => {
-                  setCurrentView('investments')
+                  handleAdminViewChange('investments')
                   setMobileMenuOpen(false)
                 }}
                 className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
@@ -1128,7 +1153,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             {modulePermissions.expenses.can_access && (
               <button
                 onClick={() => {
-                  setCurrentView('expenses')
+                  handleAdminViewChange('expenses')
                   setMobileMenuOpen(false)
                 }}
                 className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${
@@ -1147,7 +1172,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
             {modulePermissions.members.can_access && (
               <button
                 onClick={() => {
-                  setCurrentView('members')
+                  handleAdminViewChange('members')
                   setMobileMenuOpen(false)
                 }}
                 className={`w-full px-4 py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-between ${

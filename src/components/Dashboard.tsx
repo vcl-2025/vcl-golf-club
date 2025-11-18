@@ -174,20 +174,42 @@ export default function Dashboard() {
     })
   }
   
-  // 当URL参数变化时，更新currentView
+  // 切换视图的辅助函数：同时更新 state 和 URL
+  const handleViewChange = (view: 'dashboard' | 'events' | 'posters' | 'scores' | 'investments' | 'expenses' | 'reviews' | 'information' | 'members' | 'admin') => {
+    setCurrentView(view)
+    const newParams = new URLSearchParams(searchParams)
+    // 清除详情相关的参数（如果切换视图）
+    if (view !== 'events') {
+      newParams.delete('eventId')
+    }
+    if (view !== 'information') {
+      newParams.delete('informationId')
+    }
+    if (view !== 'reviews') {
+      newParams.delete('reviewId')
+    }
+    // 设置新的 view 参数
+    if (view === 'dashboard') {
+      // dashboard 是默认视图，可以不在 URL 中显示
+      newParams.delete('view')
+    } else {
+      newParams.set('view', view)
+    }
+    // 更新 URL
+    if (newParams.toString()) {
+      setSearchParams(newParams, { replace: true })
+    } else {
+      setSearchParams({}, { replace: true })
+    }
+  }
+
+  // 当URL参数变化时，更新currentView（保持 view 参数在 URL 中，以便刷新后恢复）
   useEffect(() => {
     if (viewParam && ['dashboard', 'events', 'posters', 'scores', 'investments', 'expenses', 'reviews', 'information', 'members', 'admin'].includes(viewParam)) {
       setCurrentView(viewParam as any)
-      // 只清除 view 参数，保留其他参数（如 reviewId, eventId, informationId）
-      const newParams = new URLSearchParams(searchParams)
-      newParams.delete('view')
-      if (newParams.toString()) {
-        setSearchParams(newParams, { replace: true })
-      } else {
-      setSearchParams({}, { replace: true })
+      // 不再删除 view 参数，保持它在 URL 中以便刷新后恢复视图
     }
-    }
-  }, [viewParam, searchParams, setSearchParams])
+  }, [viewParam])
   
   const [showDateWeather, setShowDateWeather] = useState(false) // false显示日期，true显示天气
   const [weather, setWeather] = useState<{ currentTemp: number; minTemp: number; maxTemp: number; condition: string; icon: 'sun' | 'cloud' | 'cloudRain' | 'cloudSun' } | null>(null)
@@ -942,7 +964,7 @@ export default function Dashboard() {
 
   // 如果是会员照片页面，直接返回全屏组件
   if (currentView === 'members') {
-    return <MemberPhotoGallery onClose={() => setCurrentView('dashboard')} />
+    return <MemberPhotoGallery onClose={() => handleViewChange('dashboard')} />
   }
 
   return (
@@ -995,7 +1017,7 @@ export default function Dashboard() {
             {/* Logo and Brand */}
             <div 
               className="flex items-center cursor-pointer hover:opacity-90 transition-opacity duration-200 px-2 py-1 rounded-lg"
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => handleViewChange('dashboard')}
               title="返回首页"
             >
               <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-12 lg:h-12 xl:w-12 xl:h-12 rounded-full flex items-center justify-center flex-shrink-0">
@@ -1016,8 +1038,8 @@ export default function Dashboard() {
 
             {/* Navigation */}
             <nav className="hidden lg:flex space-x-2 xl:space-x-3">
-              <button 
-                onClick={() => setCurrentView('dashboard')}
+              <button
+                onClick={() => handleViewChange('dashboard')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'dashboard' 
                     ? 'bg-[#F15B98] text-white' 
@@ -1027,7 +1049,7 @@ export default function Dashboard() {
                 首页
               </button>
               <button
-                onClick={() => setCurrentView('information')}
+                onClick={() => handleViewChange('information')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'information'
                     ? 'bg-[#F15B98] text-white'
@@ -1037,7 +1059,7 @@ export default function Dashboard() {
                 信息中心
               </button>
               <button 
-                onClick={() => setCurrentView('events')}
+                onClick={() => handleViewChange('events')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'events' 
                     ? 'bg-[#F15B98] text-white' 
@@ -1047,7 +1069,7 @@ export default function Dashboard() {
                 活动报名
               </button>
               <button
-                onClick={() => setCurrentView('reviews')}
+                onClick={() => handleViewChange('reviews')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'reviews'
                     ? 'bg-[#F15B98] text-white'
@@ -1057,7 +1079,7 @@ export default function Dashboard() {
                 精彩回顾
               </button>
               <button
-                onClick={() => setCurrentView('scores')}
+                onClick={() => handleViewChange('scores')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'scores'
                     ? 'bg-[#F15B98] text-white'
@@ -1067,7 +1089,7 @@ export default function Dashboard() {
                 成绩查询
               </button>
               <button
-                onClick={() => setCurrentView('investments')}
+                onClick={() => handleViewChange('investments')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'investments'
                     ? 'bg-[#F15B98] text-white'
@@ -1077,7 +1099,7 @@ export default function Dashboard() {
                 捐赠与赞助
               </button>
               <button
-                onClick={() => setCurrentView('expenses')}
+                onClick={() => handleViewChange('expenses')}
                 className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
                   currentView === 'expenses'
                     ? 'bg-[#F15B98] text-white'
@@ -1089,7 +1111,7 @@ export default function Dashboard() {
               {hasAdminAccess && (
                 <button 
                   onClick={() => {
-                    setCurrentView('admin')
+                    handleViewChange('admin')
                     setAdminMenuVisible(true)
                   }}
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
@@ -1235,7 +1257,7 @@ export default function Dashboard() {
                           onClick={(e) => {
                             e.preventDefault()
                             e.stopPropagation()
-                            setCurrentView('admin')
+                            handleViewChange('admin')
                             setUserMenuOpen(false)
                             setAdminMenuVisible(true)
                           }}
@@ -1317,7 +1339,7 @@ export default function Dashboard() {
               <div className="flex flex-col p-4 space-y-1 flex-1">
                 <button 
                   onClick={() => {
-                    setCurrentView('dashboard')
+                    handleViewChange('dashboard')
                     setMobileMenuOpen(false)
                   }}
                   className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
@@ -1331,7 +1353,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => {
-                    setCurrentView('information')
+                    handleViewChange('information')
                     setMobileMenuOpen(false)
                   }}
                   className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
@@ -1356,7 +1378,7 @@ export default function Dashboard() {
                 </button>
                 <button 
                   onClick={() => {
-                    setCurrentView('events')
+                    handleViewChange('events')
                     setMobileMenuOpen(false)
                   }}
                   className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
@@ -1370,7 +1392,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => {
-                    setCurrentView('reviews')
+                    handleViewChange('reviews')
                     setMobileMenuOpen(false)
                   }}
                   className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
@@ -1384,7 +1406,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => {
-                    setCurrentView('scores')
+                    handleViewChange('scores')
                     setMobileMenuOpen(false)
                   }}
                   className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
@@ -1398,7 +1420,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => {
-                    setCurrentView('investments')
+                    handleViewChange('investments')
                     setMobileMenuOpen(false)
                   }}
                   className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
@@ -1412,7 +1434,7 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => {
-                    setCurrentView('expenses')
+                    handleViewChange('expenses')
                     setMobileMenuOpen(false)
                   }}
                   className={`px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 ${
@@ -1427,7 +1449,7 @@ export default function Dashboard() {
                 {hasAdminAccess && (
                   <button 
                     onClick={() => {
-                      setCurrentView('admin')
+                      handleViewChange('admin')
                       setMobileMenuOpen(false)
                       setAdminMenuVisible(true)
                     }}
@@ -1497,7 +1519,7 @@ export default function Dashboard() {
                 {hasAdminAccess && (
                   <button
                     onClick={() => {
-                      setCurrentView('admin')
+                      handleViewChange('admin')
                       setMobileMenuOpen(false)
                       setAdminMenuVisible(true)
                     }}
@@ -1846,8 +1868,7 @@ export default function Dashboard() {
                     justifyContent: 'center'
                   }}
                   onClick={() => {
-                    setCurrentView('information')
-                    navigate('/dashboard?view=information')
+                    handleViewChange('information')
                   }}
                 >
                   <div 
@@ -1946,7 +1967,7 @@ export default function Dashboard() {
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 <div 
-                  onClick={() => setCurrentView('information')}
+                  onClick={() => handleViewChange('information')}
                   className={`rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none ${
                     unreadInformationCount > 0 ? 'animate-pulse-subtle' : ''
                   }`}
@@ -2025,7 +2046,7 @@ export default function Dashboard() {
                 </div>
 
                 <div 
-                  onClick={() => setCurrentView('events')}
+                  onClick={() => handleViewChange('events')}
                   className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
@@ -2082,7 +2103,7 @@ export default function Dashboard() {
                 </div>
 
                 <div
-                  onClick={() => setCurrentView('reviews')}
+                  onClick={() => handleViewChange('reviews')}
                   className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
@@ -2139,7 +2160,7 @@ export default function Dashboard() {
                 </div>
 
                 <div
-                  onClick={() => setCurrentView('scores')}
+                  onClick={() => handleViewChange('scores')}
                   className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                   style={{ 
                     backgroundColor: 'rgba(249, 246, 244, 0.4)', 
@@ -2208,7 +2229,7 @@ export default function Dashboard() {
                 >
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 py-2 sm:py-3">
                     <div
-                      onClick={() => showMoreActions && setCurrentView('investments')}
+                      onClick={() => showMoreActions && handleViewChange('investments')}
                       className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                       style={{ 
                         backgroundColor: 'rgba(249, 246, 244, 0.4)', 
@@ -2254,7 +2275,7 @@ export default function Dashboard() {
                     </div>
 
                     <div
-                      onClick={() => showMoreActions && setCurrentView('expenses')}
+                      onClick={() => showMoreActions && handleViewChange('expenses')}
                       className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-hidden border border-[#8CBF7F] border-2 select-none"
                       style={{ 
                         backgroundColor: 'rgba(249, 246, 244, 0.4)', 
@@ -2300,7 +2321,7 @@ export default function Dashboard() {
                     </div>
 
                     <div
-                      onClick={() => showMoreActions && setCurrentView('members')}
+                      onClick={() => showMoreActions && handleViewChange('members')}
                       className="rounded-2xl px-4 py-8 sm:px-6 sm:py-12 lg:px-6 lg:py-16 hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer group relative overflow-visible border border-[#8CBF7F] border-2 select-none"
                       style={{ 
                         backgroundColor: 'rgba(249, 246, 244, 0.4)', 
@@ -2489,7 +2510,7 @@ export default function Dashboard() {
                     ))}
                       <div className="text-center pt-3">
                       <button 
-                        onClick={() => setCurrentView('events')}
+                        onClick={() => handleViewChange('events')}
                           className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm rounded-xl transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105 overflow-hidden"
                       >
                           <span className="relative z-10">查看更多活动</span>
@@ -2504,7 +2525,7 @@ export default function Dashboard() {
                       </div>
                       <p className="text-gray-500 mb-4 text-sm sm:text-base">暂无即将举行的活动</p>
                     <button 
-                      onClick={() => setCurrentView('events')}
+                      onClick={() => handleViewChange('events')}
                         className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm sm:text-base rounded-xl transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105 overflow-hidden"
                     >
                         <span className="relative z-10">查看更多活动</span>
@@ -2541,10 +2562,13 @@ export default function Dashboard() {
                           onClick={() => {
                             if (result.event_id) {
                               // 切换到成绩查询视图并传递 eventId 参数
-                              setCurrentView('scores')
-                              navigate(`/dashboard?view=scores&eventId=${result.event_id}`, { replace: true })
+                              const newParams = new URLSearchParams()
+                              newParams.set('view', 'scores')
+                              newParams.set('eventId', result.event_id)
+                              setSearchParams(newParams, { replace: true })
+                              handleViewChange('scores')
                             } else {
-                              setCurrentView('scores')
+                              handleViewChange('scores')
                             }
                           }}
                           onMouseDown={(e) => {
@@ -2667,7 +2691,7 @@ export default function Dashboard() {
                     ))}
                       <div className="text-center pt-3">
                       <button 
-                        onClick={() => setCurrentView('scores')}
+                        onClick={() => handleViewChange('scores')}
                           className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm rounded-xl transition-all duration-300 shadow-sm hover:shadow-md hover:scale-105 overflow-hidden"
                       >
                           <span className="relative z-10">查看完整成绩单</span>
@@ -2682,7 +2706,7 @@ export default function Dashboard() {
                       </div>
                       <p className="text-gray-500 mb-4 text-sm sm:text-base">暂无成绩记录</p>
                     <button 
-                      onClick={() => setCurrentView('scores')}
+                      onClick={() => handleViewChange('scores')}
                         className="group relative px-6 py-2.5 bg-gradient-to-r from-[#F15B98] to-[#E0487A] hover:from-[#E0487A] hover:to-[#F15B98] text-white font-semibold text-sm sm:text-base rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105 overflow-hidden"
                     >
                         <span className="relative z-10">查看成绩查询</span>
@@ -2702,7 +2726,7 @@ export default function Dashboard() {
                     最新费用公示
                   </h3>
                   <button 
-                    onClick={() => setCurrentView('expenses')}
+                    onClick={() => handleViewChange('expenses')}
                     className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base flex items-center"
                   >
                     查看全部
@@ -2728,7 +2752,7 @@ export default function Dashboard() {
                     ))}
                     <div className="text-center pt-2">
                       <button 
-                        onClick={() => setCurrentView('expenses')}
+                        onClick={() => handleViewChange('expenses')}
                         className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm"
                       >
                         查看费用公示
@@ -2739,7 +2763,7 @@ export default function Dashboard() {
                   <div className="text-center py-6 sm:py-8">
                     <p className="text-gray-500 mb-3 sm:mb-4 text-sm sm:text-base">暂无费用公示</p>
                     <button 
-                      onClick={() => setCurrentView('expenses')}
+                      onClick={() => handleViewChange('expenses')}
                       className="text-[#F15B98] hover:text-[#F15B98]/80 font-bold text-sm sm:text-base"
                     >
                       查看费用公示
