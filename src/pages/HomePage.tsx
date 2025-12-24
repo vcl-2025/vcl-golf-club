@@ -21,12 +21,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
-  const [imageScale, setImageScale] = useState(1)
-  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [lastTouchDistance, setLastTouchDistance] = useState(0)
-  const lightboxImageRef = useRef<HTMLImageElement>(null)
   
   // 滚动动画 refs
   const aboutTextRef = useRef<HTMLDivElement>(null)
@@ -114,87 +108,6 @@ export default function HomePage() {
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [lightboxOpen, galleryImages.length])
-
-  // 重置图片缩放和位置当切换图片时
-  useEffect(() => {
-    if (lightboxOpen) {
-      setImageScale(1)
-      setImagePosition({ x: 0, y: 0 })
-    }
-  }, [lightboxIndex, lightboxOpen])
-
-  // 计算两点之间的距离（用于图片缩放）
-  const getImageTouchDistance = (touch1: React.Touch, touch2: React.Touch) => {
-    const dx = touch2.clientX - touch1.clientX
-    const dy = touch2.clientY - touch1.clientY
-    return Math.sqrt(dx * dx + dy * dy)
-  }
-
-  // 图片触摸开始（用于缩放和拖动）
-  const handleImageTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      // 单点触摸 - 准备拖动
-      setIsDragging(true)
-      setDragStart({
-        x: e.touches[0].clientX - imagePosition.x,
-        y: e.touches[0].clientY - imagePosition.y
-      })
-    } else if (e.touches.length === 2) {
-      // 两点触摸 - 准备缩放
-      setIsDragging(false)
-      const distance = getImageTouchDistance(e.touches[0], e.touches[1])
-      setLastTouchDistance(distance)
-    }
-  }
-
-  // 图片触摸移动（用于缩放和拖动）
-  const handleImageTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1 && isDragging && imageScale > 1) {
-      // 单点拖动（仅在放大时）
-      e.preventDefault()
-      setImagePosition({
-        x: e.touches[0].clientX - dragStart.x,
-        y: e.touches[0].clientY - dragStart.y
-      })
-    } else if (e.touches.length === 2) {
-      // 两点缩放
-      e.preventDefault()
-      const distance = getImageTouchDistance(e.touches[0], e.touches[1])
-      if (lastTouchDistance > 0) {
-        const scaleChange = distance / lastTouchDistance
-        const newScale = Math.max(1, Math.min(5, imageScale * scaleChange))
-        setImageScale(newScale)
-        
-        // 如果缩放回到1，重置位置
-        if (newScale === 1) {
-          setImagePosition({ x: 0, y: 0 })
-        }
-      }
-      setLastTouchDistance(distance)
-    }
-  }
-
-  // 图片触摸结束
-  const handleImageTouchEnd = () => {
-    setIsDragging(false)
-    setLastTouchDistance(0)
-    
-    // 如果缩放小于1，重置为1
-    if (imageScale < 1) {
-      setImageScale(1)
-      setImagePosition({ x: 0, y: 0 })
-    }
-  }
-
-  // 双击放大/缩小
-  const handleDoubleClick = () => {
-    if (imageScale === 1) {
-      setImageScale(2)
-    } else {
-      setImageScale(1)
-      setImagePosition({ x: 0, y: 0 })
-    }
-  }
 
   // Intersection Observer for scroll animations
   useEffect(() => {
@@ -1434,31 +1347,21 @@ export default function HomePage() {
             <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
           </button>
 
-          {/* 图片容器 */}
+          {/* 图片容器 - 使用浏览器原生缩放 */}
           <div 
-            className="relative max-w-[95vw] max-h-[95vh] flex items-center justify-center overflow-hidden"
-            onClick={(e) => {
-              e.stopPropagation()
-              // 如果图片未放大，点击背景关闭
-              if (imageScale === 1) {
-                setLightboxOpen(false)
-              }
-            }}
-            onTouchStart={handleImageTouchStart}
-            onTouchMove={handleImageTouchMove}
-            onTouchEnd={handleImageTouchEnd}
+            className="relative w-full h-full flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
           >
             <img
-              ref={lightboxImageRef}
               src={galleryImages[lightboxIndex]}
               alt={`Gallery image ${lightboxIndex + 1}`}
-              className="max-w-full max-h-[95vh] object-contain rounded-lg shadow-2xl transition-transform duration-200 select-none touch-none"
+              className="max-w-full max-h-[95vh] w-auto h-auto object-contain rounded-lg shadow-2xl select-none"
               style={{
-                transform: `scale(${imageScale}) translate(${imagePosition.x / imageScale}px, ${imagePosition.y / imageScale}px)`,
-                transformOrigin: 'center center',
-                cursor: imageScale > 1 ? 'move' : 'default'
+                touchAction: 'pinch-zoom pan-x pan-y',
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+                WebkitTouchCallout: 'none'
               }}
-              onDoubleClick={handleDoubleClick}
               draggable={false}
             />
             
