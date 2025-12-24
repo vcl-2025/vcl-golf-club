@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Users, Trophy, Calendar, Star, LogIn, Menu, X, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
+import { usePWAInstall } from '../hooks/usePWAInstall'
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const { shouldShowButton: shouldShowInstallButton } = usePWAInstall()
   const [navScrolled, setNavScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [carouselIndex, setCarouselIndex] = useState(0)
@@ -692,14 +694,16 @@ export default function HomePage() {
 
         {/* Mobile Menu Button & Login */}
         <div className="flex items-center gap-2 sm:gap-4">
-            <button
-            onClick={() => navigate('/install')}
-            className="flex items-center gap-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-xs sm:text-sm"
-            title="安装桌面应用"
-            >
-            <Download className="w-5 h-5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">安装应用</span>
-            </button>
+            {shouldShowInstallButton && (
+              <button
+              onClick={() => navigate('/install')}
+              className="flex items-center gap-1.5 sm:gap-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-xs sm:text-sm px-2 sm:px-0"
+              title="安装桌面应用"
+              >
+              <Download className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="hidden md:inline">安装应用</span>
+              </button>
+            )}
             <button
             onClick={() => navigate('/login')}
             className="flex items-center gap-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-xs sm:text-sm"
@@ -764,16 +768,18 @@ export default function HomePage() {
               >
                 CLUB風采
               </a>
-                <button
-                  onClick={() => {
-                  navigate('/install')
-                  setMobileMenuOpen(false)
-                  }}
-                className="flex items-center justify-center gap-2 mt-2 px-4 py-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-sm"
-                >
-                <Download className="w-4 h-4" />
-                <span>安装应用</span>
-                </button>
+                {shouldShowInstallButton && (
+                  <button
+                    onClick={() => {
+                    navigate('/install')
+                    setMobileMenuOpen(false)
+                    }}
+                  className="flex items-center justify-center gap-2 mt-2 px-4 py-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-sm"
+                  >
+                  <Download className="w-4 h-4" />
+                  <span>安装应用</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                   navigate('/login')

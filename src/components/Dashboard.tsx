@@ -5,6 +5,7 @@ import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, Chevro
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { getUserModulePermissions, type ModuleName, type ModulePermission } from '../lib/modulePermissions'
+import { usePWAInstall } from '../hooks/usePWAInstall'
 import ProfileModal from './ProfileModal'
 import EventList from './EventList'
 import EventDetail from './EventDetail'
@@ -96,6 +97,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user, signOut } = useAuth()
+  const { shouldShowButton: shouldShowInstallButton } = usePWAInstall()
   const [userProfile, setUserProfile] = useState<any>(null)
   const [memberCount, setMemberCount] = useState<number>(0)
   const [unreadInformationCount, setUnreadInformationCount] = useState<number>(0)
@@ -1036,6 +1038,20 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Install App Button - Desktop */}
+            {shouldShowInstallButton && (
+              <div className="hidden lg:flex items-center mr-4">
+                <button
+                  onClick={() => navigate('/install')}
+                  className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors font-medium text-sm"
+                  title="安装桌面应用"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>安装应用</span>
+                </button>
+              </div>
+            )}
+
             {/* Navigation */}
             <nav className="hidden lg:flex space-x-2 xl:space-x-3">
               <button
@@ -1252,18 +1268,20 @@ export default function Dashboard() {
                         <Lock className="w-4 h-4 mr-3" />
                         修改密码
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          navigate('/install')
-                          setUserMenuOpen(false)
-                        }}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <Download className="w-4 h-4 mr-3" />
-                        安装桌面应用
-                      </button>
+                      {shouldShowInstallButton && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            navigate('/install')
+                            setUserMenuOpen(false)
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <Download className="w-4 h-4 mr-3" />
+                          安装桌面应用
+                        </button>
+                      )}
                       {hasAdminAccess && (
                         <button
                           onClick={(e) => {
@@ -1349,6 +1367,20 @@ export default function Dashboard() {
               
               {/* Menu Items */}
               <div className="flex flex-col p-4 space-y-1 flex-1">
+                {/* Install App Button - Mobile */}
+                {shouldShowInstallButton && (
+                  <button
+                    onClick={() => {
+                      navigate('/install')
+                      setMobileMenuOpen(false)
+                    }}
+                    className="px-4 py-3 rounded-lg font-medium text-sm text-left transition-colors flex items-center space-x-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 mb-2"
+                  >
+                    <Download className="w-5 h-5 text-blue-600" strokeWidth={2} />
+                    <span>安装桌面应用</span>
+                  </button>
+                )}
+                
                 <button 
                   onClick={() => {
                     handleViewChange('dashboard')
@@ -1528,16 +1560,18 @@ export default function Dashboard() {
                 </button>
                 
                 {/* Mobile Install App Button */}
-                <button
-                  onClick={() => {
-                    navigate('/install')
-                    setMobileMenuOpen(false)
-                  }}
-                  className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#F15B98] font-medium text-sm text-left w-full rounded-lg transition-colors"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>安装桌面应用</span>
-                </button>
+                {shouldShowInstallButton && (
+                  <button
+                    onClick={() => {
+                      navigate('/install')
+                      setMobileMenuOpen(false)
+                    }}
+                    className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#F15B98] font-medium text-sm text-left w-full rounded-lg transition-colors"
+                  >
+                    <Download className="w-5 h-5" />
+                    <span>安装桌面应用</span>
+                  </button>
+                )}
                 
                 {/* Mobile Admin Button */}
                 {hasAdminAccess && (
