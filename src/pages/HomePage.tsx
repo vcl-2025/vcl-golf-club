@@ -21,6 +21,15 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [scale, setScale] = useState(1)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const touchStateRef = useRef({ 
+    distance: 0, 
+    center: { x: 0, y: 0 },
+    lastScale: 1,
+    lastPosition: { x: 0, y: 0 }
+  })
+  const imageRef = useRef<HTMLImageElement>(null)
   
   // 滚动动画 refs
   const aboutTextRef = useRef<HTMLDivElement>(null)
@@ -108,6 +117,117 @@ export default function HomePage() {
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [lightboxOpen, galleryImages.length])
+
+  // 重置缩放当切换图片或关闭时
+  useEffect(() => {
+    if (lightboxOpen) {
+      setScale(1)
+      setPosition({ x: 0, y: 0 })
+      touchStateRef.current = { 
+        distance: 0, 
+        center: { x: 0, y: 0 },
+        lastScale: 1,
+        lastPosition: { x: 0, y: 0 }
+      }
+    }
+  }, [lightboxIndex, lightboxOpen])
+
+  // 计算两点距离（用于图片缩放）
+  const getImageDistance = (t1: React.Touch, t2: React.Touch) => {
+    const dx = t2.clientX - t1.clientX
+    const dy = t2.clientY - t1.clientY
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  // 计算两点中心（用于图片缩放）
+  const getImageCenter = (t1: React.Touch, t2: React.Touch) => {
+    return {
+      x: (t1.clientX + t2.clientX) / 2,
+      y: (t1.clientY + t2.clientY) / 2
+    }
+  }
+
+  // 图片触摸开始
+  const handleImageTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const distance = getImageDistance(e.touches[0], e.touches[1])
+      const center = getImageCenter(e.touches[0], e.touches[1])
+      touchStateRef.current = {
+        distance,
+        center,
+        lastScale: scale,
+        lastPosition: position
+      }
+    } else if (e.touches.length === 1 && scale > 1) {
+      // 单指拖动准备
+      const touch = e.touches[0]
+      touchStateRef.current = {
+        ...touchStateRef.current,
+        center: { x: touch.clientX, y: touch.clientY },
+        lastPosition: position
+      }
+    }
+  }
+
+  // 图片触摸移动 - 优化性能
+  const handleImageTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault()
+      const distance = getImageDistance(e.touches[0], e.touches[1])
+      const center = getImageCenter(e.touches[0], e.touches[1])
+      
+      if (touchStateRef.current.distance > 0) {
+        const scaleChange = distance / touchStateRef.current.distance
+        const newScale = Math.max(1, Math.min(5, touchStateRef.current.lastScale * scaleChange))
+        
+        // 计算位置偏移（以缩放中心为基准）
+        const deltaX = center.x - touchStateRef.current.center.x
+        const deltaY = center.y - touchStateRef.current.center.y
+        
+        setScale(newScale)
+        setPosition({
+          x: touchStateRef.current.lastPosition.x + deltaX,
+          y: touchStateRef.current.lastPosition.y + deltaY
+        })
+      }
+    } else if (e.touches.length === 1 && scale > 1) {
+      // 单指拖动（仅在放大时）
+      e.preventDefault()
+      const touch = e.touches[0]
+      const deltaX = touch.clientX - touchStateRef.current.center.x
+      const deltaY = touch.clientY - touchStateRef.current.center.y
+      
+      setPosition({
+        x: touchStateRef.current.lastPosition.x + deltaX,
+        y: touchStateRef.current.lastPosition.y + deltaY
+      })
+    }
+  }
+
+  // 图片触摸结束
+  const handleImageTouchEnd = () => {
+    touchStateRef.current.lastScale = scale
+    touchStateRef.current.lastPosition = position
+    if (scale < 1) {
+      setScale(1)
+      setPosition({ x: 0, y: 0 })
+      touchStateRef.current.lastScale = 1
+      touchStateRef.current.lastPosition = { x: 0, y: 0 }
+    }
+  }
+
+  // 双击缩放
+  const handleDoubleClick = () => {
+    if (scale === 1) {
+      setScale(2)
+      touchStateRef.current.lastScale = 2
+    } else {
+      setScale(1)
+      setPosition({ x: 0, y: 0 })
+      touchStateRef.current.lastScale = 1
+      touchStateRef.current.lastPosition = { x: 0, y: 0 }
+    }
+  }
 
   // Intersection Observer for scroll animations
   useEffect(() => {
@@ -1347,21 +1467,36 @@ export default function HomePage() {
             <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
           </button>
 
-          {/* 图片容器 - 使用浏览器原生缩放 */}
+          {/* 图片容器 */}
           <div 
-            className="relative w-full h-full flex items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
+            className="relative w-full h-full flex items-center justify-center overflow-hidden"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (scale === 1) {
+                setLightboxOpen(false)
+              }
+            }}
+            onTouchStart={handleImageTouchStart}
+            onTouchMove={handleImageTouchMove}
+            onTouchEnd={handleImageTouchEnd}
           >
             <img
+              ref={imageRef}
               src={galleryImages[lightboxIndex]}
               alt={`Gallery image ${lightboxIndex + 1}`}
               className="max-w-full max-h-[95vh] w-auto h-auto object-contain rounded-lg shadow-2xl select-none"
               style={{
-                touchAction: 'pinch-zoom pan-x pan-y',
+                transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+                transformOrigin: 'center center',
+                willChange: 'transform',
+                transition: scale === 1 ? 'transform 0.2s ease-out' : 'none',
+                touchAction: 'none',
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
-                WebkitTouchCallout: 'none'
+                WebkitTouchCallout: 'none',
+                cursor: scale > 1 ? 'move' : 'default'
               }}
+              onDoubleClick={handleDoubleClick}
               draggable={false}
             />
             
