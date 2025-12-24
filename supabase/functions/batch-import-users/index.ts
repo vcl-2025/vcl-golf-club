@@ -33,7 +33,9 @@ serve(async (req) => {
 
     let successCount = 0
     let failedCount = 0
+    let skippedCount = 0
     const errors: string[] = []
+    const skipped: string[] = []
 
     console.log('🔄 开始处理用户...')
 
@@ -42,9 +44,9 @@ serve(async (req) => {
       console.log(`处理用户 ${i + 1}/${users.length}: ${user.email}`)
 
       try {
-        // 验证必需字段
-        if (!user.email || !user.password || !user.full_name || !user.phone || !user.membership_type) {
-          throw new Error('缺少必需字段')
+        // 验证必需字段（membership_type 可以为空，使用默认值）
+        if (!user.email || !user.password || !user.full_name || !user.phone) {
+          throw new Error('缺少必需字段: email, password, full_name, phone')
         }
 
         // 检查用户是否已存在
@@ -55,7 +57,11 @@ serve(async (req) => {
           .single()
 
         if (existingUser) {
-          throw new Error('用户已存在')
+          // 用户已存在，跳过（不计入失败）
+          skippedCount++
+          skipped.push(`${user.email}: 用户已存在，已跳过`)
+          console.log(`⏭️  用户 ${user.email} 已存在，跳过`)
+          continue
         }
 
         // 创建认证用户
@@ -71,18 +77,53 @@ serve(async (req) => {
 
         console.log('✅ 认证用户创建成功:', authUser.user?.id)
 
-        // 创建用户档案
+        // 处理 handicap 和 bc_handicap（转换为数字，处理非数字值）
+        const parseHandicap = (value: any): number | null => {
+          if (!value) return null
+          const num = parseFloat(value)
+          if (isNaN(num)) return null
+          return num
+        }
+
+        // 处理生日（确保格式正确）
+        let birthdayValue: string | null = null
+        if (user.birthday) {
+          // 尝试解析日期格式 YYYY-MM-DD
+          const dateStr = String(user.birthday).trim()
+          if (dateStr && dateStr !== '') {
+            // 验证日期格式
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+            if (dateRegex.test(dateStr)) {
+              birthdayValue = dateStr
+            } else {
+              console.warn(`日期格式不正确: ${dateStr}，跳过`)
+            }
+          }
+        }
+
+        // 处理 membership_type（确保值在允许的列表中）
+        const allowedMembershipTypes = ['standard', 'premium', 'vip']
+        let membershipType = (user.membership_type || 'standard').toLowerCase().trim()
+        if (!allowedMembershipTypes.includes(membershipType)) {
+          console.warn(`membership_type "${user.membership_type}" 不在允许列表中，使用默认值 'standard'`)
+          membershipType = 'standard'
+        }
+
+        // 创建用户档案（使用 upsert，因为触发器可能已经创建了记录）
         const { error: profileError } = await supabase
           .from('user_profiles')
-          .insert({
+          .upsert({
             id: authUser.user!.id,
             email: user.email,
             full_name: user.full_name,
             real_name: user.real_name || user.full_name,
             phone: user.phone,
-            membership_type: user.membership_type,
+            membership_type: membershipType,
             role: user.role || 'member',
-            handicap: user.handicap || null,
+            handicap: parseHandicap(user.handicap),
+            bc_handicap: parseHandicap(user.bc_handicap),
+            golflive_name: user.golflive_name || null,
+            birthday: birthdayValue,
             clothing_size: user.clothing_size || null,
             vancouver_residence: user.vancouver_residence || null,
             domestic_residence: user.domestic_residence || null,
@@ -92,6 +133,8 @@ serve(async (req) => {
             golf_motto: user.golf_motto || null,
             other_interests: user.other_interests || null,
             is_active: true
+          }, {
+            onConflict: 'id'
           })
 
         if (profileError) {
@@ -116,8 +159,10 @@ serve(async (req) => {
       JSON.stringify({
         success: successCount,
         failed: failedCount,
+        skipped: skippedCount,
         errors: errors,
-        message: `批量导入完成！成功: ${successCount}，失败: ${failedCount}`
+        skippedUsers: skipped,
+        message: `批量导入完成！成功: ${successCount}，失败: ${failedCount}，跳过: ${skippedCount}`
       }),
       { 
         status: 200, 

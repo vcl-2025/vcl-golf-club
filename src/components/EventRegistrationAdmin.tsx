@@ -22,6 +22,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [showBatchApprovalModal, setShowBatchApprovalModal] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null)
   const { showSuccess, showError } = useModal()
 
   useEffect(() => {
@@ -496,7 +497,8 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                       <img
                         src={selectedRegistration.payment_proof}
                         alt="支付证明"
-                        className="max-w-full h-auto max-h-64 rounded-lg border border-gray-200"
+                        className="max-w-full h-auto max-h-64 rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setEnlargedImage(selectedRegistration.payment_proof || null)}
                         onError={(e) => {
                           e.currentTarget.style.display = 'none'
                           e.currentTarget.nextElementSibling?.classList.remove('hidden')
@@ -505,6 +507,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                       <div className="hidden text-sm text-gray-500 mt-2">
                         图片加载失败，请检查图片链接
                       </div>
+                      <p className="text-xs text-gray-500 mt-2">点击图片可放大查看</p>
                     </div>
                   </div>
                 )}
@@ -617,6 +620,35 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 图片放大预览模态框 */}
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4"
+          style={{ zIndex: 99999 }}
+          onClick={() => setEnlargedImage(null)}
+        >
+          <div className="relative max-w-full max-h-full">
+            <img
+              src={enlargedImage}
+              alt="支付证明放大"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setEnlargedImage(null)
+              }}
+              className="absolute top-2 right-2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full p-2 transition-all z-10"
+              style={{ zIndex: 100000 }}
+              aria-label="关闭"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
         </div>
       )}

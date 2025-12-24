@@ -1006,48 +1006,22 @@ export default function HomePage() {
                   </div>
             ))
           ) : (
-            activityImages.map((activity, idx) => (
-              <div
-                key={idx}
-                className="activity-card relative overflow-hidden rounded-lg cursor-pointer group shadow-lg hover:shadow-xl transition-shadow duration-300"
-                style={{ aspectRatio: '4/5', boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)' }}
-              >
-                <img
-                  src={activity.src}
-                  alt={activity.title}
-                  className="w-full h-full object-cover"
-                />
-                <div 
-                  className="activity-overlay absolute inset-0 flex flex-col justify-end transition-all duration-400"
-                  style={{
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent 60%)',
-                    padding: '40px'
-                  }}
-                >
-                  <div>
-                    <div className="text-[13px] uppercase mb-[15px]" style={{ letterSpacing: '2px', color: 'var(--pink)', fontWeight: 500 }}>
-                      {activity.date}
-                  </div>
-                    <h3 
-                      className="mb-3 leading-[1.3] text-white"
-                      style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '24px', fontWeight: 600 }}
-                    >
-                      {activity.title}
-                    </h3>
-                    <div className="flex gap-[25px] text-[13px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                      <span className="flex items-center">
-                        <i className="fas fa-map-marker-alt mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
-                        {activity.location}
-                    </span>
-                      <span className="flex items-center">
-                        <i className="fas fa-users mr-2" style={{ color: 'var(--primary)', fontSize: '16px' }}></i>
-                        {activity.participants.replace(' Participants', '').replace(' Members', '').replace(' Players', '')}
-                      </span>
+            <div className="col-span-3 text-center py-16 sm:py-20">
+              <div className="flex flex-col items-center justify-center">
+                <div className="mb-6">
+                  <Calendar className="w-16 h-16 sm:w-20 sm:h-20 mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }} />
                 </div>
-                  </div>
-                  </div>
-                              </div>
-            ))
+                <h3 
+                  className="text-xl sm:text-2xl mb-3 text-white"
+                  style={{ fontFamily: '"Cormorant Garamond", serif', fontWeight: 600 }}
+                >
+                  暂无活动回顾
+                </h3>
+                <p className="text-sm sm:text-base" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  精彩活动即将到来，敬请期待
+                </p>
+              </div>
+            </div>
                             )}
                           </div>
                           

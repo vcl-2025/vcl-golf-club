@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Users, Search, Filter, Edit, Trash2, Download, Mail, Phone, Calendar,
   User, Crown, Star, CheckCircle, XCircle, UserCog, ToggleLeft, ToggleRight, Upload, UserPlus, Eye, EyeOff,
   Key, Shield, Lock
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import { getUserModulePermissions } from '../lib/modulePermissions'
@@ -60,11 +61,15 @@ export default function MemberAdmin() {
   // 批量导入状态
   const [isImporting, setIsImporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
+  const [importTotal, setImportTotal] = useState(0)
   const [importResults, setImportResults] = useState<{
     success: number
     failed: number
+    skipped?: number
     errors: string[]
+    skippedUsers?: string[]
   } | null>(null)
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // 注册新会员状态
   const [showRegisterModal, setShowRegisterModal] = useState(false)
@@ -588,22 +593,62 @@ export default function MemberAdmin() {
     link.click()
   }
 
-  // 处理CSV文件上传
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // 处理Excel/CSV文件上传
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.name.endsWith('.csv')) {
-      modal.showError('请选择CSV文件')
+    const fileName = file.name.toLowerCase()
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls')
+    const isCSV = fileName.endsWith('.csv')
+
+    if (!isExcel && !isCSV) {
+      modal.showError('请选择 Excel (.xlsx, .xls) 或 CSV (.csv) 文件')
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const csvText = e.target?.result as string
+    try {
+      let csvText: string
+
+      if (isExcel) {
+        // 处理 Excel 文件
+        const arrayBuffer = await file.arrayBuffer()
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+        
+        // 读取第一个工作表
+        const firstSheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[firstSheetName]
+        
+        // 转换为 JSON 数组（header: 1 表示第一行是数据，我们需要第一行作为表头）
+        // 使用 header: 1 获取所有行，第一行会被当作表头处理
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][]
+        
+        // 转换为 CSV 格式的字符串（每行用逗号连接）
+        // 第一行会被当作表头，后续行是数据
+        const lines = jsonData.map(row => {
+          return row.map((cell: any) => {
+            if (cell === null || cell === undefined) return ''
+            const str = String(cell)
+            // 如果包含逗号、引号或换行符，需要用引号包裹
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+              return `"${str.replace(/"/g, '""')}"`
+            }
+            return str
+          }).join(',')
+        })
+        
+        csvText = lines.join('\n')
+      } else {
+        // 处理 CSV 文件
+        const text = await file.text()
+        csvText = text
+      }
+
       parseAndImportCSV(csvText)
+    } catch (error) {
+      console.error('文件读取失败:', error)
+      modal.showError('文件读取失败: ' + (error as any)?.message)
     }
-    reader.readAsText(file, 'utf-8')
   }
 
   // 解析CSV并批量导入
@@ -615,59 +660,124 @@ export default function MemberAdmin() {
 
       const lines = csvText.split('\n').filter(line => line.trim())
       if (lines.length < 2) {
-        modal.showError('CSV文件格式不正确，至少需要标题行和一行数据')
+        modal.showError('文件格式不正确，至少需要标题行和一行数据')
         return
       }
 
-      // 解析CSV数据
-      const headers = lines[0].split(',').map(h => h.trim())
-      const requiredHeaders = ['email', 'password', 'full_name', 'phone', 'membership_type']
+      // 解析CSV数据（支持带引号的字段）
+      const parseCSVLine = (line: string): string[] => {
+        const result: string[] = []
+        let current = ''
+        let inQuotes = false
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i]
+          if (char === '"') {
+            inQuotes = !inQuotes
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim())
+            current = ''
+          } else {
+            current += char
+          }
+        }
+        result.push(current.trim())
+        return result
+      }
+
+      const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim())
+      const requiredHeaders = ['email', 'password', 'full_name', 'phone']
       
       // 检查必需字段
       const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
       if (missingHeaders.length > 0) {
-        modal.showError(`CSV文件缺少必需字段: ${missingHeaders.join(', ')}`)
+        modal.showError(`文件缺少必需字段: ${missingHeaders.join(', ')}`)
         return
       }
 
       const users = []
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim())
-        if (values.length !== headers.length) continue
+        const values = parseCSVLine(lines[i]).map(v => v.replace(/^"|"$/g, '').trim())
+        if (values.length !== headers.length) {
+          console.warn(`第 ${i + 1} 行数据列数不匹配，跳过`)
+          continue
+        }
 
         const user: any = {}
         headers.forEach((header, index) => {
-          user[header] = values[index]
+          // 移除字段名中的引号
+          const cleanHeader = header.replace(/^"|"$/g, '').trim()
+          let value = values[index] || ''
+          // 移除值中的引号
+          value = value.replace(/^"|"$/g, '').trim()
+          user[cleanHeader] = value
         })
 
-        // 验证必需字段
-        if (user.email && user.password && user.full_name && user.phone && user.membership_type) {
+        // 验证必需字段（membership_type 可以为空，使用默认值 'standard'）
+        if (user.email && user.password && user.full_name && user.phone) {
+          // 如果没有 membership_type，设置默认值
+          if (!user.membership_type) {
+            user.membership_type = 'standard'
+          }
           users.push(user)
+        } else {
+          console.warn(`第 ${i + 1} 行缺少必需字段，跳过`)
         }
       }
 
       if (users.length === 0) {
         modal.showError('没有找到有效的用户数据')
+        setIsImporting(false)
         return
       }
+
+      // 设置导入总数
+      setImportTotal(users.length)
+      setImportProgress(0.05) // 5% 表示开始
 
       // 调用批量导入API
       if (!supabase) {
         throw new Error('Supabase客户端未初始化')
       }
       
+      // 模拟进度更新（因为后端一次性处理，无法获取实时进度）
+      progressIntervalRef.current = setInterval(() => {
+        setImportProgress(prev => {
+          // 缓慢增加到 85%，留出 15% 给完成
+          if (prev < 0.85) {
+            return Math.min(prev + 0.05, 0.85)
+          }
+          return prev
+        })
+      }, 500) // 每 500ms 更新一次
+      
       const { data, error } = await supabase.functions.invoke('batch-import-users', {
         body: { users }
       })
+      
+      // 清除进度更新定时器
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
 
       if (error) {
+        // 提供更详细的错误信息
+        if (error.message?.includes('Failed to send a request')) {
+          throw new Error('Edge Function 未部署。请先部署 batch-import-users 函数：\n\nsupabase functions deploy batch-import-users')
+        }
         throw error
       }
+
+      // 显示完成进度
+      setImportProgress(1)
 
       setImportResults({
         success: data.success || 0,
         failed: data.failed || 0,
-        errors: data.errors || []
+        skipped: data.skipped || 0,
+        errors: data.errors || [],
+        skippedUsers: data.skippedUsers || []
       })
 
       // 刷新会员列表
@@ -679,8 +789,17 @@ export default function MemberAdmin() {
       console.error('批量导入失败:', error)
       modal.showError('批量导入失败: ' + (error as any)?.message)
     } finally {
+      // 清除进度更新定时器
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
       setIsImporting(false)
-      setImportProgress(0)
+      // 延迟重置进度，让用户看到完成状态
+      setTimeout(() => {
+        setImportProgress(0)
+        setImportTotal(0)
+      }, 1500)
     }
   }
 
@@ -758,7 +877,7 @@ export default function MemberAdmin() {
                 <span>{isImporting ? '导入中...' : '批量导入'}</span>
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={handleFileUpload}
                   disabled={isImporting}
                   className="hidden"
@@ -768,8 +887,44 @@ export default function MemberAdmin() {
           </div>
         </div>
 
+        {/* 导入进度显示 */}
+        {isImporting && (
+          <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
+            <div className="flex items-center space-x-4">
+              <div className="flex-shrink-0">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-900">
+                    正在批量导入用户...
+                  </span>
+                  <span className="text-sm text-blue-700">
+                    {importTotal > 0 ? `共 ${importTotal} 个用户` : '处理中...'}
+                  </span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                    style={{ 
+                      width: `${Math.min(importProgress * 100, 90)}%` 
+                    }}
+                  ></div>
+                </div>
+                <div className="text-xs text-blue-600 mt-1">
+                  {importProgress < 0.1 
+                    ? '正在准备导入...' 
+                    : importProgress < 0.9
+                    ? '正在处理数据，请稍候...'
+                    : '即将完成...'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 导入结果显示 */}
-        {importResults && (
+        {importResults && !isImporting && (
           <div className="px-6 py-4 bg-blue-50 border-b border-blue-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -777,6 +932,11 @@ export default function MemberAdmin() {
                   <CheckCircle className="w-5 h-5 text-green-500" />
                   <span className="text-green-700 font-medium">成功: {importResults.success}</span>
                 </div>
+                {importResults.skipped && importResults.skipped > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-yellow-600 font-medium">跳过: {importResults.skipped}</span>
+                  </div>
+                )}
                 <div className="flex items-center space-x-2">
                   <XCircle className="w-5 h-5 text-red-500" />
                   <span className="text-red-700 font-medium">失败: {importResults.failed}</span>
@@ -789,6 +949,19 @@ export default function MemberAdmin() {
                 ✕
               </button>
             </div>
+            {importResults.skippedUsers && importResults.skippedUsers.length > 0 && (
+              <div className="mt-2 text-sm text-yellow-600">
+                <div className="font-medium">跳过的用户（已存在）:</div>
+                <ul className="list-disc list-inside ml-4">
+                  {importResults.skippedUsers.slice(0, 5).map((skipped, index) => (
+                    <li key={index}>{skipped}</li>
+                  ))}
+                  {importResults.skippedUsers.length > 5 && (
+                    <li>...还有 {importResults.skippedUsers.length - 5} 个已跳过</li>
+                  )}
+                </ul>
+              </div>
+            )}
             {importResults.errors.length > 0 && (
               <div className="mt-2 text-sm text-red-600">
                 <div className="font-medium">错误详情:</div>
@@ -916,7 +1089,7 @@ export default function MemberAdmin() {
         </div>
         
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
             <thead className="bg-gray-50">
               <tr>
                 <th 
@@ -933,7 +1106,7 @@ export default function MemberAdmin() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
+                  className="px-4 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none max-w-[250px]"
                   onClick={() => handleSort('email')}
                 >
                   <div className="flex items-center space-x-1">
@@ -959,7 +1132,7 @@ export default function MemberAdmin() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
+                  className="px-4 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none max-w-[120px]"
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center space-x-1">
@@ -985,7 +1158,7 @@ export default function MemberAdmin() {
                   </div>
                 </th>
                 {(modulePermissions.can_update || modulePermissions.can_delete) && (
-                  <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">
+                  <th className="px-6 py-4 text-left text-base font-semibold text-gray-700 min-w-[200px]">
                     操作
                   </th>
                 )}
@@ -1038,27 +1211,29 @@ export default function MemberAdmin() {
                     </div>
                   </td>
                   
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 max-w-[250px]">
                     <div className="text-sm text-gray-900">
                       <div className="flex items-center space-x-1">
-                        <Phone className="w-4 h-4 text-gray-400" />
-                        <span>{member.phone || '未设置'}</span>
+                        <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{member.phone || '未设置'}</span>
                       </div>
                       <div className="flex items-center space-x-1 mt-1">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-500">{member.email || '未设置'}</span>
+                        <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-500 truncate" title={member.email || '未设置'}>
+                          {member.email || '未设置'}
+                        </span>
                       </div>
-                      <div className="flex items-center space-x-3 text-xs text-gray-400 mt-1">
+                      <div className="flex items-center space-x-2 text-xs text-gray-400 mt-1 flex-wrap">
                         {member.vancouver_residence && (
-                          <span className="flex items-center space-x-1">
+                          <span className="flex items-center space-x-1 truncate max-w-full">
                             <span>📍</span>
-                            <span>{member.vancouver_residence}</span>
+                            <span className="truncate">{member.vancouver_residence}</span>
                           </span>
                         )}
                         {member.clothing_size && (
-                          <span className="flex items-center space-x-1">
+                          <span className="flex items-center space-x-1 truncate max-w-full">
                             <span>👕</span>
-                            <span>{member.clothing_size}</span>
+                            <span className="truncate">{member.clothing_size}</span>
                           </span>
                         )}
                       </div>
@@ -1093,19 +1268,19 @@ export default function MemberAdmin() {
                     )}
                   </td>
                   
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
+                  <td className="px-4 py-4 max-w-[120px]">
+                    <div className="flex items-center space-x-1">
                       {member.is_active ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
                       ) : (
-                        <XCircle className="w-4 h-4 text-red-500" />
+                        <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
                       )}
                       <span className={`text-sm ${member.is_active ? 'text-green-600' : 'text-red-600'}`}>
                         {member.is_active ? '活跃' : '非活跃'}
                       </span>
                     </div>
                     {member.last_sign_in_at && (
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 mt-1 truncate" title={`最后登录: ${new Date(member.last_sign_in_at).toLocaleDateString()}`}>
                         最后登录: {new Date(member.last_sign_in_at).toLocaleDateString()}
                       </div>
                     )}
@@ -1116,7 +1291,7 @@ export default function MemberAdmin() {
                   </td>
                   
                   {(modulePermissions.can_update || modulePermissions.can_delete) && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium min-w-[200px]">
                       <div className="flex items-center space-x-2 flex-wrap gap-2">
                         {modulePermissions.can_update && (
                           <>
