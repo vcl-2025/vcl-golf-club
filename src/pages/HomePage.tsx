@@ -786,7 +786,7 @@ export default function HomePage() {
           <img src="/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain flex-shrink-0" />
           <div className="flex flex-col gap-[1px] sm:gap-[2px] min-w-0 flex-1">
             <span className="font-semibold leading-tight" style={{ color: 'var(--light)', letterSpacing: '0px', fontSize: 'clamp(12px, 5vw, 22px)' }}>溫哥華華人女子高爾夫球會</span>
-            <span className="uppercase leading-tight break-words" style={{ color: 'var(--accent)', letterSpacing: '0.2px', fontWeight: 700, fontFamily: 'sans-serif', fontSize: 'clamp(10px, 2.8vw, 13px)' }}>Vancouver Chinese Women's Golf Club</span>
+            <span className="uppercase leading-tight break-words" style={{ color: 'var(--accent)', letterSpacing: '0.2px', fontWeight: 700, fontFamily: 'sans-serif', fontSize: 'clamp(10px, 2.8vw, 13px)' }}>Vancouver Chinese Ladies' Golf Club</span>
               </div>
               </div>
         
@@ -980,8 +980,9 @@ export default function HomePage() {
             className="text-base sm:text-base lg:text-xl leading-[1.8] max-w-[600px] mb-6 sm:mb-[50px] font-light opacity-0 animate-fade-in-delay"
             style={{ color: 'rgba(255,255,255,0.9)' }}
           >
+            匯聚熱愛高爾夫的華人女性，在綠茵場上揮灑激情
             <br className="hidden sm:block" />
-            <br/>
+            讓熱愛連結彼此，共享無限歡樂與真摯友誼
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-[25px] w-full sm:w-auto opacity-0 animate-fade-in-delay">
             <a 
@@ -1517,8 +1518,8 @@ export default function HomePage() {
               <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
                 <img src="/logo.png" alt="VCL Logo" className="h-12 sm:h-14 w-auto" />
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm sm:text-base font-medium" style={{ color: 'var(--primary)' }}>溫哥華華人女子高爾夫俱樂部</span>
-                  <span className="text-[10px] sm:text-xs uppercase" style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1px' }}>Vancouver Chinese Women's Golf Club</span>
+                  <span className="text-sm sm:text-base font-medium" style={{ color: 'var(--primary)' }}>溫哥華華人女子高爾夫球會</span>
+                  <span className="text-[10px] sm:text-xs uppercase" style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1px' }}>Vancouver Chinese Ladies' Golf Club</span>
                               </div>
                           </div>
               <p className="text-sm sm:text-[15px] leading-[1.8] mb-6 sm:mb-8" style={{ color: 'rgba(255,255,255,0.7)' }}>
