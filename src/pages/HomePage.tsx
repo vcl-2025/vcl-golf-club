@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Users, Trophy, Calendar, Star, LogIn, Menu, X, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Users, Trophy, Calendar, Star, LogIn, Menu, X, Download, ZoomIn, Heart, Target } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
 import { usePWAInstall } from '../hooks/usePWAInstall'
@@ -19,6 +19,8 @@ export default function HomePage() {
   const touchEndX = useRef<number>(0)
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
   
   // 滚动动画 refs
   const aboutTextRef = useRef<HTMLDivElement>(null)
@@ -54,12 +56,15 @@ export default function HomePage() {
 
   // 会员风采图片
   const galleryImages = [
-    'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?q=80&w=2070',
-    'https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?q=80&w=2070',
-    'https://images.unsplash.com/photo-1592919505780-303950717480?q=80&w=2070',
-    'https://images.unsplash.com/photo-1530028828-25e8270d5d0a?q=80&w=2070',
-    'https://images.unsplash.com/photo-1596727362302-b8d891c42ab8?q=80&w=2070',
-    'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=2070'
+    '/member_gallery1.jpg',
+    '/member_gallery2.jpg',
+    '/member_gallery3.jpg',
+    '/member_gallery4.jpg',
+    '/member_gallery5.jpg',
+    '/member_gallery6.jpg',
+    '/member_gallery7.jpg',
+    '/member_gallery8.jpg',
+    '/member_gallery9.jpg'
   ]
 
   useEffect(() => {
@@ -81,11 +86,28 @@ export default function HomePage() {
 
     window.addEventListener('scroll', handleScroll)
     window.addEventListener('resize', handleResize)
+    
+    // 键盘快捷键：ESC 关闭 lightbox，左右箭头切换图片
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (lightboxOpen) {
+        if (e.key === 'Escape') {
+          setLightboxOpen(false)
+        } else if (e.key === 'ArrowLeft') {
+          setLightboxIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)
+        } else if (e.key === 'ArrowRight') {
+          setLightboxIndex((prev) => (prev + 1) % galleryImages.length)
+        }
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    
     return () => {
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleResize)
+      window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [])
+  }, [lightboxOpen, galleryImages.length])
 
   // Intersection Observer for scroll animations
   useEffect(() => {
@@ -643,7 +665,7 @@ export default function HomePage() {
         <div className="flex items-center gap-2 sm:gap-[15px] flex-1 min-w-0" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '16px sm:text-[20px]', fontWeight: 700, letterSpacing: '1px', color: 'var(--light)' }}>
           <img src="/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain flex-shrink-0" />
           <div className="flex flex-col gap-[1px] sm:gap-[2px] min-w-0 flex-1">
-            <span className="font-semibold leading-tight" style={{ color: 'var(--light)', letterSpacing: '0px', fontSize: 'clamp(12px, 5vw, 22px)' }}>溫哥華華人女子高爾夫俱樂部</span>
+            <span className="font-semibold leading-tight" style={{ color: 'var(--light)', letterSpacing: '0px', fontSize: 'clamp(12px, 5vw, 22px)' }}>溫哥華華人女子高爾夫球會</span>
             <span className="uppercase leading-tight break-words" style={{ color: 'var(--accent)', letterSpacing: '0.2px', fontWeight: 700, fontFamily: 'sans-serif', fontSize: 'clamp(10px, 2.8vw, 13px)' }}>Vancouver Chinese Women's Golf Club</span>
               </div>
               </div>
@@ -831,15 +853,15 @@ export default function HomePage() {
           >
             歡迎來到<br />
             <strong className="font-bold block whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--primary)', fontSize: 'clamp(24px, 6.4vw, 60px)' }}>
-              溫哥華華人女子高爾夫俱樂部
+            溫哥華華人女子高爾夫球會
             </strong>
           </h1>
           <p 
             className="text-base sm:text-base lg:text-xl leading-[1.8] max-w-[600px] mb-6 sm:mb-[50px] font-light opacity-0 animate-fade-in-delay"
             style={{ color: 'rgba(255,255,255,0.9)' }}
           >
-            汇聚温哥华优雅女性，在世界级球场挥洒激情，<br className="hidden sm:block" />
-            享受高尔夫运动的至臻体验
+            匯聚溫哥華優雅女性，在世界級球場揮灑激情，<br className="hidden sm:block" />
+            享受高爾夫運動的至臻體驗
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-[25px] w-full sm:w-auto opacity-0 animate-fade-in-delay">
             <a 
@@ -853,7 +875,7 @@ export default function HomePage() {
                 transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              <span className="relative z-[1]">About Us</span>
+              <span className="relative z-[1]">關於我們</span>
             </a>
             <a 
               href="#activities" 
@@ -897,37 +919,99 @@ export default function HomePage() {
             <div className="text-sm sm:text-sm uppercase mb-4 sm:mb-[25px] font-semibold" style={{ letterSpacing: '3px', color: 'var(--accent)' }}>
               About VCL Golf Club
                     </div>
+            {/* 主标题 */}
             <h2 
-              className="font-light leading-[1.2] mb-6 sm:mb-10 text-4xl sm:text-5xl lg:text-[64px]"
-              style={{ fontFamily: '"Cormorant Garamond", serif' }}
+              className="font-light leading-[1.3] mb-4 sm:mb-6 text-4xl sm:text-5xl lg:text-[64px]"
+              style={{ fontFamily: '"Cormorant Garamond", serif', color: 'var(--dark)' }}
             >
-              煥發女性 <strong className="font-bold" style={{ color: 'var(--primary)' }}>高爾夫</strong><br />的优雅与激情
+              <span className="block">
+                揮桿<strong className="font-bold" style={{ color: 'var(--primary)' }}>溫哥華</strong>，悅享高
+              </span>
+              <span className="block">球人生</span>
             </h2>
+            
+            {/* 分隔线 */}
+            <div className="mb-4 sm:mb-6">
+              <div className="w-16 sm:w-24 h-px bg-[#888]" style={{ opacity: 0.3 }}></div>
+            </div>
+            
+            {/* 副标题 */}
+            <div 
+              className="text-xl sm:text-2xl lg:text-3xl font-light leading-[1.6] mb-6 sm:mb-10"
+              style={{ fontFamily: '"Cormorant Garamond", serif', color: '#666' }}
+            >
+              <span className="block">每一個優雅瞬</span>
+              <span className="block">間，都有<strong className="font-semibold" style={{ color: 'var(--primary)' }}>VCL</strong>的陪</span>
+              <span className="block">伴</span>
+            </div>
             <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
-              溫哥華華人女子高爾夫俱樂部，致力於為熱愛高爾夫的女性打造專屬平台。我們不僅提供世界級的球場資源，更創造了一個充滿活力、優雅精緻的社交圈層。
+            溫哥華華人女子高爾夫球會（VCL）成立於 <strong className="font-semibold">2016 年</strong>。VCL 不僅僅是一個公益性的運動組織，更是一個充滿溫情的華人女性大家庭。我們匯聚了來自五湖四海、定居溫哥華的女性高球愛好者，透過共同的熱愛，在這裡收穫成長、友誼與快樂。
             </p>
             <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
-              無論您是初學者還是資深球手，在這裡都能找到志同道合的夥伴，在綠茵場上揮灑激情，在交流中收穫友誼與成長。
+            「在 VCL，高爾夫不僅是競技，更是一種連結彼此的紐帶。」我們相信，每一次完美的揮桿背後，都是對生活的熱愛；每一次果嶺上的握手，都是一段珍貴友誼的開始。
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-[35px] mt-8 sm:mt-[50px]">
-              {[
-                { icon: Trophy, title: 'Professional Training', desc: '頂級教練團隊，量身定制訓練計劃' },
-                { icon: Users, title: 'Exclusive Community', desc: '匯聚精英女性，建立高端社交網絡' },
-                { icon: Calendar, title: 'Regular Events', desc: '精彩賽事活動，展現優雅球技' },
-                { icon: Star, title: 'Premium Benefits', desc: '專享會員福利，尊享貴賓體驗' }
-              ].map((feature, idx) => (
-                <div key={idx} className="flex items-start gap-5">
-                  <div className="text-[32px] flex-shrink-0" style={{ color: 'var(--primary)', width: '60px' }}>
-                    <feature.icon className="w-8 h-8" />
-                    </div>
-                <div>
-                    <h4 className="text-xl mb-2 font-semibold">{feature.title}</h4>
-                    <p className="text-base text-[#888] leading-[1.6]">{feature.desc}</p>
-                    </div>
+            {/* VCL 球會特色 */}
+            <div className="mt-8 sm:mt-[50px]">
+              <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
+                <span className="text-2xl sm:text-3xl mr-2">🌟</span> VCL 球會特色
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+                {/* 溫情大家庭 */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-1" style={{ color: 'var(--primary)' }}>
+                    <Heart className="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-              ))}
+                  <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] font-light flex-1">
+                    <strong className="font-semibold text-[#333]">【溫情大家庭】</strong>我們致力於營造一個包容、互助的氛圍。無論您是初試身手的球場新人，還是經驗豐富的資深球手，都能在這個平台上找到志同道合的朋友，共同進步，告別孤獨揮桿。
+                  </p>
                 </div>
+
+                {/* 專業與禮儀 */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-1" style={{ color: 'var(--primary)' }}>
+                    <Trophy className="w-6 h-6 sm:w-7 sm:h-7" />
+                  </div>
+                  <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] font-light flex-1">
+                    <strong className="font-semibold text-[#333]">【專業與禮儀】</strong>作為 <strong className="font-semibold">BC Golf</strong> 正式註冊球會，我們倡導優雅的運動精神。通過普及學習規則與禮儀，我們不斷提升個人修養，確保每一位 VCL 會員在球場上都能展現出<strong className="font-semibold">懂規則、自信且知禮</strong>的高爾夫風采。
+                  </p>
+                </div>
+
+                {/* 精彩賽季活動 */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-1" style={{ color: 'var(--primary)' }}>
+                    <Calendar className="w-6 h-6 sm:w-7 sm:h-7" />
+                  </div>
+                  <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] font-light flex-1">
+                    <strong className="font-semibold text-[#333]">【精彩賽季活動】</strong>每逢高爾夫賽季，我們每月都會策劃豐富多彩的球聚：從嚴謹的球會賽事到輕鬆的聯誼聚會，讓大家在繁忙的生活之餘，盡情享受大自然的陽光與空氣。
+                  </p>
+                </div>
+
+                {/* 競技與成長 */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-1" style={{ color: 'var(--primary)' }}>
+                    <Target className="w-6 h-6 sm:w-7 sm:h-7" />
+                  </div>
+                  <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] font-light flex-1">
+                    <strong className="font-semibold text-[#333]">【競技與成長】</strong>我們積極鼓勵會員走出「舒適區」，參與本地各類高爾夫比賽。在競技中挑戰自我，在挑戰中突破極限，在球場的綠茵間展示真實的自我。
+                  </p>
+                </div>
+              </div>
+
+              {/* 結尾段落 */}
+              <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-[#ddd]">
+                <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
+                  加入我們，不只是高爾夫
+                </p>
+                <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
+                  在這裡，我們分享揮桿的技巧，更分享生活的點滴。我們邀請每一位熱愛生活、渴望友誼的華人女性加入 VCL。
+                </p>
+                <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
+                  讓我們在溫哥華的藍天綠草間，一起揮出快樂，收穫友誼，活出最精彩的自己！
+                </p>
+              </div>
+            </div>
               </div>
 
           <div 
@@ -1153,24 +1237,36 @@ export default function HomePage() {
               }}
             >
               {/* Duplicate images for seamless loop */}
-              {[...galleryImages, ...galleryImages].map((img, idx) => (
-                                                <div
-                                                  key={idx}
-                  className="flex-shrink-0 rounded-2xl overflow-hidden relative bg-transparent"
-                  style={{ 
-                    width: windowWidth <= 768 ? 'calc(100vw - 80px)' : windowWidth <= 1024 ? 'calc((100vw - 120px) / 2)' : 'calc((100vw - 240px) / 3)',
-                    height: windowWidth <= 768 ? '300px' : windowWidth <= 1024 ? '400px' : '500px',
-                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
-                    backgroundColor: 'transparent'
-                  }}
-                                                >
-                                                  <img
-                    src={img}
-                    alt="Golf moment"
-                    className="w-full h-full object-cover object-center"
-                                                  />
-                                                </div>
-                                              ))}
+              {[...galleryImages, ...galleryImages].map((img, idx) => {
+                // 计算实际图片索引（因为图片被复制了，需要取模）
+                const actualIndex = idx % galleryImages.length
+                return (
+                  <div
+                    key={idx}
+                    className="flex-shrink-0 rounded-2xl overflow-hidden relative bg-transparent cursor-pointer group"
+                    style={{ 
+                      width: windowWidth <= 768 ? 'calc(100vw - 80px)' : windowWidth <= 1024 ? 'calc((100vw - 120px) / 2)' : 'calc((100vw - 240px) / 3)',
+                      height: windowWidth <= 768 ? '300px' : windowWidth <= 1024 ? '400px' : '500px',
+                      boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+                      backgroundColor: 'transparent'
+                    }}
+                    onClick={() => {
+                      setLightboxIndex(actualIndex)
+                      setLightboxOpen(true)
+                    }}
+                  >
+                    <img
+                      src={img}
+                      alt="Golf moment"
+                      className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                    />
+                    {/* 放大图标提示 */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <ZoomIn className="w-12 h-12 text-white" />
+                    </div>
+                  </div>
+                )
+              })}
                                             </div>
                                       </div>
 
@@ -1183,17 +1279,21 @@ export default function HomePage() {
             `}</style>
             <div className="flex gap-2 sm:gap-3 thumbnail-scroll py-1">
               {galleryImages.map((img, idx) => (
-                          <button
+                <button
                   key={idx}
                   onClick={() => goToIndex(idx)}
-                  className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+                  className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all duration-300 cursor-pointer ${
                     idx === carouselIndex 
                       ? 'border-[var(--accent)] scale-110 shadow-lg' 
                       : 'border-transparent opacity-60 hover:opacity-100 hover:scale-105'
                   }`}
-                                style={{
+                  style={{
                     width: windowWidth <= 768 ? '60px' : windowWidth <= 1024 ? '80px' : '100px',
                     height: windowWidth <= 768 ? '60px' : windowWidth <= 1024 ? '80px' : '100px'
+                  }}
+                  onDoubleClick={() => {
+                    setLightboxIndex(idx)
+                    setLightboxOpen(true)
                   }}
                 >
                   <img
@@ -1201,12 +1301,70 @@ export default function HomePage() {
                     alt={`Thumbnail ${idx + 1}`}
                     className="w-full h-full object-cover rounded-lg"
                   />
-                                    </button>
-                                  ))}
+                </button>
+              ))}
                                 </div>
                               </div>
                           </div>
       </section>
+
+      {/* Lightbox Modal - 全屏图片查看 */}
+      {lightboxOpen && (
+        <div 
+          className="fixed inset-0 z-[2000] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* 关闭按钮 */}
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 sm:top-8 sm:right-8 z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            aria-label="关闭"
+          >
+            <X className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          </button>
+
+          {/* 上一张按钮 */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setLightboxIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)
+            }}
+            className="absolute left-4 sm:left-8 z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            aria-label="上一张"
+          >
+            <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          </button>
+
+          {/* 下一张按钮 */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setLightboxIndex((prev) => (prev + 1) % galleryImages.length)
+            }}
+            className="absolute right-4 sm:right-8 z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            aria-label="下一张"
+          >
+            <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          </button>
+
+          {/* 图片容器 */}
+          <div 
+            className="relative max-w-[95vw] max-h-[95vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={galleryImages[lightboxIndex]}
+              alt={`Gallery image ${lightboxIndex + 1}`}
+              className="max-w-full max-h-[95vh] object-contain rounded-lg shadow-2xl"
+            />
+            
+            {/* 图片索引指示器 */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full text-white text-sm">
+              {lightboxIndex + 1} / {galleryImages.length}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="relative overflow-hidden" style={{ background: '#0f0f0f', color: 'rgba(255,255,255,0.7)' }}>
