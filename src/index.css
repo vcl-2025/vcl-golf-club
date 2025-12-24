@@ -312,6 +312,22 @@ select {
     padding: 16px !important;
   }
 
+  /* TinyMCE 全屏时隐藏 Dashboard header */
+  body:has(.tox-fullscreen) header.sticky {
+    display: none !important;
+  }
+  
+  /* 兼容不支持 :has() 的浏览器 */
+  .tox-fullscreen ~ header.sticky,
+  .tox-fullscreen + * header.sticky {
+    display: none !important;
+  }
+  
+  /* 更通用的方式：当 body 有 tox-fullscreen 类时隐藏 sticky header */
+  body.tox-fullscreen-active header.sticky {
+    display: none !important;
+  }
+
   /* 响应式调整 */
   @media (max-width: 768px) {
     .tinymce-viewer table {

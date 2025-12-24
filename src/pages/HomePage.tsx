@@ -980,8 +980,8 @@ export default function HomePage() {
             className="text-base sm:text-base lg:text-xl leading-[1.8] max-w-[600px] mb-6 sm:mb-[50px] font-light opacity-0 animate-fade-in-delay"
             style={{ color: 'rgba(255,255,255,0.9)' }}
           >
-            匯聚溫哥華優雅女性，在世界級球場揮灑激情，<br className="hidden sm:block" />
-            享受高爾夫運動的至臻體驗
+            <br className="hidden sm:block" />
+            <br/>
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-[25px] w-full sm:w-auto opacity-0 animate-fade-in-delay">
             <a 

@@ -193,6 +193,18 @@ export default function TinyMCEEditor({
             editor.on('change keyup', () => {
               onChange(editor.getContent());
             });
+            
+            // 监听全屏状态变化，动态添加/移除 body 类以隐藏 header
+            editor.on('FullscreenStateChanged', (e: any) => {
+              if (e.state) {
+                // 进入全屏时，添加类到 body
+                document.body.classList.add('tox-fullscreen-active');
+              } else {
+                // 退出全屏时，移除类
+                document.body.classList.remove('tox-fullscreen-active');
+              }
+            });
+            
             editor.on('error', (e: any) => {
               console.error('TinyMCE 错误:', e);
             });
@@ -276,6 +288,17 @@ export default function TinyMCEEditor({
                     editor.setContent(content);
                   }
                 }, 0);
+              });
+              
+              // 监听全屏状态变化，动态添加/移除 body 类以隐藏 header
+              editor.on('FullscreenStateChanged', (e: any) => {
+                if (e.state) {
+                  // 进入全屏时，添加类到 body
+                  document.body.classList.add('tox-fullscreen-active');
+                } else {
+                  // 退出全屏时，移除类
+                  document.body.classList.remove('tox-fullscreen-active');
+                }
               });
               editor.on('change keyup', () => {
                 onChange(editor.getContent());
