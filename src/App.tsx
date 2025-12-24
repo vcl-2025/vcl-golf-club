@@ -9,6 +9,7 @@ import ResetPassword from './pages/ResetPassword'
 import EventDetailPage from './pages/EventDetailPage'
 import EventReviewSharePage from './pages/EventReviewSharePage'
 import EmailTestPage from './pages/EmailTestPage'
+import InstallApp from './pages/InstallApp'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
 import { initMobileViewport } from './utils/viewport'
@@ -163,6 +164,9 @@ function App() {
               <NavigateWithParams to="/login" replace />
             )
           } />
+          
+          {/* 安装应用页面（公开） */}
+          <Route path="/install" element={<InstallApp />} />
           
           {/* 其他路由重定向到首页 */}
           <Route path="*" element={

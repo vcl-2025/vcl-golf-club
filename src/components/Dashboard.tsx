@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun, ShoppingCart, AlertCircle, Archive } from 'lucide-react'
+import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun, ShoppingCart, AlertCircle, Archive, Download } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { getUserModulePermissions, type ModuleName, type ModulePermission } from '../lib/modulePermissions'
@@ -1252,6 +1252,18 @@ export default function Dashboard() {
                         <Lock className="w-4 h-4 mr-3" />
                         修改密码
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          navigate('/install')
+                          setUserMenuOpen(false)
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Download className="w-4 h-4 mr-3" />
+                        安装桌面应用
+                      </button>
                       {hasAdminAccess && (
                         <button
                           onClick={(e) => {
@@ -1513,6 +1525,18 @@ export default function Dashboard() {
                 >
                   <Lock className="w-5 h-5" />
                   <span>修改密码</span>
+                </button>
+                
+                {/* Mobile Install App Button */}
+                <button
+                  onClick={() => {
+                    navigate('/install')
+                    setMobileMenuOpen(false)
+                  }}
+                  className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#F15B98] font-medium text-sm text-left w-full rounded-lg transition-colors"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>安装桌面应用</span>
                 </button>
                 
                 {/* Mobile Admin Button */}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Users, Trophy, Calendar, Star, LogIn, Menu, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Users, Trophy, Calendar, Star, LogIn, Menu, X, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
 
@@ -693,7 +693,15 @@ export default function HomePage() {
         {/* Mobile Menu Button & Login */}
         <div className="flex items-center gap-2 sm:gap-4">
             <button
-              onClick={() => navigate('/login')}
+            onClick={() => navigate('/install')}
+            className="flex items-center gap-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-xs sm:text-sm"
+            title="安装桌面应用"
+            >
+            <Download className="w-5 h-5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">安装应用</span>
+            </button>
+            <button
+            onClick={() => navigate('/login')}
             className="flex items-center gap-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-xs sm:text-sm"
             >
             <LogIn className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -756,6 +764,16 @@ export default function HomePage() {
               >
                 CLUB風采
               </a>
+                <button
+                  onClick={() => {
+                  navigate('/install')
+                  setMobileMenuOpen(false)
+                  }}
+                className="flex items-center justify-center gap-2 mt-2 px-4 py-2 text-white hover:text-[var(--accent)] transition-colors font-medium text-sm"
+                >
+                <Download className="w-4 h-4" />
+                <span>安装应用</span>
+                </button>
                 <button
                   onClick={() => {
                   navigate('/login')
