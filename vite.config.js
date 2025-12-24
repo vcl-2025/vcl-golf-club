@@ -16,9 +16,16 @@ export default defineConfig({
     include: ['tinymce']
   },
   build: {
-    // 支持旧版浏览器，包括 iPhone 6 的 Safari (iOS 12)
-    // 这会将可选链 ?. 和空值合并 ?? 等 ES2020 语法转译为 ES2015
-    target: ['es2015', 'safari10'],
+    // 支持现代浏览器，使用 ES2017 作为构建目标
+    // ES2017 支持 const/let，同时保持较好的兼容性
+    target: 'es2017',
+    // 如果需要支持更旧的浏览器，可以使用 polyfill 而不是降低构建目标
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false, // 保留 console，方便调试
+      },
+    },
   },
   server: {
     host: '0.0.0.0', // 允许外部访问
