@@ -1529,7 +1529,7 @@ export default function HomePage() {
                 {[
                   { name: 'WeChat', icon: 'fab fa-weixin', href: '#' },
                   { name: 'Instagram', icon: 'fab fa-instagram', href: '#' },
-                  { name: 'Facebook', icon: 'fab fa-facebook-f', href: '#' },
+                  { name: 'Facebook', icon: 'fab fa-facebook-f', href: 'https://www.facebook.com/VCLgolfclub' },
                   { name: 'YouTube', icon: 'fab fa-youtube', href: '#' }
                 ].map((social, idx) => (
                   <a
@@ -1560,19 +1560,22 @@ export default function HomePage() {
                   <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>vclgolfclub@hotmail.com</span>
                   </div>
                 <div className="flex items-start gap-3">
-                  <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>📞</span>
-                  <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>+1 (604) 123-4567</span>
-              </div>
+                  <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>💬</span>
+                  <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>微信 13817862041</span>
+                </div>
             </div>
           </div>
 
             {/* Right Column - QR Code */}
             <div className="flex flex-col items-start md:items-center justify-start">
               <img 
-                src="/vcl_QR_code.jpg" 
+                src="/vcl_QR_code.png" 
                 alt="VCL QR Code" 
                 className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 object-contain rounded-lg border border-white/10"
               />
+              <p className="text-sm sm:text-base mt-3 text-center" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                微信公眾號
+              </p>
             </div>
         </div>
 
