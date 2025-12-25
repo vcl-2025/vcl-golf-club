@@ -81,7 +81,8 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
           industry,
           golf_preferences,
           golf_motto,
-          other_interests
+          other_interests,
+          birthday
         `)
         .eq('id', user.id)
         .maybeSingle()
@@ -379,6 +380,23 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
     }
   }
 
+  // 计算年龄
+  const calculateAge = (birthday: string | null | undefined): number | null => {
+    if (!birthday) return null
+    try {
+      const birthDate = new Date(birthday)
+      const today = new Date()
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const monthDiff = today.getMonth() - birthDate.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
+      return age
+    } catch (error) {
+      return null
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
       <div className="bg-white rounded-2xl w-full max-w-[1080px] max-h-[90vh] overflow-y-auto">
@@ -446,6 +464,10 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                 <div className="flex-1 w-full md:w-auto">
                   <h3 className="text-2xl font-bold text-gray-900 mb-1">
                     {userProfile.full_name || '未设置昵称'}
+                    {(() => {
+                      const age = calculateAge(userProfile.birthday)
+                      return age !== null ? ` (${age}岁)` : ''
+                    })()}
                   </h3>
                   <p className="text-gray-600 mb-3">{user.email}</p>
                   <div className="flex flex-wrap items-center gap-2">

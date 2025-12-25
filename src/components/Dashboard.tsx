@@ -1690,7 +1690,7 @@ export default function Dashboard() {
                 <div className="mb-3 sm:mb-4">
                   <div className="mb-2">
                   <h2 
-                      className="text-2xl sm:text-3xl lg:text-3xl xl:text-4xl font-extrabold transition-all duration-300 group-hover:brightness-110"
+                      className="text-xl sm:text-3xl lg:text-3xl xl:text-4xl font-extrabold transition-all duration-300 group-hover:brightness-110"
                     style={{ 
                       letterSpacing: '0.02em',
                       color: '#FFFFFF',
@@ -1699,7 +1699,7 @@ export default function Dashboard() {
                   >
                       欢迎回来，{userProfile?.full_name || '用户'}
                       {userProfile?.role && (
-                        <span className="ml-2 text-lg sm:text-xl lg:text-2xl font-normal opacity-90">
+                        <span className="ml-2 text-base sm:text-xl lg:text-2xl font-normal opacity-90">
                           ({getRoleText(userProfile.role)})
                         </span>
                       )}
