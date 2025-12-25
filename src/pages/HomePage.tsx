@@ -65,15 +65,15 @@ export default function HomePage() {
 
   // 会员风采图片
   const galleryImages = [
-    '/member_gallery1.jpg',
-    '/member_gallery2.jpg',
-    '/member_gallery3.jpg',
-    '/member_gallery4.jpg',
-    '/member_gallery5.jpg',
-    '/member_gallery6.jpg',
-    '/member_gallery7.jpg',
-    '/member_gallery8.jpg',
-    '/member_gallery9.jpg'
+    '/member_gallery1.webp',
+    '/member_gallery2.webp',
+    '/member_gallery3.webp',
+    '/member_gallery4.webp',
+    '/member_gallery5.webp',
+    '/member_gallery6.webp',
+    '/member_gallery7.webp',
+    '/member_gallery8.webp',
+    '/member_gallery9.webp'
   ]
 
   useEffect(() => {
@@ -1557,7 +1557,7 @@ export default function HomePage() {
                   </div>
                 <div className="flex items-start gap-3">
                   <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>@</span>
-                  <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>info@vclgolf.com</span>
+                  <span className="text-sm sm:text-[15px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.8)' }}>vclgolfclub@hotmail.com</span>
                   </div>
                 <div className="flex items-start gap-3">
                   <span className="w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 text-center" style={{ color: 'var(--primary)', fontSize: '14px sm:text-base' }}>📞</span>

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /test-email
+Disallow: /reset-password
+
+# Sitemap
+Sitemap: https://vclgolfclub.ca/sitemap.xml
+
