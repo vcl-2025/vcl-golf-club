@@ -7,33 +7,9 @@
   <!-- 首页 - 最高优先级 -->
   <url>
     <loc>https://vclgolfclub.ca/</loc>
-    <lastmod>2025-01-27</lastmod>
+    <lastmod>2025-12-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-  </url>
-  
-  <!-- 登录页面 -->
-  <url>
-    <loc>https://vclgolfclub.ca/login</loc>
-    <lastmod>2025-01-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  
-  <!-- 安装应用页面 -->
-  <url>
-    <loc>https://vclgolfclub.ca/install</loc>
-    <lastmod>2025-01-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <!-- 重置密码页面 -->
-  <url>
-    <loc>https://vclgolfclub.ca/reset-password</loc>
-    <lastmod>2025-01-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
   </url>
   
 </urlset>
