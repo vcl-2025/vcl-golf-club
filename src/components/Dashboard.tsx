@@ -1552,7 +1552,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className={`max-w-[1280px] mx-auto py-4 sm:py-6 lg:py-8 relative z-10 ${
+      <main className={`max-w-[1280px] mx-auto py-4 sm:py-6 lg:py-8 pb-20 lg:pb-8 relative z-10 ${
         currentView === 'admin' 
           ? 'px-0.5 sm:px-0.5 lg:px-10' 
           : 'px-4 sm:px-8 lg:px-10'
@@ -2826,6 +2826,112 @@ export default function Dashboard() {
           <AdminPanel adminMenuVisible={adminMenuVisible} />
         ) : null}
       </main>
+
+      {/* Mobile Bottom Navigation Bar - 固定在底部，仅移动端显示 */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50" style={{ 
+        background: 'linear-gradient(to top, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderTop: '1px solid rgba(0,0,0,0.08)',
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.08), 0 -2px 8px rgba(0,0,0,0.04)'
+      }}>
+        <div className="flex items-center justify-around px-1 py-2 safe-area-inset-bottom">
+          <button
+            onClick={() => handleViewChange('dashboard')}
+            className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-300 min-w-0 flex-1 relative group ${
+              currentView === 'dashboard'
+                ? 'transform scale-105'
+                : 'hover:scale-105'
+            }`}
+          >
+            {currentView === 'dashboard' && (
+              <div className="absolute inset-0 bg-gradient-to-b from-[#F15B98]/10 to-transparent rounded-xl" />
+            )}
+            <div className={`relative transition-all duration-300 ${currentView === 'dashboard' ? 'transform scale-110' : ''}`}>
+              <Calendar className={`w-6 h-6 mb-1 transition-all duration-300 ${currentView === 'dashboard' ? 'text-[#F15B98] drop-shadow-sm' : 'text-gray-500 group-hover:text-[#F15B98]'}`} strokeWidth={currentView === 'dashboard' ? 2.5 : 2} />
+            </div>
+            <span className={`text-[11px] font-semibold transition-all duration-300 ${currentView === 'dashboard' ? 'text-[#F15B98]' : 'text-gray-600 group-hover:text-[#F15B98]'}`}>首页</span>
+          </button>
+          
+          <button
+            onClick={() => handleViewChange('information')}
+            className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-300 min-w-0 flex-1 relative group ${
+              currentView === 'information'
+                ? 'transform scale-105'
+                : 'hover:scale-105'
+            }`}
+          >
+            {currentView === 'information' && (
+              <div className="absolute inset-0 bg-gradient-to-b from-[#F15B98]/10 to-transparent rounded-xl" />
+            )}
+            <div className={`relative transition-all duration-300 ${currentView === 'information' ? 'transform scale-110' : ''}`}>
+              <Archive className={`w-6 h-6 mb-1 transition-all duration-300 ${currentView === 'information' ? 'text-[#F15B98] drop-shadow-sm' : 'text-gray-500 group-hover:text-[#F15B98]'}`} strokeWidth={currentView === 'information' ? 2.5 : 2} />
+            </div>
+            <span className={`text-[11px] font-semibold transition-all duration-300 ${currentView === 'information' ? 'text-[#F15B98]' : 'text-gray-600 group-hover:text-[#F15B98]'}`}>信息</span>
+            {unreadInformationCount > 0 && (
+              <span className="absolute -top-0.5 right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center shadow-lg animate-pulse">
+                {unreadInformationCount > 99 ? '99+' : unreadInformationCount}
+              </span>
+            )}
+          </button>
+          
+          <button
+            onClick={() => handleViewChange('events')}
+            className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-300 min-w-0 flex-1 relative group ${
+              currentView === 'events'
+                ? 'transform scale-105'
+                : 'hover:scale-105'
+            }`}
+          >
+            {currentView === 'events' && (
+              <div className="absolute inset-0 bg-gradient-to-b from-[#F15B98]/10 to-transparent rounded-xl" />
+            )}
+            <div className={`relative transition-all duration-300 ${currentView === 'events' ? 'transform scale-110' : ''}`}>
+              <Calendar className={`w-6 h-6 mb-1 transition-all duration-300 ${currentView === 'events' ? 'text-[#F15B98] drop-shadow-sm' : 'text-gray-500 group-hover:text-[#F15B98]'}`} strokeWidth={currentView === 'events' ? 2.5 : 2} />
+            </div>
+            <span className={`text-[11px] font-semibold transition-all duration-300 ${currentView === 'events' ? 'text-[#F15B98]' : 'text-gray-600 group-hover:text-[#F15B98]'}`}>活动</span>
+            {eventCart.size > 0 && (
+              <span className="absolute -top-0.5 right-1 bg-gradient-to-r from-[#F15B98] to-[#e04a87] text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center shadow-lg animate-bounce">
+                {eventCart.size}
+              </span>
+            )}
+          </button>
+          
+          <button
+            onClick={() => handleViewChange('reviews')}
+            className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-300 min-w-0 flex-1 relative group ${
+              currentView === 'reviews'
+                ? 'transform scale-105'
+                : 'hover:scale-105'
+            }`}
+          >
+            {currentView === 'reviews' && (
+              <div className="absolute inset-0 bg-gradient-to-b from-[#F15B98]/10 to-transparent rounded-xl" />
+            )}
+            <div className={`relative transition-all duration-300 ${currentView === 'reviews' ? 'transform scale-110' : ''}`}>
+              <BookOpen className={`w-6 h-6 mb-1 transition-all duration-300 ${currentView === 'reviews' ? 'text-[#F15B98] drop-shadow-sm' : 'text-gray-500 group-hover:text-[#F15B98]'}`} strokeWidth={currentView === 'reviews' ? 2.5 : 2} />
+            </div>
+            <span className={`text-[11px] font-semibold transition-all duration-300 ${currentView === 'reviews' ? 'text-[#F15B98]' : 'text-gray-600 group-hover:text-[#F15B98]'}`}>回顾</span>
+          </button>
+          
+          <button
+            onClick={() => handleViewChange('scores')}
+            className={`flex flex-col items-center justify-center px-2 py-2 rounded-xl transition-all duration-300 min-w-0 flex-1 relative group ${
+              currentView === 'scores'
+                ? 'transform scale-105'
+                : 'hover:scale-105'
+            }`}
+          >
+            {currentView === 'scores' && (
+              <div className="absolute inset-0 bg-gradient-to-b from-[#F15B98]/10 to-transparent rounded-xl" />
+            )}
+            <div className={`relative transition-all duration-300 ${currentView === 'scores' ? 'transform scale-110' : ''}`}>
+              <Trophy className={`w-6 h-6 mb-1 transition-all duration-300 ${currentView === 'scores' ? 'text-[#F15B98] drop-shadow-sm' : 'text-gray-500 group-hover:text-[#F15B98]'}`} strokeWidth={currentView === 'scores' ? 2.5 : 2} />
+            </div>
+            <span className={`text-[11px] font-semibold transition-all duration-300 ${currentView === 'scores' ? 'text-[#F15B98]' : 'text-gray-600 group-hover:text-[#F15B98]'}`}>成绩</span>
+          </button>
+        </div>
+      </nav>
 
       {/* Profile Modal */}
       <ProfileModal
