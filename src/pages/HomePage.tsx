@@ -1100,7 +1100,7 @@ export default function HomePage() {
                     <Trophy className="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
                   <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] font-light flex-1">
-                    <strong className="font-semibold text-[#333]">【專業與禮儀】</strong>作為 <strong className="font-semibold">BC Golf</strong> 正式註冊球會，我們倡導優雅的運動精神。通過普及學習規則與禮儀，我們不斷提升個人修養，確保每一位 VCL 會員在球場上都能展現出<strong className="font-semibold">懂規則、自信且知禮</strong>的高爾夫風采。
+                    <strong className="font-semibold text-[#333]">【專業與禮儀】</strong>作為 <strong className="font-semibold">BC Golf</strong> 正式註冊俱樂部，我們倡導優雅的運動精神。通過普及學習規則與禮儀，我們不斷提升個人修養，確保每一位 VCL 會員在球場上都能展現出<strong className="font-semibold">懂規則、自信且知禮</strong>的高爾夫風采。
                   </p>
                 </div>
 
@@ -1110,7 +1110,7 @@ export default function HomePage() {
                     <Calendar className="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
                   <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] font-light flex-1">
-                    <strong className="font-semibold text-[#333]">【精彩賽季活動】</strong>每逢高爾夫賽季，我們每月都會策劃豐富多彩的球聚：從嚴謹的球會賽事到輕鬆的聯誼聚會，讓大家在繁忙的生活之餘，盡情享受大自然的陽光與空氣。
+                    <strong className="font-semibold text-[#333]">【精彩賽季活動】</strong>每逢高爾夫賽季，我們每月都會策劃豐富多彩的球聚：從嚴謹的俱樂部賽事到輕鬆的聯誼聚會，讓大家在繁忙的生活之餘，盡情享受大自然的陽光與空氣。
                   </p>
                 </div>
 
