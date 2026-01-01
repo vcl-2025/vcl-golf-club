@@ -13,6 +13,7 @@ export default function HomePage() {
   const [carouselIndex, setCarouselIndex] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 640 : false)
   const carouselTrackRef = useRef<HTMLDivElement>(null)
   const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const touchStartX = useRef<number>(0)
@@ -91,6 +92,7 @@ export default function HomePage() {
     // Window resize handler
     const handleResize = () => {
       setWindowWidth(window.innerWidth)
+      setIsMobile(window.innerWidth < 640)
     }
 
     window.addEventListener('scroll', handleScroll)
@@ -785,7 +787,7 @@ export default function HomePage() {
         <div className="flex items-center gap-2 sm:gap-[15px] flex-1 min-w-0" style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: '16px sm:text-[20px]', fontWeight: 700, letterSpacing: '1px', color: 'var(--light)' }}>
           <img src="/logo.png" alt="VCL Logo" className="h-8 sm:h-[50px] w-auto object-contain flex-shrink-0" />
           <div className="flex flex-col gap-[1px] sm:gap-[2px] min-w-0 flex-1">
-            <span className="font-semibold leading-tight" style={{ color: 'var(--light)', letterSpacing: '0px', fontSize: 'clamp(12px, 5vw, 22px)' }}>溫哥華華人女子高爾夫球會</span>
+            <span className="font-semibold leading-tight" style={{ color: 'var(--light)', letterSpacing: '0px', fontSize: 'clamp(12px, 5vw, 22px)' }}>溫哥華華人女子高爾夫俱樂部</span>
             <span className="uppercase leading-tight break-words" style={{ color: 'var(--accent)', letterSpacing: '0.2px', fontWeight: 700, fontFamily: 'sans-serif', fontSize: 'clamp(10px, 2.8vw, 13px)' }}>Vancouver Chinese Ladies' Golf Club</span>
               </div>
               </div>
@@ -940,8 +942,11 @@ export default function HomePage() {
       {/* Hero Section */}
       <section id="hero" className="relative h-screen flex items-center overflow-hidden pt-16 sm:pt-0">
         <div 
-          className="absolute inset-0 w-full h-full bg-cover bg-center"
-          style={{ backgroundImage: 'url(/hero_photo.jpg)' }}
+          className="absolute inset-0 w-full h-full bg-cover"
+          style={{ 
+            backgroundImage: 'url(/hero_photo.jpg)',
+            backgroundPosition: isMobile ? '35% center' : 'center center'
+          }}
         >
           {/* 主光影渐变层 */}
           <div 
@@ -973,7 +978,7 @@ export default function HomePage() {
           >
             歡迎來到<br />
             <strong className="font-bold block whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--primary)', fontSize: 'clamp(24px, 6.4vw, 60px)' }}>
-            溫哥華華人女子高爾夫球會
+            溫哥華華人女子高爾夫俱樂部
             </strong>
           </h1>
           <p 
@@ -1066,7 +1071,7 @@ export default function HomePage() {
               <span className="block">伴</span>
             </div>
             <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
-            溫哥華華人女子高爾夫球會（VCL）成立於 <strong className="font-semibold">2016 年</strong>。VCL 不僅僅是一個公益性的運動組織，更是一個充滿溫情的華人女性大家庭。我們匯聚了來自五湖四海、定居溫哥華的女性高球愛好者，透過共同的熱愛，在這裡收穫成長、友誼與快樂。
+            溫哥華華人女子高爾夫俱樂部（VCL）成立於 <strong className="font-semibold">2016 年</strong>。VCL 不僅僅是一個公益性的運動組織，更是一個充滿溫情的華人女性大家庭。我們匯聚了來自五湖四海、定居溫哥華的女性高球愛好者，透過共同的熱愛，在這裡收穫成長、友誼與快樂。
             </p>
             <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
             「在 VCL，高爾夫不僅是競技，更是一種連結彼此的紐帶。」我們相信，每一次完美的揮桿背後，都是對生活的熱愛；每一次果嶺上的握手，都是一段珍貴友誼的開始。
@@ -1075,7 +1080,7 @@ export default function HomePage() {
             {/* VCL 球會特色 */}
             <div className="mt-8 sm:mt-[50px]">
               <p className="text-base sm:text-base lg:text-lg leading-[1.9] text-[#666] mb-4 sm:mb-[30px] font-light">
-                <span className="text-2xl sm:text-3xl mr-2">🌟</span> VCL 球會特色
+                <span className="text-2xl sm:text-3xl mr-2">🌟</span> VCL 俱樂部特色
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
@@ -1518,7 +1523,7 @@ export default function HomePage() {
               <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
                 <img src="/logo.png" alt="VCL Logo" className="h-12 sm:h-14 w-auto" />
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm sm:text-base font-medium" style={{ color: 'var(--primary)' }}>溫哥華華人女子高爾夫球會</span>
+                  <span className="text-sm sm:text-base font-medium" style={{ color: 'var(--primary)' }}>溫哥華華人女子高爾夫俱樂部</span>
                   <span className="text-[10px] sm:text-xs uppercase" style={{ color: 'rgba(255,255,255,0.8)', letterSpacing: '1px' }}>Vancouver Chinese Ladies' Golf Club</span>
                               </div>
                           </div>

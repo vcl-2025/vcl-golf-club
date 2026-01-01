@@ -47,7 +47,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
   const [events, setEvents] = useState<any[]>([])
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [participants, setParticipants] = useState<EventParticipant[]>([])
-  const { showSuccess, showError } = useModal()
+  const { showSuccess, showError, showConfirm } = useModal()
   const [selectedParticipant, setSelectedParticipant] = useState<EventParticipant | null>(null)
   const [savedParticipants, setSavedParticipants] = useState<Set<string>>(new Set())
   const [eventScoreStats, setEventScoreStats] = useState<Record<string, { total: number, entered: number }>>({})
@@ -85,10 +85,19 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
   // 队伍颜色配置：Excel中的队伍名称 -> 颜色
   const [teamColors, setTeamColors] = useState<Record<string, string>>({})
   const [allUsers, setAllUsers] = useState<Array<{ id: string; full_name: string }>>([])
+  // 错误信息接口
+  interface ImportError {
+    message: string
+    type?: 'not_registered' | 'other'
+    userId?: string
+    playerName?: string
+    canFix?: boolean
+  }
+
   const [importResult, setImportResult] = useState<{
     success: number
     failed: number
-    errors: string[]
+    errors: ImportError[]
     guestSuccess?: number  // 访客成绩成功数量
     teamStats?: {
       totalScores: Array<{ teamName: string; score: number }>
@@ -100,6 +109,17 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       importMode?: 'individual' | 'team_ryder' | 'team_strokes'
     }
   } | null>(null)
+  
+  // 记录已修复的错误（用于UI显示）
+  const [fixedErrors, setFixedErrors] = useState<Set<number>>(new Set())
+  // 记录正在修复的错误（显示加载状态）
+  const [fixingErrors, setFixingErrors] = useState<Set<number>>(new Set())
+  // 记录在预览界面已加入活动的用户（用于预览界面UI更新）
+  const [previewFixedUsers, setPreviewFixedUsers] = useState<Set<string>>(new Set())
+  // 记录正在加入活动的用户（预览界面）
+  const [previewFixingUsers, setPreviewFixingUsers] = useState<Set<string>>(new Set())
+  // 记录选中的用户（用于批量操作）
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (preselectedEvent) {
@@ -146,6 +166,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
   // 检查球员是否是会员且不在注册名单中
   const isUnregisteredMember = (playerName: string): boolean => {
     if (!selectedEvent || !allUsers.length || !participants.length) return false
+    
+    // 如果已经在预览界面修复了，不再显示为未报名
+    if (previewFixedUsers.has(playerName.trim())) return false
     
     // 检查是否是会员（在user_profiles中存在）
     const trimmedName = playerName.trim()
@@ -887,6 +910,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     setImportStep('preview')
     setImportResult(null)
     setIsImporting(true)
+    // 重置预览界面的修复状态
+    setPreviewFixedUsers(new Set())
+    setPreviewFixingUsers(new Set())
+    setSelectedUsers(new Set())
 
     try {
       let lines: string[] = []
@@ -1409,6 +1436,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
     setImportStep('importing')
     setIsImporting(true)
+    // 重置修复状态
+    setFixedErrors(new Set())
+    setFixingErrors(new Set())
 
     try {
       const success: string[] = []
@@ -1490,7 +1520,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
             if (checkGuestError && checkGuestError.code !== 'PGRST116') {
               console.error(`[导入] 检查访客成绩失败:`, checkGuestError)
               failed.push(player.name)
-              errors.push(`${player.name}: 检查访客成绩时出错`)
+              errors.push({
+                message: `${player.name}: 检查访客成绩时出错`,
+                type: 'other'
+              })
               continue
             }
 
@@ -1527,7 +1560,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                   if (result.error) {
                     console.error(`[导入] 更新访客成绩失败:`, result.error)
                 failed.push(player.name)
-                    errors.push(`${player.name}: 更新访客成绩失败 - ${result.error.message}`)
+                    errors.push({
+                      message: `${player.name}: 更新访客成绩失败 - ${result.error.message}`,
+                      type: 'other'
+                    })
               } else {
                 success.push(player.name)
                 guestSuccessCount++
@@ -1547,7 +1583,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
               if (insertGuestError) {
                 console.error(`[导入] 插入访客成绩失败:`, insertGuestError)
                 failed.push(player.name)
-                errors.push(`${player.name}: 插入访客成绩失败 - ${insertGuestError.message}`)
+                errors.push({
+                  message: `${player.name}: 插入访客成绩失败 - ${insertGuestError.message}`,
+                  type: 'other'
+                })
               } else {
                 success.push(player.name)
                 guestSuccessCount++
@@ -1567,7 +1606,13 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
           if (!registration) {
             failed.push(player.name)
-            errors.push(`${player.name}: 该用户未报名此活动`)
+            errors.push({
+              message: `${player.name}: 该用户未报名此活动`,
+              type: 'not_registered',
+              userId: userId,
+              playerName: player.name,
+              canFix: true
+            })
             continue
           }
 
@@ -1658,7 +1703,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         } catch (err: any) {
           console.error(`[导入] ${player.name}: 处理失败`, err)
           failed.push(player.name)
-          errors.push(`${player.name}: ${err.message || '保存失败'}`)
+          errors.push({
+            message: `${player.name}: ${err.message || '保存失败'}`,
+            type: 'other'
+          })
         }
       }
 
@@ -1842,7 +1890,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       setImportResult({
         success: 0,
         failed: 0,
-        errors: [err.message || '未知错误']
+        errors: [{
+          message: err.message || '未知错误',
+          type: 'other'
+        }]
       })
     } finally {
       setIsImporting(false)
@@ -1854,6 +1905,443 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       setPreviewData(null)
       setTeamNameMapping({})
       setTeamColors({})
+    }
+  }
+
+  // 处理"加入活动"功能
+  const handleAddToEvent = async (errorIndex: number, error: ImportError) => {
+    if (!selectedEvent || !error.userId || !error.playerName || !previewData) {
+      showError('无法处理：缺少必要信息')
+      return
+    }
+
+    // 使用自定义确认对话框
+    showConfirm({
+      title: '确认加入活动',
+      message: `是否将 ${error.playerName} 加入活动 "${selectedEvent.title}"？`,
+      type: 'warning',
+      confirmText: '确定',
+      cancelText: '取消',
+      onConfirm: async () => {
+        // 用户确认后执行
+        await executeAddToEvent(errorIndex, error)
+      }
+    })
+  }
+
+  // 执行加入活动的实际逻辑
+  const executeAddToEvent = async (errorIndex: number, error: ImportError) => {
+    if (!selectedEvent || !error.userId || !error.playerName || !previewData) {
+      showError('无法处理：缺少必要信息')
+      return
+    }
+
+    setFixingErrors(prev => new Set(prev).add(errorIndex))
+
+    try {
+      if (!user || !supabase) {
+        throw new Error('请先登录')
+      }
+
+      // 检查用户角色（只有管理员或有权限的用户才能执行）
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = (profile?.role || 'member') as UserRole
+      if (userRole !== 'admin' && userRole !== 'score_manager') {
+        throw new Error('您没有权限执行此操作')
+      }
+
+      // 检查是否已经报名（防止重复）
+      const { data: existingRegistration } = await supabase
+        .from('event_registrations')
+        .select('id')
+        .eq('event_id', selectedEvent.id)
+        .eq('user_id', error.userId)
+        .maybeSingle()
+
+      if (existingRegistration) {
+        showError(`${error.playerName} 已经报名此活动`)
+        setFixingErrors(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(errorIndex)
+          return newSet
+        })
+        return
+      }
+
+      // 创建报名记录
+      const { error: insertError } = await supabase
+        .from('event_registrations')
+        .insert({
+          event_id: selectedEvent.id,
+          user_id: error.userId,
+          payment_status: 'paid', // 自动设置为已支付
+          status: 'registered',
+          approval_status: 'approved', // 自动批准
+          notes: '批量导入成绩时自动加入'
+        })
+
+      if (insertError) {
+        throw new Error(`加入活动失败: ${insertError.message}`)
+      }
+
+      // 找到该玩家的数据并重新导入成绩
+      const player = previewData.players.find(p => p.name.trim() === error.playerName?.trim())
+      if (!player) {
+        throw new Error('找不到该玩家的成绩数据')
+      }
+
+      // 重新导入该用户的成绩
+      const { data: allUsers } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+
+      const userMap = new Map<string, string>()
+      if (allUsers) {
+        allUsers.forEach(u => {
+          if (u.full_name) {
+            userMap.set(u.full_name.trim(), u.id)
+          }
+        })
+      }
+
+      const userId = userMap.get(player.name.trim())
+      if (!userId) {
+        throw new Error('找不到用户ID')
+      }
+
+      // 计算handicap
+      let handicap = 0
+      if (player.netStrokes !== null && player.totalStrokes > 0) {
+        handicap = Math.round(player.totalStrokes - player.netStrokes)
+      }
+
+      const normalizedTeamName = player.teamName ? player.teamName.trim() : null
+
+      const scoreData = {
+        user_id: userId,
+        event_id: selectedEvent.id,
+        total_strokes: player.totalStrokes,
+        net_strokes: player.netStrokes !== null && player.netStrokes !== undefined ? player.netStrokes : null,
+        handicap: handicap,
+        holes_played: 18,
+        hole_scores: player.actualStrokes.length === 18 ? player.actualStrokes : null,
+        group_number: player.groupNumber,
+        team_name: normalizedTeamName,
+        notes: null
+      }
+
+      // 检查是否已存在成绩
+      const { data: existingScore } = await supabase
+        .from('scores')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('event_id', selectedEvent.id)
+        .maybeSingle()
+
+      if (existingScore) {
+        // 更新现有成绩
+        const { error: updateError } = await supabase
+          .from('scores')
+          .update(scoreData)
+          .eq('id', existingScore.id)
+
+        if (updateError) {
+          throw new Error(`更新成绩失败: ${updateError.message}`)
+        }
+      } else {
+        // 插入新成绩
+        const { error: insertScoreError } = await supabase
+          .from('scores')
+          .insert([scoreData])
+
+        if (insertScoreError) {
+          throw new Error(`插入成绩失败: ${insertScoreError.message}`)
+        }
+      }
+
+      // 标记为已修复
+      setFixedErrors(prev => new Set(prev).add(errorIndex))
+      showSuccess(`${error.playerName} 已成功加入活动并导入成绩`)
+
+      // 更新导入结果统计
+      if (importResult) {
+        setImportResult({
+          ...importResult,
+          success: importResult.success + 1,
+          failed: importResult.failed - 1,
+          errors: importResult.errors.filter((_, idx) => idx !== errorIndex)
+        })
+      }
+
+    } catch (err: any) {
+      console.error('加入活动失败:', err)
+      showError(err.message || '加入活动失败')
+    } finally {
+      setFixingErrors(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(errorIndex)
+        return newSet
+      })
+    }
+  }
+
+  // 在预览界面处理"加入活动"功能
+  const handleAddToEventFromPreview = async (playerName: string, userId: string) => {
+    if (!selectedEvent || !userId || !previewData) {
+      showError('无法处理：缺少必要信息')
+      return
+    }
+
+    // 使用自定义确认对话框
+    showConfirm({
+      title: '确认加入活动',
+      message: `是否将 ${playerName} 加入活动 "${selectedEvent.title}"？`,
+      type: 'warning',
+      confirmText: '确定',
+      cancelText: '取消',
+      onConfirm: async () => {
+        // 用户确认后执行
+        await executeAddToEventFromPreview(playerName, userId)
+      }
+    })
+  }
+
+  // 执行预览界面加入活动的实际逻辑
+  const executeAddToEventFromPreview = async (playerName: string, userId: string) => {
+    if (!selectedEvent || !userId || !previewData) {
+      showError('无法处理：缺少必要信息')
+      return
+    }
+
+    setPreviewFixingUsers(prev => new Set(prev).add(playerName.trim()))
+
+    try {
+      if (!user || !supabase) {
+        throw new Error('请先登录')
+      }
+
+      // 检查用户角色（只有管理员或有权限的用户才能执行）
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = (profile?.role || 'member') as UserRole
+      if (userRole !== 'admin' && userRole !== 'score_manager') {
+        throw new Error('您没有权限执行此操作')
+      }
+
+      // 检查是否已经报名（防止重复）
+      const { data: existingRegistration } = await supabase
+        .from('event_registrations')
+        .select('id')
+        .eq('event_id', selectedEvent.id)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (existingRegistration) {
+        showError(`${playerName} 已经报名此活动`)
+        setPreviewFixingUsers(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(playerName.trim())
+          return newSet
+        })
+        // 即使已报名，也标记为已修复（避免重复显示）
+        setPreviewFixedUsers(prev => new Set(prev).add(playerName.trim()))
+        // 刷新参与者列表
+        await fetchParticipants(selectedEvent.id)
+        return
+      }
+
+      // 创建报名记录
+      const { error: insertError } = await supabase
+        .from('event_registrations')
+        .insert({
+          event_id: selectedEvent.id,
+          user_id: userId,
+          payment_status: 'paid', // 自动设置为已支付
+          status: 'registered',
+          approval_status: 'approved', // 自动批准
+          notes: '批量导入成绩时自动加入'
+        })
+
+      if (insertError) {
+        throw new Error(`加入活动失败: ${insertError.message}`)
+      }
+
+      // 标记为已修复
+      setPreviewFixedUsers(prev => new Set(prev).add(playerName.trim()))
+      showSuccess(`${playerName} 已成功加入活动`)
+
+      // 刷新参与者列表，这样 isUnregisteredMember 会正确识别
+      await fetchParticipants(selectedEvent.id)
+
+    } catch (err: any) {
+      console.error('加入活动失败:', err)
+      showError(err.message || '加入活动失败')
+    } finally {
+      setPreviewFixingUsers(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(playerName.trim())
+        return newSet
+      })
+    }
+  }
+
+  // 批量加入活动功能
+  const handleBatchAddToEvent = async () => {
+    if (!selectedEvent || !previewData || selectedUsers.size === 0) {
+      showError('请先选择要加入活动的用户')
+      return
+    }
+
+    const selectedUserNames = Array.from(selectedUsers)
+    
+    // 使用自定义确认对话框
+    showConfirm({
+      title: '批量加入活动',
+      message: `是否将以下 ${selectedUserNames.length} 个用户加入活动 "${selectedEvent.title}"？\n\n${selectedUserNames.join('、')}`,
+      type: 'warning',
+      confirmText: '确定',
+      cancelText: '取消',
+      onConfirm: async () => {
+        // 用户确认后执行批量加入
+        await executeBatchAddToEvent(selectedUserNames)
+      }
+    })
+  }
+
+  // 执行批量加入活动的实际逻辑
+  const executeBatchAddToEvent = async (userNames: string[]) => {
+    if (!selectedEvent || !previewData || userNames.length === 0) {
+      return
+    }
+
+    // 标记所有用户为处理中
+    userNames.forEach(name => {
+      setPreviewFixingUsers(prev => new Set(prev).add(name.trim()))
+    })
+
+    try {
+      if (!user || !supabase) {
+        throw new Error('请先登录')
+      }
+
+      // 检查用户角色（只有管理员或有权限的用户才能执行）
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const userRole = (profile?.role || 'member') as UserRole
+      if (userRole !== 'admin' && userRole !== 'score_manager') {
+        throw new Error('您没有权限执行此操作')
+      }
+
+      // 获取所有用户信息
+      const { data: allUsers } = await supabase
+        .from('user_profiles')
+        .select('id, full_name')
+
+      const userMap = new Map<string, string>()
+      if (allUsers) {
+        allUsers.forEach(u => {
+          if (u.full_name) {
+            userMap.set(u.full_name.trim(), u.id)
+          }
+        })
+      }
+
+      let successCount = 0
+      let failCount = 0
+      const errors: string[] = []
+
+      // 批量处理每个用户
+      for (const playerName of userNames) {
+        try {
+          const userId = userMap.get(playerName.trim())
+          if (!userId) {
+            errors.push(`${playerName}: 找不到用户ID`)
+            failCount++
+            continue
+          }
+
+          // 检查是否已经报名（防止重复）
+          const { data: existingRegistration } = await supabase
+            .from('event_registrations')
+            .select('id')
+            .eq('event_id', selectedEvent.id)
+            .eq('user_id', userId)
+            .maybeSingle()
+
+          if (existingRegistration) {
+            // 已报名，标记为已修复（避免重复显示）
+            setPreviewFixedUsers(prev => new Set(prev).add(playerName.trim()))
+            successCount++
+            continue
+          }
+
+          // 创建报名记录
+          const { error: insertError } = await supabase
+            .from('event_registrations')
+            .insert({
+              event_id: selectedEvent.id,
+              user_id: userId,
+              payment_status: 'paid', // 自动设置为已支付
+              status: 'registered',
+              approval_status: 'approved', // 自动批准
+              notes: '批量导入成绩时自动加入'
+            })
+
+          if (insertError) {
+            errors.push(`${playerName}: ${insertError.message}`)
+            failCount++
+            continue
+          }
+
+          // 标记为已修复
+          setPreviewFixedUsers(prev => new Set(prev).add(playerName.trim()))
+          successCount++
+
+        } catch (err: any) {
+          console.error(`处理 ${playerName} 失败:`, err)
+          errors.push(`${playerName}: ${err.message || '未知错误'}`)
+          failCount++
+        }
+      }
+
+      // 刷新参与者列表
+      await fetchParticipants(selectedEvent.id)
+
+      // 清空选择
+      setSelectedUsers(new Set())
+
+      // 显示结果
+      if (failCount === 0) {
+        showSuccess(`成功将 ${successCount} 个用户加入活动`)
+      } else {
+        showWarning(`成功 ${successCount} 个，失败 ${failCount} 个。${errors.join('；')}`)
+      }
+
+    } catch (err: any) {
+      console.error('批量加入活动失败:', err)
+      showError(err.message || '批量加入活动失败')
+    } finally {
+      // 清除所有处理中状态
+      userNames.forEach(name => {
+        setPreviewFixingUsers(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(name.trim())
+          return newSet
+        })
+      })
     }
   }
 
@@ -2174,6 +2662,38 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
+                      <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          checked={previewData.players.filter(p => {
+                            const isUnregistered = isUnregisteredMember(p.name)
+                            const canFix = isUnregistered && isMember(p.name)
+                            return canFix && !previewFixedUsers.has(p.name.trim())
+                          }).length > 0 && 
+                          previewData.players.filter(p => {
+                            const isUnregistered = isUnregisteredMember(p.name)
+                            const canFix = isUnregistered && isMember(p.name)
+                            return canFix && !previewFixedUsers.has(p.name.trim())
+                          }).every(p => selectedUsers.has(p.name.trim()))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              // 全选所有可加入的用户
+                              const selectableUsers = previewData.players
+                                .filter(p => {
+                                  const isUnregistered = isUnregisteredMember(p.name)
+                                  const canFix = isUnregistered && isMember(p.name)
+                                  return canFix && !previewFixedUsers.has(p.name.trim())
+                                })
+                                .map(p => p.name.trim())
+                              setSelectedUsers(new Set(selectableUsers))
+                            } else {
+                              // 取消全选
+                              setSelectedUsers(new Set())
+                            }
+                          }}
+                          className="w-4 h-4 text-[#F15B98] border-gray-300 rounded focus:ring-[#F15B98]"
+                        />
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">姓名</th>
                       {previewData.headers.slice(1, 10).map((header, idx) => (
                         <th key={idx} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -2195,16 +2715,48 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                   <tbody className="bg-white divide-y divide-gray-200">
                     {previewData.players.map((player, idx) => {
                       const isUnregistered = isUnregisteredMember(player.name)
+                      const isFixing = previewFixingUsers.has(player.name.trim())
+                      const isFixed = previewFixedUsers.has(player.name.trim())
+                      const canFix = isUnregistered && isMember(player.name)
+                      
+                      // 获取用户ID
+                      const userId = allUsers.find(u => u.full_name?.trim() === player.name.trim())?.id
+                      
+                      const isSelected = selectedUsers.has(player.name.trim())
+                      
                       return (
                       <tr 
                         key={idx} 
                         className="hover:bg-gray-50"
-                        style={isUnregistered ? {
+                        style={isUnregistered && !isFixed ? {
                           animation: 'blink 1.5s ease-in-out infinite',
                           backgroundColor: 'rgba(254, 226, 226, 0.8)'
                         } : {}}
                       >
+                        <td className="px-3 py-2 text-center">
+                          {canFix && !isFixed ? (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedUsers(prev => new Set(prev).add(player.name.trim()))
+                                } else {
+                                  setSelectedUsers(prev => {
+                                    const newSet = new Set(prev)
+                                    newSet.delete(player.name.trim())
+                                    return newSet
+                                  })
+                                }
+                              }}
+                              className="w-4 h-4 text-[#F15B98] border-gray-300 rounded focus:ring-[#F15B98]"
+                            />
+                          ) : null}
+                        </td>
                         <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {isFixed && (
+                            <span className="text-xs text-green-600 mr-2">✓ 已加入</span>
+                          )}
                           <div className="flex items-center gap-2">
                             {isMember(player.name) && (
                               <UserCheck className="w-4 h-4 text-green-600" title="会员" />
@@ -2250,7 +2802,27 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                 </table>
               </div>
               
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {selectedUsers.size > 0 && (
+                    <>
+                      <span className="text-sm text-gray-600">
+                        已选择 {selectedUsers.size} 个用户
+                      </span>
+                      <button
+                        onClick={handleBatchAddToEvent}
+                        disabled={previewFixingUsers.size > 0}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                          previewFixingUsers.size > 0
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#F15B98] text-white hover:bg-[#e04a87]'
+                        }`}
+                      >
+                        {previewFixingUsers.size > 0 ? '处理中...' : `批量加入活动 (${selectedUsers.size})`}
+                      </button>
+                    </>
+                  )}
+                </div>
                 <button
                   onClick={() => setImportStep('mode')}
                   className="px-6 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/90 transition-colors"
@@ -2864,10 +3436,43 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
               {importResult.errors.length > 0 && (
                 <div className="bg-white rounded-lg p-4">
                   <div className="text-sm text-gray-600 mb-2">错误详情</div>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
-                    {importResult.errors.map((error, index) => (
-                      <div key={index} className="text-xs text-red-600">{error}</div>
-                    ))}
+                  <div className="max-h-48 overflow-y-auto space-y-2">
+                    {importResult.errors.map((error, index) => {
+                      const isFixed = fixedErrors.has(index)
+                      const isFixing = fixingErrors.has(index)
+                      const canFix = error.type === 'not_registered' && error.canFix && error.userId
+                      
+                      return (
+                        <div 
+                          key={index} 
+                          className={`flex items-center justify-between p-2 rounded ${
+                            isFixed 
+                              ? 'bg-gray-50 text-gray-500' 
+                              : error.type === 'not_registered' 
+                                ? 'bg-red-50 text-red-600' 
+                                : 'bg-red-50 text-red-600'
+                          }`}
+                        >
+                          <div className="flex-1 text-xs">
+                            {error.message}
+                            {isFixed && <span className="ml-2 text-green-600">✓ 已修复</span>}
+                          </div>
+                          {canFix && !isFixed && (
+                            <button
+                              onClick={() => handleAddToEvent(index, error)}
+                              disabled={isFixing}
+                              className={`ml-2 px-3 py-1 text-xs rounded transition-colors ${
+                                isFixing
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : 'bg-[#F15B98] text-white hover:bg-[#e04a87]'
+                              }`}
+                            >
+                              {isFixing ? '处理中...' : '加入活动'}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}
