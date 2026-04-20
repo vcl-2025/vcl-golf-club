@@ -21,6 +21,18 @@ function NavigateWithParams({ to, replace }: { to: string; replace?: boolean }) 
   return <Navigate to={`${to}${search}`} replace={replace} />
 }
 
+function LoginRedirect() {
+  const location = useLocation()
+  const redirect = new URLSearchParams(location.search).get('redirect')
+
+  // 仅允许站内相对路径，避免开放重定向风险
+  if (redirect && redirect.startsWith('/')) {
+    return <Navigate to={redirect} replace />
+  }
+
+  return <NavigateWithParams to="/dashboard" replace />
+}
+
 function App() {
   const { user, loading } = useAuth()
   const [showPasswordReset, setShowPasswordReset] = useState(false)
@@ -134,7 +146,7 @@ function App() {
             !user ? (
               <MemberLogin onLoginSuccess={() => {}} />
             ) : (
-              <NavigateWithParams to="/dashboard" replace />
+              <LoginRedirect />
             )
           } />
           

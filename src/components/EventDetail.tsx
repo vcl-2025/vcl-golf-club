@@ -604,8 +604,14 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
 
                 {/* 登录提示 */}
                 {!user && (
-                  <div className="text-center text-gray-500 text-sm mt-4">
-                    请先登录后再报名参加活动
+                  <div className="text-center text-gray-500 text-sm mt-4 space-y-3">
+                    <div>请先登录后再报名参加活动</div>
+                    <button
+                      onClick={() => navigate(`/login?redirect=${encodeURIComponent(`/event/${event.id}`)}`)}
+                      className="w-full py-3 px-4 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
+                    >
+                      去登录并返回当前活动
+                    </button>
                   </div>
                 )}
               </div>
@@ -1031,8 +1037,14 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
 
                 {/* 登录提示 */}
                 {!user && (
-                  <div className="text-center text-gray-500 text-sm mt-4">
-                    请先登录后再报名参加活动
+                  <div className="text-center text-gray-500 text-sm mt-4 space-y-3">
+                    <div>请先登录后再报名参加活动</div>
+                    <button
+                      onClick={() => navigate(`/login?redirect=${encodeURIComponent(`/event/${event.id}`)}`)}
+                      className="w-full py-3 px-4 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 transition-colors"
+                    >
+                      去登录并返回当前活动
+                    </button>
                   </div>
                 )}
               </div>

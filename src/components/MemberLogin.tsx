@@ -342,8 +342,16 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         // console.log('=====================================')
         
         onLoginSuccess()
-        // 保留 URL 参数（如果有的话）
         const currentParams = new URLSearchParams(window.location.search)
+
+        // 优先跳回登录前目标页（如分享活动详情页）
+        const redirectPath = currentParams.get('redirect')
+        if (redirectPath && redirectPath.startsWith('/')) {
+          navigate(redirectPath)
+          return
+        }
+
+        // 保留 URL 参数（如果有的话）
         const paramsString = currentParams.toString()
         navigate(`/dashboard${paramsString ? `?${paramsString}` : ''}`)
       }
