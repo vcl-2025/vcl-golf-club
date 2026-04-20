@@ -16,6 +16,13 @@ export default function EventDetailPage() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [showShareModal, setShowShareModal] = useState(false)
 
+  const stripHtml = (html: string) => {
+    if (!html) return ''
+    const tmp = document.createElement('div')
+    tmp.innerHTML = html
+    return (tmp.textContent || tmp.innerText || '').trim()
+  }
+
   useEffect(() => {
     if (id) {
       fetchEvent()
@@ -38,8 +45,10 @@ export default function EventDetailPage() {
         meta.setAttribute('content', content)
       }
 
-      setMetaTag('og:title', event.title)
-      setMetaTag('og:description', event.description || event.article_excerpt || '')
+      const plainDescription = stripHtml(event.description || event.article_excerpt || '')
+
+      setMetaTag('og:title', event.title || 'VCL Golf Club 活动详情')
+      setMetaTag('og:description', plainDescription || '查看 VCL Golf Club 活动详情')
       setMetaTag('og:url', window.location.href)
       setMetaTag('og:type', 'article')
       
@@ -103,7 +112,7 @@ export default function EventDetailPage() {
       try {
         await navigator.share({
           title: event?.title || '活动详情',
-          text: event?.description || event?.article_excerpt || '',
+          text: stripHtml(event?.description || event?.article_excerpt || ''),
           url: window.location.href,
         })
         return
@@ -189,7 +198,7 @@ export default function EventDetailPage() {
         onClose={() => setShowShareModal(false)}
         url={window.location.href}
         title={event.title}
-        description={event.description || event.article_excerpt}
+        description={stripHtml(event.description || event.article_excerpt || '')}
         imageUrl={event.image_url || event.article_featured_image_url}
       />
     </div>

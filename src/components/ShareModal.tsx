@@ -15,6 +15,9 @@ export default function ShareModal({ isOpen, onClose, url, title, description, i
 
   if (!isOpen) return null
 
+  const plainDescription = (description || '').replace(/<[^>]*>/g, '').trim()
+  const shareText = `${title}${plainDescription ? `\n${plainDescription}` : ''}\n${url}`
+
   const copyToClipboard = async (text: string) => {
     try {
       // 尝试使用现代 Clipboard API
@@ -48,7 +51,7 @@ export default function ShareModal({ isOpen, onClose, url, title, description, i
   }
 
   const handleCopy = () => {
-    copyToClipboard(url)
+    copyToClipboard(shareText)
   }
 
   const handleWeChatShare = () => {
@@ -68,7 +71,7 @@ export default function ShareModal({ isOpen, onClose, url, title, description, i
       if (navigator.share) {
         await navigator.share({
           title,
-          text: description || title,
+          text: plainDescription || title,
           url,
         })
         onClose()
@@ -120,8 +123,8 @@ export default function ShareModal({ isOpen, onClose, url, title, description, i
               />
             )}
             <h4 className="font-semibold text-gray-900 mb-1 line-clamp-2">{title}</h4>
-            {description && (
-              <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
+            {plainDescription && (
+              <p className="text-sm text-gray-600 line-clamp-2">{plainDescription}</p>
             )}
             <div className="mt-2 flex items-center text-xs text-gray-500">
               <LinkIcon className="w-3 h-3 mr-1" />
