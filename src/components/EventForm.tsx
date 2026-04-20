@@ -39,6 +39,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
     payment_emt_email: '',
     payment_instructions: '',
     event_type: '普通活动' as '普通活动' | '个人赛' | '团体赛',
+    is_out_of_town: false,
     status: 'upcoming'
   })
 
@@ -77,6 +78,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_emt_email: event.payment_emt_email || '',
         payment_instructions: event.payment_instructions || '',
         event_type: event.event_type || '普通活动',
+        is_out_of_town: Boolean(event.is_out_of_town),
         status: event.status || 'active'
       })
       
@@ -113,6 +115,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_emt_email: '',
         payment_instructions: '',
         event_type: '普通活动',
+        is_out_of_town: false,
         status: 'upcoming'
       })
       setQrCodePreview('')
@@ -248,11 +251,12 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_emt_email: formData.payment_emt_email,
         payment_instructions: formData.payment_instructions,
         event_type: formData.event_type || '普通活动',
+        is_out_of_town: Boolean(formData.is_out_of_town),
         status: formData.status === 'cancelled' ? 'cancelled' : 'active'
       }
 
       // 如果是编辑模式，只包含实际修改的字段（用于审计）
-      let eventData = fullEventData
+      let eventData: Record<string, any> = fullEventData
       if (event) {
         // 获取旧数据用于比较
         const { data: oldEventData } = await supabase
@@ -511,6 +515,30 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                   <option value="个人赛">个人赛</option>
                   <option value="团体赛">团体赛</option>
                 </select>
+              </div>
+
+              {/* 外地活动配置 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  报名信息收集
+                </label>
+                <div className="flex items-center justify-between border border-gray-300 rounded-lg px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">是否外地活动</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      开启后，报名页会收集住宿、交通、会员和备注信息
+                    </div>
+                  </div>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_out_of_town}
+                      onChange={(e) => setFormData({ ...formData, is_out_of_town: e.target.checked })}
+                      className="h-4 w-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{formData.is_out_of_town ? '外地活动' : '本地活动'}</span>
+                  </label>
+                </div>
               </div>
             </div>
 

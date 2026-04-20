@@ -18,8 +18,14 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
   const [message, setMessage] = useState('')
   const [userProfile, setUserProfile] = useState<any>(null)
   const [existingRegistration, setExistingRegistration] = useState<EventRegistration | null>(null)
+  const isOutOfTownEvent = Boolean(event.is_out_of_town)
   
-  const [formData, setFormData] = useState({})
+  const [formData, setFormData] = useState<{
+    accommodation?: '双人间住宿' | '单人间住宿'
+    transportation?: '自驾（Car pool）' | '安排全程交通接送（费用另计）'
+    isVclMember2026?: '是' | '否'
+    roommateNote?: string
+  }>({})
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null)
 
@@ -104,6 +110,12 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
     setMessage('')
 
     try {
+      if (isOutOfTownEvent) {
+        if (!formData.accommodation || !formData.transportation || !formData.isVclMember2026) {
+          throw new Error('请先完整填写外地报名信息（住宿、交通、会员）')
+        }
+      }
+
       // console.log('开始检查报名状态')
       // 检查是否已经报名过
       const { data: existingRegistration, error: checkError } = await supabase
@@ -214,13 +226,24 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       }
 
       // 创建报名记录，状态为待审批
+      const outOfTownNotes = isOutOfTownEvent
+        ? [
+            '【外地活动报名信息】',
+            `住宿选择：${formData.accommodation || '-'}`,
+            `交通选择：${formData.transportation || '-'}`,
+            `是否2026年度VCL会员：${formData.isVclMember2026 || '-'}`,
+            `备注：${formData.roommateNote?.trim() || '无'}`
+          ].join('\n')
+        : null
+
       const insertData = {
         event_id: event.id,
         user_id: user.id,
         payment_status: 'pending',
         approval_status: 'pending',
         status: 'registered',
-        payment_proof: paymentProofUrl
+        payment_proof: paymentProofUrl,
+        notes: outOfTownNotes
       }
       
       // console.log('插入数据:', insertData)
@@ -449,6 +472,101 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                   <div>费用：¥{event.fee.toFixed(2)}</div>
                 </div>
               </div>
+
+              {isOutOfTownEvent && (
+                <div className="bg-gray-50 p-4 rounded-lg space-y-5">
+                  <div className="text-base font-semibold text-gray-900">外地活动补充信息</div>
+
+                  <div>
+                    <div className="text-sm font-medium text-gray-800 mb-2">1. 住宿选择 <span className="text-red-500">*</span></div>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="accommodation"
+                          value="双人间住宿"
+                          checked={formData.accommodation === '双人间住宿'}
+                          onChange={(e) => setFormData({ ...formData, accommodation: e.target.value as '双人间住宿' | '单人间住宿' })}
+                        />
+                        双人间住宿
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="accommodation"
+                          value="单人间住宿"
+                          checked={formData.accommodation === '单人间住宿'}
+                          onChange={(e) => setFormData({ ...formData, accommodation: e.target.value as '双人间住宿' | '单人间住宿' })}
+                        />
+                        单人间住宿
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium text-gray-800 mb-2">2. 交通选择 <span className="text-red-500">*</span></div>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="transportation"
+                          value="自驾（Car pool）"
+                          checked={formData.transportation === '自驾（Car pool）'}
+                          onChange={(e) => setFormData({ ...formData, transportation: e.target.value as '自驾（Car pool）' | '安排全程交通接送（费用另计）' })}
+                        />
+                        自驾（Car pool）
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="transportation"
+                          value="安排全程交通接送（费用另计）"
+                          checked={formData.transportation === '安排全程交通接送（费用另计）'}
+                          onChange={(e) => setFormData({ ...formData, transportation: e.target.value as '自驾（Car pool）' | '安排全程交通接送（费用另计）' })}
+                        />
+                        安排全程交通接送（费用另计）
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium text-gray-800 mb-2">3. 是否2026年度VCL会员 <span className="text-red-500">*</span></div>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="isVclMember2026"
+                          value="是"
+                          checked={formData.isVclMember2026 === '是'}
+                          onChange={(e) => setFormData({ ...formData, isVclMember2026: e.target.value as '是' | '否' })}
+                        />
+                        是
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="isVclMember2026"
+                          value="否"
+                          checked={formData.isVclMember2026 === '否'}
+                          onChange={(e) => setFormData({ ...formData, isVclMember2026: e.target.value as '是' | '否' })}
+                        />
+                        否
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-800 mb-2">4. 备注（需要和谁share房间）</label>
+                    <textarea
+                      value={formData.roommateNote || ''}
+                      onChange={(e) => setFormData({ ...formData, roommateNote: e.target.value })}
+                      placeholder="如需与指定成员同住，请在此填写"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all resize-none"
+                    />
+                  </div>
+                </div>
+              )}
 
 
               {/* 重要提示 */}
