@@ -20,6 +20,7 @@ interface EventParticipant {
   user_profiles?: {
     full_name: string
     email: string
+    golflive_name?: string
   }
   registration_number: string
   total_strokes?: number
@@ -84,7 +85,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
   const [teamNameMapping, setTeamNameMapping] = useState<Record<string, string>>({})
   // 队伍颜色配置：Excel中的队伍名称 -> 颜色
   const [teamColors, setTeamColors] = useState<Record<string, string>>({})
-  const [allUsers, setAllUsers] = useState<Array<{ id: string; full_name: string }>>([])
+  const [allUsers, setAllUsers] = useState<Array<{ id: string; full_name?: string; golflive_name?: string }>>([])
   // 错误信息接口
   interface ImportError {
     message: string
@@ -138,12 +139,37 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     }
   }, [selectedEvent])
 
+  const normalizeName = (value: string | null | undefined) => (value || '').trim()
+
+  const findUserByImportedName = (playerName: string) => {
+    const target = normalizeName(playerName)
+    if (!target) return null
+
+    // 优先按 GolfLive 用户名匹配，避免姓名重名
+    const byGolfLive = allUsers.find(user => normalizeName(user.golflive_name) === target)
+    if (byGolfLive) return byGolfLive
+
+    // 兼容旧数据：兜底按 full_name 匹配
+    return allUsers.find(user => normalizeName(user.full_name) === target) || null
+  }
+
+  const buildUserIdMap = (users: Array<{ id: string; full_name?: string; golflive_name?: string }>) => {
+    const userMap = new Map<string, string>()
+    users.forEach((user) => {
+      const golfLiveName = normalizeName(user.golflive_name)
+      const fullName = normalizeName(user.full_name)
+      if (golfLiveName) userMap.set(golfLiveName, user.id)
+      if (fullName && !userMap.has(fullName)) userMap.set(fullName, user.id)
+    })
+    return userMap
+  }
+
   // 获取所有用户列表
   const fetchAllUsers = async () => {
     try {
       const { data: users, error } = await supabase
         .from('user_profiles')
-        .select('id, full_name')
+        .select('id, full_name, golflive_name')
       
       if (error) {
         console.error('获取用户列表失败:', error)
@@ -159,8 +185,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
   // 检查球员是否是会员
   const isMember = (playerName: string): boolean => {
     if (!allUsers.length) return false
-    const trimmedName = playerName.trim()
-    return allUsers.some(user => user.full_name?.trim() === trimmedName)
+    return !!findUserByImportedName(playerName)
   }
 
   // 检查球员是否是会员且不在注册名单中
@@ -172,14 +197,15 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     
     // 检查是否是会员（在user_profiles中存在）
     const trimmedName = playerName.trim()
-    const isMemberCheck = allUsers.some(user => user.full_name?.trim() === trimmedName)
+    const matchedUser = findUserByImportedName(trimmedName)
+    const isMemberCheck = !!matchedUser
     
     if (!isMemberCheck) return false // 不是会员，不需要警告
     
     // 检查是否在注册名单中
-    const isRegistered = participants.some(p => {
+    const isRegistered = participants.some((p) => {
       if (p.isGuest) return false
-      return p.user_profiles?.full_name?.trim() === trimmedName
+      return p.user_id === matchedUser?.id
     })
     
     return !isRegistered // 是会员但未注册
@@ -267,7 +293,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         const userIds = registrations.map(r => r.user_id)
         const { data: profiles, error: profileError } = await supabase
           .from('user_profiles')
-          .select('id, full_name, email')
+          .select('id, full_name, email, golflive_name')
           .in('id', userIds)
 
         if (profileError) throw profileError
@@ -1468,16 +1494,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       // 批量获取所有用户姓名
       const { data: allUsers } = await supabase
         .from('user_profiles')
-        .select('id, full_name')
+        .select('id, full_name, golflive_name')
       
-      const userMap = new Map<string, string>()
-      if (allUsers) {
-        allUsers.forEach(user => {
-          if (user.full_name) {
-            userMap.set(user.full_name.trim(), user.id)
-          }
-        })
-      }
+      const userMap = allUsers ? buildUserIdMap(allUsers) : new Map<string, string>()
 
       // 保存每个球员的成绩
       for (const player of previewData.players) {
@@ -1998,16 +2017,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       // 重新导入该用户的成绩
       const { data: allUsers } = await supabase
         .from('user_profiles')
-        .select('id, full_name')
+        .select('id, full_name, golflive_name')
 
-      const userMap = new Map<string, string>()
-      if (allUsers) {
-        allUsers.forEach(u => {
-          if (u.full_name) {
-            userMap.set(u.full_name.trim(), u.id)
-          }
-        })
-      }
+      const userMap = allUsers ? buildUserIdMap(allUsers) : new Map<string, string>()
 
       const userId = userMap.get(player.name.trim())
       if (!userId) {
@@ -2248,16 +2260,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       // 获取所有用户信息
       const { data: allUsers } = await supabase
         .from('user_profiles')
-        .select('id, full_name')
+        .select('id, full_name, golflive_name')
 
-      const userMap = new Map<string, string>()
-      if (allUsers) {
-        allUsers.forEach(u => {
-          if (u.full_name) {
-            userMap.set(u.full_name.trim(), u.id)
-          }
-        })
-      }
+      const userMap = allUsers ? buildUserIdMap(allUsers) : new Map<string, string>()
 
       let successCount = 0
       let failCount = 0
@@ -2720,7 +2725,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                       const canFix = isUnregistered && isMember(player.name)
                       
                       // 获取用户ID
-                      const userId = allUsers.find(u => u.full_name?.trim() === player.name.trim())?.id
+                      const userId = findUserByImportedName(player.name)?.id
                       
                       const isSelected = selectedUsers.has(player.name.trim())
                       
