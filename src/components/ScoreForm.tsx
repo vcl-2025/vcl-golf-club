@@ -1917,13 +1917,8 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     } finally {
       setIsImporting(false)
       setImportStep('select')
-      // 清空文件输入和预览数据
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-      setPreviewData(null)
-      setTeamNameMapping({})
-      setTeamColors({})
+      // 保留预览上下文给“导入结果-加入活动”按钮使用。
+      // 统一在关闭导入结果面板时再清理这些状态。
     }
   }
 
@@ -3357,7 +3352,18 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
               <div className="flex items-center justify-between sticky top-0 bg-blue-50 pb-2 z-10">
                 <h3 className="text-lg font-semibold text-gray-900">导入结果</h3>
                 <button
-                  onClick={() => setImportResult(null)}
+                  onClick={() => {
+                    setImportResult(null)
+                    setPreviewData(null)
+                    setTeamNameMapping({})
+                    setTeamColors({})
+                    setPreviewFixedUsers(new Set())
+                    setPreviewFixingUsers(new Set())
+                    setSelectedUsers(new Set())
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = ''
+                    }
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-5 h-5" />
