@@ -4,9 +4,11 @@ import { supabase } from '../lib/supabase'
 import { Event } from '../types'
 import TinyMCEEditor from './TinyMCEEditor'
 import { getEventStatus, getEventStatusText, getEventStatusStyles } from '../utils/eventStatus'
-import { updateWithAudit, insertWithAudit, createAuditContext, type UserRole } from '../lib/audit'
+import { updateWithAudit, insertWithAudit, createAuditContext } from '../lib/audit'
 import { useAuth } from '../hooks/useAuth'
 import { useModal } from './ModalProvider'
+import { convertEventInputValueToUtcIso, convertUtcIsoToEventInputValue, getEventDisplayTimezone } from '../utils/eventDateTime'
+import { type UserRole } from '../lib/fieldPermissions'
 
 interface EventFormProps {
   event?: Event | null
@@ -50,28 +52,15 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
     
     if (event) {
       // 编辑模式 - 填充现有数据
-      // 格式化日期为 datetime-local 格式
-      const formatDateTime = (dateString: string) => {
-        if (!dateString) return ''
-        const date = new Date(dateString)
-        // 使用本地时间，避免时区转换问题
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-        const hours = String(date.getHours()).padStart(2, '0')
-        const minutes = String(date.getMinutes()).padStart(2, '0')
-        return `${year}-${month}-${day}T${hours}:${minutes}`
-      }
-      
       setFormData({
         title: event.title || '',
         description: event.description || '',
-        start_time: formatDateTime(event.start_time),
-        end_time: formatDateTime(event.end_time),
+        start_time: convertUtcIsoToEventInputValue(event.start_time),
+        end_time: convertUtcIsoToEventInputValue(event.end_time),
         location: event.location || '',
         fee: event.fee ? event.fee.toString() : '',
         max_participants: event.max_participants ? event.max_participants.toString() : '50',
-        registration_deadline: formatDateTime(event.registration_deadline),
+        registration_deadline: convertUtcIsoToEventInputValue(event.registration_deadline),
         rules: event.rules || '',
         image_url: event.image_url || '',
         payment_qr_code: event.payment_qr_code || '',
@@ -160,6 +149,10 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) {
+      showError('Supabase未初始化')
+      return
+    }
     
     // 验证时间逻辑
     if (formData.start_time && formData.end_time) {
@@ -239,12 +232,12 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
       const fullEventData = {
         title: formData.title,
         description: formData.description,
-        start_time: formData.start_time ? new Date(formData.start_time + ':00').toISOString() : null,
-        end_time: formData.end_time ? new Date(formData.end_time + ':00').toISOString() : null,
+        start_time: formData.start_time ? convertEventInputValueToUtcIso(formData.start_time) : null,
+        end_time: formData.end_time ? convertEventInputValueToUtcIso(formData.end_time) : null,
         location: formData.location,
         fee: typeof formData.fee === 'string' ? parseFloat(formData.fee) || 0 : formData.fee,
         max_participants: typeof formData.max_participants === 'string' ? parseInt(formData.max_participants) || 50 : formData.max_participants,
-        registration_deadline: formData.registration_deadline ? new Date(formData.registration_deadline + ':00').toISOString() : null,
+        registration_deadline: formData.registration_deadline ? convertEventInputValueToUtcIso(formData.registration_deadline) : null,
         rules: formData.rules,
         image_url: imageUrl,
         payment_qr_code: qrCodeUrl,
@@ -461,6 +454,9 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                     className="input-field"
                     required
                   />
+                <p className="text-xs text-gray-500 mt-1">
+                  当前按活动时区显示：{getEventDisplayTimezone()}
+                </p>
                 </div>
 
                 {/* 结束时间 */}

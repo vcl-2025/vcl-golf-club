@@ -3,6 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar, MapPin, Users, Clock, DollarSign, ChevronRight, CheckCircle, AlertCircle, FileText, User, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getEventStatus, getEventStatusText, getEventStatusStyles, canRegister } from '../utils/eventStatus'
+import {
+  formatEventDateInTimezone,
+  formatEventTimeInTimezone,
+  getEventDateKeyInTimezone,
+  getEventDatePartsForCard,
+  getEventYearMonthInTimezone
+} from '../utils/eventDateTime'
 import { Event, EventStats } from '../types'
 import UnifiedSearch from './UnifiedSearch'
 
@@ -151,20 +158,26 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
     const matchesLocation = !locationTerm || 
                            event.location.toLowerCase().includes(locationTerm.toLowerCase())
     
-    const eventDate = new Date(event.start_time)
-    const matchesYear = !selectedYear || eventDate.getFullYear().toString() === selectedYear
-    const matchesMonth = !selectedMonth || (eventDate.getMonth() + 1).toString() === selectedMonth
+    const eventDate = getEventYearMonthInTimezone(event.start_time)
+    const matchesYear = !selectedYear || eventDate.year.toString() === selectedYear
+    const matchesMonth = !selectedMonth || eventDate.month.toString() === selectedMonth
     
     return matchesSearch && matchesLocation && matchesYear && matchesMonth
   })
 
   // 获取可用年份
-  const availableYears = [...new Set(events.map(e => new Date(e.start_time).getFullYear()))].sort((a, b) => b - a)
+  const availableYears = [...new Set(events.map(e => getEventYearMonthInTimezone(e.start_time).year))].sort((a, b) => b - a)
 
   const fetchEvents = async () => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+    const sb = supabase
+
     try {
       // 1. 先获取活动列表（快速显示）
-      const eventsResponse = await supabase
+      const eventsResponse = await sb
         .from('events')
         .select('*')
         .order('created_at', { ascending: false })
@@ -184,10 +197,10 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
       
       const [statsResponse, registrationsResponse] = await Promise.all([
         // 批量获取所有活动统计信息（避免N+1查询）
-        supabase.rpc('get_batch_event_stats'),
+        sb.rpc('get_batch_event_stats'),
         
         // 获取用户报名状态（如果有用户）
-        user ? supabase
+        user ? sb
           .from('event_registrations')
           .select('event_id, payment_status, status, approval_status')
           .eq('user_id', user.id) : Promise.resolve({ data: null, error: null })
@@ -222,7 +235,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
 
       // 获取当前用户头像信息
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile } = await sb
           .from('user_profiles')
           .select('avatar_url, full_name')
           .eq('id', user.id)
@@ -243,7 +256,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
         // 并行获取所有活动的头像
         const avatarPromises = displayableEvents.map(async (event) => {
           try {
-            const { data: registrations } = await supabase
+            const { data: registrations } = await sb
               .from('event_registrations')
               .select('user_id')
               .eq('event_id', event.id)
@@ -253,7 +266,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
 
             if (registrations && registrations.length > 0) {
               const userIds = registrations.map(r => r.user_id)
-              const { data: profiles } = await supabase
+              const { data: profiles } = await sb
                 .from('user_profiles')
                 .select('id, avatar_url, full_name')
                 .in('id', userIds)
@@ -294,21 +307,11 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long'
-    })
+    return formatEventDateInTimezone(dateString)
   }
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return formatEventTimeInTimezone(dateString)
   }
 
   const formatEventDateTime = (event: Event) => {
@@ -316,7 +319,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
     const endDate = new Date(event.end_time)
     
     // 检查是否是同一天
-    const isSameDay = startDate.toDateString() === endDate.toDateString()
+    const isSameDay = getEventDateKeyInTimezone(event.start_time) === getEventDateKeyInTimezone(event.end_time)
     
     if (isSameDay) {
       // 同一天：显示日期 + 时间范围
@@ -335,13 +338,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
 
   // 格式化日期为卡片样式（月份、日期、星期）
   const formatDateForCard = (dateString: string) => {
-    const date = new Date(dateString)
-    const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月']
-    const dayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-    const month = monthNames[date.getMonth()]
-    const day = date.getDate()
-    const dayOfWeek = dayNames[date.getDay()]
-    return { month, day, dayOfWeek }
+    return getEventDatePartsForCard(dateString)
   }
 
   const isRegistrationOpen = (deadline: string) => {
@@ -470,7 +467,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                 
                 {/* 底部渐变覆盖层 - 混合黑色和月份颜色 */}
                 {(() => {
-                  const monthIndex = new Date(event.start_time).getMonth()
+                  const monthIndex = getEventYearMonthInTimezone(event.start_time).month - 1
                   const colorThemes = [
                     { color: 'blue' }, // 一月 - 蓝色
                     { color: 'pink' }, // 二月 - 粉色
@@ -577,7 +574,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                   {(() => {
                     const dateInfo = formatDateForCard(event.start_time)
                     // 根据月份选择颜色主题
-                    const monthIndex = new Date(event.start_time).getMonth()
+                    const monthIndex = getEventYearMonthInTimezone(event.start_time).month - 1
                     const colorThemes = [
                       { bg: 'bg-blue-500', border: 'border-blue-400' }, // 一月 - 蓝色
                       { bg: 'bg-pink-500', border: 'border-pink-400' }, // 二月 - 粉色

@@ -12,6 +12,12 @@ import TinyMCEEditor from './TinyMCEEditor'
 import ShareModal from './ShareModal'
 import { useModal } from './ModalProvider'
 import { getEventStatus } from '../utils/eventStatus'
+import {
+  formatEventDateInTimezone,
+  formatEventDateTimeInTimezone,
+  formatEventTimeInTimezone,
+  getEventDateKeyInTimezone
+} from '../utils/eventDateTime'
 
 interface EventDetailProps {
   event: Event
@@ -285,21 +291,11 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long'
-    })
+    return formatEventDateInTimezone(dateString)
   }
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return formatEventTimeInTimezone(dateString)
   }
 
   const formatEventDateTime = () => {
@@ -307,7 +303,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
     const endDate = new Date(event.end_time)
     
     // 检查是否是同一天
-    const isSameDay = startDate.toDateString() === endDate.toDateString()
+    const isSameDay = getEventDateKeyInTimezone(event.start_time) === getEventDateKeyInTimezone(event.end_time)
     
     // 调试信息
     // console.log('活动时间调试:', {
@@ -334,14 +330,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   }
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return formatEventDateTimeInTimezone(dateString)
   }
 
   const isRegistrationOpen = () => {
