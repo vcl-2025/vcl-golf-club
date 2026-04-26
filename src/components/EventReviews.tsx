@@ -741,8 +741,8 @@ export default function EventReviews() {
       setMetaTag('og:url', window.location.href)
       setMetaTag('og:type', 'article')
       
-      if (selectedEvent.image_url || selectedEvent.article_featured_image_url) {
-        setMetaTag('og:image', selectedEvent.image_url || selectedEvent.article_featured_image_url || '')
+      if (selectedEvent.article_featured_image_url || selectedEvent.image_url) {
+        setMetaTag('og:image', selectedEvent.article_featured_image_url || selectedEvent.image_url || '')
       }
     } else {
       setReplies([])
@@ -1351,7 +1351,7 @@ export default function EventReviews() {
             {/* 活动图片 */}
             <div className="aspect-[16/9] bg-gradient-to-br from-[#F15B98]/20 to-[#F15B98]/30 overflow-hidden">
               <img
-                src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
+                src={event.article_featured_image_url || event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
                 alt={event.title}
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
@@ -1729,7 +1729,7 @@ export default function EventReviews() {
           url={`${window.location.origin}/review/${selectedEvent.id}`}
           title={selectedEvent.title}
           description={selectedEvent.article_excerpt || selectedEvent.description}
-          imageUrl={selectedEvent.image_url || selectedEvent.article_featured_image_url}
+          imageUrl={selectedEvent.article_featured_image_url || selectedEvent.image_url}
         />
       )}
 

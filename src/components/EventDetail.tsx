@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   X, Calendar, MapPin, Users, Clock, DollarSign, 
-  FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye, Maximize2, Minimize2, Share2, ChevronLeft, ShoppingCart
+  FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye, Maximize2, Minimize2, Share2, ChevronLeft, ShoppingCart, Image as ImageIcon, Upload
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventStats, EventRegistration } from '../types'
@@ -38,6 +38,10 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   const [isClosing, setIsClosing] = useState(false)
   const [articleContent, setArticleContent] = useState(event.article_content || '')
   const [articleExcerpt, setArticleExcerpt] = useState(event.article_excerpt || '')
+  const [articleFeaturedImageUrl, setArticleFeaturedImageUrl] = useState(event.article_featured_image_url || '')
+  const [articleImageUploadMethod, setArticleImageUploadMethod] = useState<'url' | 'upload'>('url')
+  const [articleImageFile, setArticleImageFile] = useState<File | null>(null)
+  const [articleImagePreview, setArticleImagePreview] = useState(event.article_featured_image_url || '')
   const [savingArticle, setSavingArticle] = useState(false)
   const [isArticlePublished, setIsArticlePublished] = useState(event.article_published || false)
   const [articlePublishedAt, setArticlePublishedAt] = useState(event.article_published_at || '')
@@ -52,6 +56,13 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   useEffect(() => {
     setIsClosing(false)
   }, [event.id])
+
+  useEffect(() => {
+    setArticleFeaturedImageUrl(event.article_featured_image_url || '')
+    setArticleImagePreview(event.article_featured_image_url || '')
+    setArticleImageUploadMethod('url')
+    setArticleImageFile(null)
+  }, [event.id, event.article_featured_image_url])
 
   // 防止背景滚动 - 更强力的方案（仅Modal模式）
   useEffect(() => {
@@ -95,13 +106,15 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
       if (supabase) {
         const { data: eventData } = await supabase
           .from('events')
-          .select('is_public, article_published, article_published_at')
+          .select('is_public, article_published, article_published_at, article_featured_image_url')
           .eq('id', event.id)
           .single()
 
         if (eventData) {
           setIsPublic(eventData.is_public || false)
           setIsArticlePublished(eventData.article_published || false)
+          setArticleFeaturedImageUrl(eventData.article_featured_image_url || '')
+          setArticleImagePreview(eventData.article_featured_image_url || '')
           if (eventData.article_published_at) {
             setArticlePublishedAt(eventData.article_published_at)
           }
@@ -141,11 +154,32 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
         throw new Error('Supabase 未初始化')
       }
 
+      let finalArticleFeaturedImageUrl = articleFeaturedImageUrl.trim()
+      if (articleImageUploadMethod === 'upload' && articleImageFile) {
+        const fileExt = articleImageFile.name.split('.').pop()
+        const fileName = `review-covers/${event.id}_${Date.now()}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('golf-club-images')
+          .upload(fileName, articleImageFile)
+
+        if (uploadError) {
+          throw new Error(`封面图上传失败: ${uploadError.message}`)
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('golf-club-images')
+          .getPublicUrl(fileName)
+
+        finalArticleFeaturedImageUrl = publicUrl
+      }
+
       const { error } = await supabase
         .from('events')
         .update({
           article_content: articleContent,
           article_excerpt: articleExcerpt,
+          article_featured_image_url: finalArticleFeaturedImageUrl || null,
           article_author_id: user?.id,
           updated_at: new Date().toISOString()
         })
@@ -159,6 +193,10 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
       // 更新本地状态以实时反映更改
       setArticleContent(articleContent)
       setArticleExcerpt(articleExcerpt)
+      setArticleFeaturedImageUrl(finalArticleFeaturedImageUrl)
+      setArticleImagePreview(finalArticleFeaturedImageUrl)
+      setArticleImageFile(null)
+      setArticleImageUploadMethod('url')
       setIsFullscreenEditing(false)
       
       // console.log('文章保存成功')
@@ -178,6 +216,26 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
       if (!supabase) {
         throw new Error('Supabase 未初始化')
       }
+
+      let finalArticleFeaturedImageUrl = articleFeaturedImageUrl.trim()
+      if (articleImageUploadMethod === 'upload' && articleImageFile) {
+        const fileExt = articleImageFile.name.split('.').pop()
+        const fileName = `review-covers/${event.id}_${Date.now()}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('golf-club-images')
+          .upload(fileName, articleImageFile)
+
+        if (uploadError) {
+          throw new Error(`封面图上传失败: ${uploadError.message}`)
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('golf-club-images')
+          .getPublicUrl(fileName)
+
+        finalArticleFeaturedImageUrl = publicUrl
+      }
       
       // console.log('开始发布文章...', {
       //   eventId: event.id,
@@ -191,6 +249,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
         .update({
           article_content: articleContent,
           article_excerpt: articleExcerpt,
+          article_featured_image_url: finalArticleFeaturedImageUrl || null,
           article_published: true,
           article_published_at: new Date().toISOString(),
           article_author_id: user?.id,
@@ -207,6 +266,10 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
       // 更新本地状态以实时反映更改
       setArticleContent(articleContent)
       setArticleExcerpt(articleExcerpt)
+      setArticleFeaturedImageUrl(finalArticleFeaturedImageUrl)
+      setArticleImagePreview(finalArticleFeaturedImageUrl)
+      setArticleImageFile(null)
+      setArticleImageUploadMethod('url')
       setIsArticlePublished(true)
       setArticlePublishedAt(new Date().toISOString())
       setIsFullscreenEditing(false)
@@ -295,6 +358,17 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
 
   const canCancelRegistration = () => {
     return userRegistration && userRegistration.approval_status === 'pending' && isRegistrationOpen()
+  }
+
+  const handleArticleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setArticleImageFile(file)
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setArticleImagePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
   }
 
   // 飞入购物车动画
@@ -710,6 +784,78 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   rows={3}
                 />
+              </div>
+
+              {/* 回顾封面图 */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <ImageIcon className="w-4 h-4 inline mr-2" />
+                  回顾封面图
+                </label>
+                <div className="mb-3 flex gap-6">
+                  <label className="flex items-center text-sm text-gray-700">
+                    <input
+                      type="radio"
+                      name="articleImageUploadMethodStandalone"
+                      value="url"
+                      checked={articleImageUploadMethod === 'url'}
+                      onChange={(e) => setArticleImageUploadMethod(e.target.value as 'url' | 'upload')}
+                      className="mr-2"
+                    />
+                    URL 输入
+                  </label>
+                  <label className="flex items-center text-sm text-gray-700">
+                    <input
+                      type="radio"
+                      name="articleImageUploadMethodStandalone"
+                      value="upload"
+                      checked={articleImageUploadMethod === 'upload'}
+                      onChange={(e) => setArticleImageUploadMethod(e.target.value as 'url' | 'upload')}
+                      className="mr-2"
+                    />
+                    文件上传
+                  </label>
+                </div>
+                {articleImageUploadMethod === 'url' ? (
+                  <input
+                    type="url"
+                    value={articleFeaturedImageUrl}
+                    onChange={(e) => {
+                      setArticleFeaturedImageUrl(e.target.value)
+                      setArticleImagePreview(e.target.value)
+                      setArticleImageFile(null)
+                    }}
+                    placeholder="https://example.com/review-cover.jpg"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleArticleImageFileChange}
+                      className="hidden"
+                      id="review-cover-upload-standalone"
+                    />
+                    <label htmlFor="review-cover-upload-standalone" className="cursor-pointer block">
+                      {articleImagePreview ? (
+                        <div>
+                          <img src={articleImagePreview} alt="回顾封面预览" className="max-w-full max-h-48 mx-auto mb-2 rounded-lg" />
+                          <p className="text-sm text-gray-600">点击更换图片</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-600 mb-1">点击上传回顾封面图</p>
+                          <p className="text-xs text-gray-500">支持 JPG、PNG 格式</p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  留空时，回顾列表会回退使用活动图片。
+                </p>
               </div>
 
               {/* 文章内容 */}
@@ -1154,6 +1300,78 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={3}
               />
+            </div>
+
+            {/* 回顾封面图 */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <ImageIcon className="w-4 h-4 inline mr-2" />
+                回顾封面图
+              </label>
+              <div className="mb-3 flex gap-6">
+                <label className="flex items-center text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="articleImageUploadMethodModal"
+                    value="url"
+                    checked={articleImageUploadMethod === 'url'}
+                    onChange={(e) => setArticleImageUploadMethod(e.target.value as 'url' | 'upload')}
+                    className="mr-2"
+                  />
+                  URL 输入
+                </label>
+                <label className="flex items-center text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="articleImageUploadMethodModal"
+                    value="upload"
+                    checked={articleImageUploadMethod === 'upload'}
+                    onChange={(e) => setArticleImageUploadMethod(e.target.value as 'url' | 'upload')}
+                    className="mr-2"
+                  />
+                  文件上传
+                </label>
+              </div>
+              {articleImageUploadMethod === 'url' ? (
+                <input
+                  type="url"
+                  value={articleFeaturedImageUrl}
+                  onChange={(e) => {
+                    setArticleFeaturedImageUrl(e.target.value)
+                    setArticleImagePreview(e.target.value)
+                    setArticleImageFile(null)
+                  }}
+                  placeholder="https://example.com/review-cover.jpg"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleArticleImageFileChange}
+                    className="hidden"
+                    id="review-cover-upload-modal"
+                  />
+                  <label htmlFor="review-cover-upload-modal" className="cursor-pointer block">
+                    {articleImagePreview ? (
+                      <div>
+                        <img src={articleImagePreview} alt="回顾封面预览" className="max-w-full max-h-48 mx-auto mb-2 rounded-lg" />
+                        <p className="text-sm text-gray-600">点击更换图片</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-600 mb-1">点击上传回顾封面图</p>
+                        <p className="text-xs text-gray-500">支持 JPG、PNG 格式</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                留空时，回顾列表会回退使用活动图片。
+              </p>
             </div>
 
             {/* 文章内容 */}

@@ -50,8 +50,8 @@ export default function EventReviewSharePage() {
       setMetaTag('og:url', window.location.href)
       setMetaTag('og:type', 'article')
       
-      if (event.image_url || event.article_featured_image_url) {
-        setMetaTag('og:image', event.image_url || event.article_featured_image_url || '')
+      if (event.article_featured_image_url || event.image_url) {
+        setMetaTag('og:image', event.article_featured_image_url || event.image_url || '')
       }
     }
 
