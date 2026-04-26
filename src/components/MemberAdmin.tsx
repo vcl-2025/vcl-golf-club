@@ -288,31 +288,53 @@ export default function MemberAdmin() {
   // 重置密码
   const handleResetPassword = async (memberId: string) => {
     try {
-      const confirmed = await modal.confirmDelete(
-        '重置密码',
-        '确定要将该用户的密码重置为 12345678 吗？用户下次登录时需要使用新密码。'
-      )
-      if (!confirmed) return
+      if (!supabase) {
+        modal.showError('Supabase 未初始化，无法重置密码')
+        return
+      }
 
-      // 使用 Supabase Admin API 重置密码
-      const { error } = await supabase.auth.admin.updateUserById(memberId, {
-        password: '12345678'
+      // 使用 Edge Function 在服务端执行管理员密码重置（函数统一返回 200 + JSON，便于展示具体错误）
+      const { data, error } = await supabase.functions.invoke('reset-user-password', {
+        body: {
+          userId: memberId,
+          newPassword: '12345678'
+        }
       })
 
-      if (error) throw error
+      if (error) {
+        throw error
+      }
+
+      const payload = data as { success?: boolean; error?: string } | null
+      if (!payload?.success) {
+        modal.showError(payload?.error || '重置密码失败')
+        return
+      }
 
       modal.showSuccess('密码已重置为 12345678')
       setShowResetPasswordModal(false)
       setSelectedMemberForPermission(null)
     } catch (error: any) {
       console.error('重置密码失败:', error)
-      modal.showError('重置密码失败: ' + (error.message || '未知错误'))
+      const errorMessage = String(error?.message || '')
+      if (errorMessage.includes('Failed to send a request to the Edge Function')) {
+        modal.showError('重置密码失败：Edge Function 未部署，请先部署 reset-user-password 函数。')
+      } else if (errorMessage.includes('仅管理员可重置密码')) {
+        modal.showError('重置密码失败：仅管理员账号可执行此操作。')
+      } else {
+        modal.showError('重置密码失败: ' + (error.message || '未知错误'))
+      }
     }
   }
 
   // 更新用户角色
   const handleUpdateRole = async (memberId: string, newRole: string) => {
     try {
+      if (!supabase) {
+        modal.showError('Supabase 未初始化，无法更新角色')
+        return
+      }
+
       const { error } = await supabase
         .from('user_profiles')
         .update({ role: newRole })

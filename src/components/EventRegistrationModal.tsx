@@ -19,15 +19,22 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
   const [userProfile, setUserProfile] = useState<any>(null)
   const [existingRegistration, setExistingRegistration] = useState<EventRegistration | null>(null)
   const isOutOfTownEvent = Boolean(event.is_out_of_town)
+  const hasBanquet = Boolean(event.has_banquet)
   
   const [formData, setFormData] = useState<{
     accommodation?: '双人间住宿' | '单人间住宿'
     transportation?: '自驾（Car pool）' | '安排全程交通接送（费用另计）'
     isVclMember2026?: '是' | '否'
     roommateNote?: string
+    banquetAttendance?: '参加' | '不参加'
   }>({})
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null)
+
+  if (!supabase) {
+    return null
+  }
+  const sb = supabase
 
 
   useEffect(() => {
@@ -41,7 +48,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
     if (!user) return
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
@@ -89,7 +96,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
 
   const checkExistingRegistration = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('event_registrations')
         .select('*')
         .eq('event_id', event.id)
@@ -115,10 +122,13 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
           throw new Error('请先完整填写外地报名信息（住宿、交通、会员）')
         }
       }
+      if (hasBanquet && !formData.banquetAttendance) {
+        throw new Error('请先选择是否参加赛后餐会')
+      }
 
       // console.log('开始检查报名状态')
       // 检查是否已经报名过
-      const { data: existingRegistration, error: checkError } = await supabase
+      const { data: existingRegistration, error: checkError } = await sb
         .from('event_registrations')
         .select('id, payment_status, approval_status, status')
         .eq('event_id', event.id)
@@ -157,7 +167,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
 
     try {
       // 先检查是否已经存在报名记录
-      const { data: existingRegistration, error: checkError } = await supabase
+      const { data: existingRegistration, error: checkError } = await sb
         .from('event_registrations')
         .select('id, status, approval_status')
         .eq('event_id', event.id)
@@ -176,7 +186,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       }
 
       // 乐观锁检查：查询活动的当前报名人数
-      const { data: currentRegistrations, error: countError } = await supabase
+      const { data: currentRegistrations, error: countError } = await sb
         .from('event_registrations')
         .select('id')
         .eq('event_id', event.id)
@@ -203,7 +213,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
           const fileName = `${user.id}_${Date.now()}.${fileExt}`
           const filePath = `payment-proofs/${fileName}`
           
-          const { error: uploadError } = await supabase.storage
+          const { error: uploadError } = await sb.storage
             .from('golf-club-images')
             .upload(`payment-proofs/${filePath}`, paymentProof)
           
@@ -212,7 +222,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
             throw uploadError
           }
           
-          const { data: { publicUrl } } = supabase.storage
+          const { data: { publicUrl } } = sb.storage
             .from('golf-club-images')
             .getPublicUrl(`payment-proofs/${filePath}`)
           
@@ -226,15 +236,23 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       }
 
       // 创建报名记录，状态为待审批
-      const outOfTownNotes = isOutOfTownEvent
-        ? [
-            '【外地活动报名信息】',
-            `住宿选择：${formData.accommodation || '-'}`,
-            `交通选择：${formData.transportation || '-'}`,
-            `是否2026年度VCL会员：${formData.isVclMember2026 || '-'}`,
-            `备注：${formData.roommateNote?.trim() || '无'}`
-          ].join('\n')
-        : null
+      const noteSections: string[] = []
+      if (hasBanquet) {
+        noteSections.push([
+          '【赛后餐会信息】',
+          `是否参加赛后餐会：${formData.banquetAttendance || '-'}`
+        ].join('\n'))
+      }
+      if (isOutOfTownEvent) {
+        noteSections.push([
+          '【外地活动报名信息】',
+          `住宿选择：${formData.accommodation || '-'}`,
+          `交通选择：${formData.transportation || '-'}`,
+          `是否2026年度VCL会员：${formData.isVclMember2026 || '-'}`,
+          `备注：${formData.roommateNote?.trim() || '无'}`
+        ].join('\n'))
+      }
+      const registrationNotes = noteSections.length > 0 ? noteSections.join('\n\n') : null
 
       const insertData = {
         event_id: event.id,
@@ -243,12 +261,12 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         approval_status: 'pending',
         status: 'registered',
         payment_proof: paymentProofUrl,
-        notes: outOfTownNotes
+        notes: registrationNotes
       }
       
       // console.log('插入数据:', insertData)
       
-      const { error: insertError } = await supabase
+      const { error: insertError } = await sb
         .from('event_registrations')
         .insert(insertData)
 
@@ -281,7 +299,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
     setMessage('')
 
     try {
-      const { error } = await supabase
+      const { error } = await sb
         .from('event_registrations')
         .update({ 
           status: 'cancelled',
@@ -564,6 +582,36 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all resize-none"
                     />
+                  </div>
+                </div>
+              )}
+
+              {hasBanquet && (
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <div className="text-sm font-medium text-gray-800">
+                    是否参加赛后餐会 <span className="text-red-500">*</span>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="banquetAttendance"
+                        value="参加"
+                        checked={formData.banquetAttendance === '参加'}
+                        onChange={(e) => setFormData({ ...formData, banquetAttendance: e.target.value as '参加' | '不参加' })}
+                      />
+                      参加
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="banquetAttendance"
+                        value="不参加"
+                        checked={formData.banquetAttendance === '不参加'}
+                        onChange={(e) => setFormData({ ...formData, banquetAttendance: e.target.value as '参加' | '不参加' })}
+                      />
+                      不参加
+                    </label>
                   </div>
                 </div>
               )}

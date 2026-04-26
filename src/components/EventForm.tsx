@@ -42,6 +42,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
     payment_instructions: '',
     event_type: '普通活动' as '普通活动' | '个人赛' | '团体赛',
     is_out_of_town: false,
+    has_banquet: false,
     status: 'upcoming'
   })
 
@@ -68,6 +69,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_instructions: event.payment_instructions || '',
         event_type: event.event_type || '普通活动',
         is_out_of_town: Boolean(event.is_out_of_town),
+        has_banquet: Boolean(event.has_banquet),
         status: event.status || 'active'
       })
       
@@ -105,6 +107,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_instructions: '',
         event_type: '普通活动',
         is_out_of_town: false,
+        has_banquet: false,
         status: 'upcoming'
       })
       setQrCodePreview('')
@@ -245,6 +248,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         payment_instructions: formData.payment_instructions,
         event_type: formData.event_type || '普通活动',
         is_out_of_town: Boolean(formData.is_out_of_town),
+        has_banquet: Boolean(formData.has_banquet),
         status: formData.status === 'cancelled' ? 'cancelled' : 'active'
       }
 
@@ -514,7 +518,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
               </div>
 
               {/* 外地活动配置 */}
-              <div>
+              <div className="space-y-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   报名信息收集
                 </label>
@@ -533,6 +537,24 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                       className="h-4 w-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
                     />
                     <span className="ml-2 text-sm text-gray-700">{formData.is_out_of_town ? '外地活动' : '本地活动'}</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between border border-gray-300 rounded-lg px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">是否有赛后餐会</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      开启后，报名页会要求用户选择是否参加赛后餐会
+                    </div>
+                  </div>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.has_banquet}
+                      onChange={(e) => setFormData({ ...formData, has_banquet: e.target.checked })}
+                      className="h-4 w-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{formData.has_banquet ? '有餐会' : '无餐会'}</span>
                   </label>
                 </div>
               </div>

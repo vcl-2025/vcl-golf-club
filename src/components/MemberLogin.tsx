@@ -485,12 +485,12 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
               溫哥華華人女子高爾夫俱樂部
             </h1>
             <p className="text-white/90 text-base sm:text-lg lg:text-xl mb-3 sm:mb-4 lg:mb-8 font-medium">
-              Vancouver Chinese Women's Golf Club
+              Vancouver Chinese Ladies Golf Club
             </p>
             
             {/* Description */}
             <p className="text-white/90 text-sm sm:text-base lg:text-lg leading-relaxed mb-4 sm:mb-6 lg:mb-12 max-w-md mx-auto lg:mx-0">
-              在这片绿意盎然的天地里，每一杆都是艺术，每一场都是享受。加入我们，体验世界级的高尔夫之旅。
+              在这片绿意盎然的天地里，每一杆都是艺术，每一场都是享受。加入我们， 一起享受高尔夫的快乐！
             </p>
             
             {/* Stats */}
@@ -498,10 +498,6 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
               <div className="text-center lg:text-left">
                 <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1">{memberCount}+</div>
                 <div className="text-xs sm:text-sm lg:text-base text-white/80">尊贵会员</div>
-              </div>
-              <div className="text-center lg:text-left">
-                <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1">18洞</div>
-                <div className="text-xs sm:text-sm lg:text-base text-white/80">锦标球场</div>
               </div>
               <div className="text-center lg:text-left">
                 <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1">{yearsEstablished}年</div>

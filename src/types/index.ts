@@ -66,6 +66,7 @@ export interface Event {
   team_name_mapping?: Record<string, string> // 队伍名称映射：Excel中的原始名称 -> 系统显示名称
   team_colors?: Record<string, string> // 队伍颜色配置：Excel中的原始名称 -> 颜色代码
   is_out_of_town?: boolean // 是否为外地活动（决定是否展示外地报名补充信息）
+  has_banquet?: boolean // 是否包含赛后餐会（决定是否展示餐会参与选择）
 }
 
 export interface EventRegistration {
