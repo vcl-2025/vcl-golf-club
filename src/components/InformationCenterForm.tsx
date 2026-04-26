@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useModal } from './ModalProvider'
 import { canRegister, getEventStatus } from '../utils/eventStatus'
 import { insertWithAudit, updateWithAudit, createAuditContext, type UserRole } from '../lib/audit'
+import { formatEventDateInTimezone } from '../utils/eventDateTime'
 
 interface InformationCenterFormProps {
   item?: InformationItem | null
@@ -657,10 +658,7 @@ export default function InformationCenterForm({ item, onClose, onSuccess }: Info
                             <div className="ml-6 text-sm text-gray-600 space-y-1">
                               <div className="flex items-center gap-2">
                                 <Calendar className="w-3.5 h-3.5" />
-                                <span>{new Date(event.start_time).toLocaleDateString('zh-CN')}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-green-600">${event.fee}</span>
+                                <span>{formatEventDateInTimezone(event.start_time)}</span>
                               </div>
                             </div>
                           </div>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { X, Calendar, Eye, FileText, Download, Clock, User, Pin, AlertCircle, Share2, ChevronLeft, ShoppingCart, MapPin, DollarSign } from 'lucide-react'
+import { X, Calendar, Eye, FileText, Download, Clock, User, Pin, AlertCircle, Share2, ChevronLeft, ShoppingCart, MapPin } from 'lucide-react'
 import { InformationItem, Event } from '../types'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import ShareModal from './ShareModal'
 import BatchRegistrationCart from './BatchRegistrationCart'
 import { canRegister, getEventStatus, getEventStatusText } from '../utils/eventStatus'
+import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 
 interface InformationCenterDetailProps {
   item: InformationItem
@@ -447,15 +448,11 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
                                 <div className="space-y-1 text-sm text-gray-600">
                                   <div className="flex items-center gap-2">
                                     <Calendar className="w-4 h-4 flex-shrink-0" />
-                                    <span className="truncate">{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="truncate">{formatEventDateTimeInTimezone(event.start_time)}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <MapPin className="w-4 h-4 flex-shrink-0" />
                                     <span className="truncate">{event.location}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <DollarSign className="w-4 h-4 flex-shrink-0" />
-                                    <span className="font-semibold text-green-600">${event.fee}</span>
                                   </div>
                                 </div>
                               </div>

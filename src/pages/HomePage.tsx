@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, MapPin, Users, Trophy, Calendar
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
 import { usePWAInstall } from '../hooks/usePWAInstall'
+import { formatEventDateInTimezone } from '../utils/eventDateTime'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -1217,7 +1218,7 @@ export default function HomePage() {
                 >
                 <div>
                     <div className="text-[13px] uppercase mb-[15px]" style={{ letterSpacing: '2px', color: 'var(--pink)', fontWeight: 500 }}>
-                      {new Date(event.start_time).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {formatEventDateInTimezone(event.start_time, 'en-US')}
                 </div>
                     <h3 
                       className="mb-3 leading-[1.3] text-white"

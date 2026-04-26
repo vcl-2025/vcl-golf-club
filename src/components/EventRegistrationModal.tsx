@@ -3,6 +3,7 @@ import { X, User, Phone, CreditCard, QrCode, Clock, CheckCircle, XCircle, AlertC
 import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
 import { useModal } from './ModalProvider'
+import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 
 interface EventRegistrationModalProps {
   event: Event
@@ -391,9 +392,9 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
             <div className="bg-golf-50 p-4 rounded-lg mb-6">
               <h3 className="font-semibold text-gray-900 mb-2">{event.title}</h3>
               <div className="text-sm text-gray-600 space-y-1">
-                <div>时间：{new Date(event.start_time).toLocaleString('zh-CN')}</div>
+                <div>时间：{formatEventDateTimeInTimezone(event.start_time)}</div>
                 <div>地点：{event.location}</div>
-                <div>费用：¥{event.fee.toFixed(2)}</div>
+                {/* 费用暂不展示 */}
               </div>
             </div>
 
@@ -485,9 +486,9 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
               <div className="bg-golf-50 p-4 rounded-lg">
                 <h3 className="font-semibold text-gray-900 mb-2">{event.title}</h3>
                 <div className="text-sm text-gray-600 space-y-1">
-                  <div>时间：{new Date(event.start_time).toLocaleString('zh-CN')}</div>
+                  <div>时间：{formatEventDateTimeInTimezone(event.start_time)}</div>
                   <div>地点：{event.location}</div>
-                  <div>费用：¥{event.fee.toFixed(2)}</div>
+                  {/* 费用暂不展示 */}
                 </div>
               </div>
 
@@ -673,9 +674,9 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
               <div className="bg-golf-50 p-4 rounded-lg">
                 <h3 className="font-semibold text-gray-900 mb-2">{event.title}</h3>
                 <div className="text-sm text-gray-600 space-y-1">
-                  <div>时间：{new Date(event.start_time).toLocaleString('zh-CN')}</div>
+                  <div>时间：{formatEventDateTimeInTimezone(event.start_time)}</div>
                   <div>地点：{event.location}</div>
-                  <div className="font-semibold text-lg">费用：¥{event.fee.toFixed(2)}</div>
+                  {/* 费用暂不展示 */}
                 </div>
               </div>
 

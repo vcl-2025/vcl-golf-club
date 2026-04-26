@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { X, ShoppingCart, Calendar, MapPin, DollarSign, Upload, CheckCircle, AlertCircle, Trash2, QrCode, Mail, Download } from 'lucide-react'
+import { X, ShoppingCart, Calendar, MapPin, Upload, CheckCircle, AlertCircle, Trash2, QrCode, Mail, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import { useModal } from './ModalProvider'
 import { canRegister, getEventStatus, getEventStatusText } from '../utils/eventStatus'
+import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 
 interface EventCartModalProps {
   eventIds: string[]
@@ -169,14 +170,6 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
     }
   }
 
-  const calculateTotal = () => {
-    return events.reduce((sum, event) => {
-      // 如果已报名，不计算价格
-      if (userRegistrations[event.id]) return sum
-      return sum + (event.fee || 0)
-    }, 0)
-  }
-
   const handleSubmit = async () => {
     if (!user || !supabase) {
       showError('请先登录')
@@ -308,7 +301,6 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
     }
   }
 
-  const total = calculateTotal()
   const hasAlreadyRegistered = events.some(e => userRegistrations[e.id])
   const availableEvents = events.filter(e => !userRegistrations[e.id])
   const alreadyRegistered = events.filter(e => userRegistrations[e.id])
@@ -427,15 +419,11 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                             <div className="space-y-1 text-sm text-gray-600">
                               <div className="flex items-center gap-2">
                                 <Calendar className="w-4 h-4" />
-                                <span>{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span>{formatEventDateTimeInTimezone(event.start_time)}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4" />
                                 <span>{event.location}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <DollarSign className="w-4 h-4" />
-                                <span className="font-semibold text-green-600">${event.fee.toFixed(2)}</span>
                               </div>
                             </div>
                             
@@ -518,16 +506,6 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                   })}
                 </div>
               </div>
-
-              {/* 价格总计 */}
-              {!hasAlreadyRegistered && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-gray-900">总计：</span>
-                    <span className="text-2xl font-bold text-green-600">${total.toFixed(2)}</span>
-                  </div>
-                </div>
-              )}
 
               {/* 支付凭证上传 */}
               {!hasAlreadyRegistered && (

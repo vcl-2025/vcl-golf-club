@@ -8,6 +8,7 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import UnifiedSearch from './UnifiedSearch'
+import { formatEventDateInTimezone } from '../utils/eventDateTime'
 
 interface ScoreData {
   id: string
@@ -629,11 +630,7 @@ export default function UserScoreQuery() {
                           <div className="flex items-center">
                             <Clock className="w-4 h-4 mr-2 text-golf-400" />
                             <span>
-                              {new Date(group.event.start_time).toLocaleDateString('zh-CN', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit'
-                              })}
+                              {formatEventDateInTimezone(group.event.start_time, 'zh-CN')}
                             </span>
                           </div>
                         </div>

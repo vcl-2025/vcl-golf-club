@@ -25,6 +25,7 @@ import InformationCenterList from './InformationCenterList'
 import InformationCenterDetail from './InformationCenterDetail'
 import EventCartModal from './EventCartModal'
 import { Event, InformationItem } from '../types'
+import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 
 interface Poster {
   id: string
@@ -2500,7 +2501,7 @@ export default function Dashboard() {
                               <div className="space-y-1.5">
                                 <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                   <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-[#F15B98]/70" />
-                                  <span className="whitespace-nowrap">{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                  <span className="whitespace-nowrap">{formatEventDateTimeInTimezone(event.start_time)}</span>
                           </div>
                                 <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                   <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-golf-500/70" />

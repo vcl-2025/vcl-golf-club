@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { X, ShoppingCart, Calendar, MapPin, DollarSign, Upload, CheckCircle, AlertCircle, Trash2, QrCode, Mail, Download } from 'lucide-react'
+import { X, ShoppingCart, Calendar, MapPin, Upload, CheckCircle, AlertCircle, Trash2, QrCode, Mail, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
 import { useAuth } from '../hooks/useAuth'
 import { useModal } from './ModalProvider'
 import { canRegister, getEventStatus } from '../utils/eventStatus'
+import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 
 interface BatchRegistrationCartProps {
   events: Event[]
@@ -144,14 +145,6 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
 
     console.log('✅ 获取公开URL:', publicUrl)
     return publicUrl
-  }
-
-  const calculateTotal = () => {
-    return selectedEvents.reduce((sum, event) => {
-      // 如果已报名，不计算价格
-      if (userRegistrations[event.id]) return sum
-      return sum + (event.fee || 0)
-    }, 0)
   }
 
   const handleSubmit = async () => {
@@ -331,7 +324,6 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
     }
   }
 
-  const total = calculateTotal()
   const hasAlreadyRegistered = selectedEvents.some(e => userRegistrations[e.id])
   
   // 检查不可报名的活动（已结束或报名已截止）
@@ -437,15 +429,11 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
                         <div className="space-y-1 text-sm text-gray-600">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4" />
-                            <span>{new Date(event.start_time).toLocaleDateString('zh-CN')} {new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>{formatEventDateTimeInTimezone(event.start_time)}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <MapPin className="w-4 h-4" />
                             <span>{event.location}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="w-4 h-4" />
-                            <span className="font-semibold text-green-600">${event.fee}</span>
                           </div>
                         </div>
                         
@@ -530,16 +518,6 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
               })}
             </div>
           </div>
-
-          {/* 价格总计 */}
-          {!hasAlreadyRegistered && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-semibold text-gray-900">总计：</span>
-                <span className="text-2xl font-bold text-green-600">${total.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
 
           {/* 支付凭证上传 */}
           {!hasAlreadyRegistered && (

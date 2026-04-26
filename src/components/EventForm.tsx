@@ -458,9 +458,9 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                     className="input-field"
                     required
                   />
-                <p className="text-xs text-gray-500 mt-1">
-                  当前按活动时区显示：{getEventDisplayTimezone()}
-                </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    时间按俱乐部所在地录入：{getEventDisplayTimezone()}
+                  </p>
                 </div>
 
                 {/* 结束时间 */}

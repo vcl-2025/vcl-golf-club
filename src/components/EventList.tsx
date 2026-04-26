@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Calendar, MapPin, Users, Clock, DollarSign, ChevronRight, CheckCircle, AlertCircle, FileText, User, X } from 'lucide-react'
+import { Calendar, MapPin, Users, Clock, ChevronRight, CheckCircle, AlertCircle, FileText, User, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getEventStatus, getEventStatusText, getEventStatusStyles, canRegister } from '../utils/eventStatus'
 import {
@@ -315,9 +315,6 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
   }
 
   const formatEventDateTime = (event: Event) => {
-    const startDate = new Date(event.start_time)
-    const endDate = new Date(event.end_time)
-    
     // 检查是否是同一天
     const isSameDay = getEventDateKeyInTimezone(event.start_time) === getEventDateKeyInTimezone(event.end_time)
     
@@ -467,7 +464,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                 
                 {/* 底部渐变覆盖层 - 混合黑色和月份颜色 */}
                 {(() => {
-                  const monthIndex = getEventYearMonthInTimezone(event.start_time).month - 1
+                  const monthIndex = new Date(event.start_time).getMonth()
                   const colorThemes = [
                     { color: 'blue' }, // 一月 - 蓝色
                     { color: 'pink' }, // 二月 - 粉色
@@ -574,7 +571,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                   {(() => {
                     const dateInfo = formatDateForCard(event.start_time)
                     // 根据月份选择颜色主题
-                    const monthIndex = getEventYearMonthInTimezone(event.start_time).month - 1
+                    const monthIndex = new Date(event.start_time).getMonth()
                     const colorThemes = [
                       { bg: 'bg-blue-500', border: 'border-blue-400' }, // 一月 - 蓝色
                       { bg: 'bg-pink-500', border: 'border-pink-400' }, // 二月 - 粉色
@@ -635,11 +632,7 @@ export default function EventList({ onEventSelect, user }: EventListProps) {
                       <MapPin className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5 text-white/80" />
                       <span className="line-clamp-2 break-words text-white/80">{event.location}</span>
                     </div>
-                    {/* 价格 */}
-                    <div className="flex items-center gap-1.5 text-sm sm:text-base drop-shadow-md">
-                      <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                      <span className="font-bold">{event.fee.toFixed(2)}</span>
-                    </div>
+                    {/* 费用暂不展示 */}
                   </div>
                 </div>
 

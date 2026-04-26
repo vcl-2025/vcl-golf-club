@@ -19,6 +19,7 @@ import AuditLogViewer from './AuditLogViewer'
 import RolePermissionsManager from './RolePermissionsManager'
 import { useModal } from './ModalProvider'
 import { getEventStatus, getEventStatusText, getEventStatusStyles } from '../utils/eventStatus'
+import { formatEventDateInTimezone, formatEventDateTimeInTimezone, formatEventTimeInTimezone } from '../utils/eventDateTime'
 import { InformationItem } from '../types'
 import { FileText as FileTextIcon, Shield } from 'lucide-react'
 import { deleteWithAudit, updateWithAudit, createAuditContext, logBatchOperation, type UserRole } from '../lib/audit'
@@ -1386,8 +1387,8 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm font-medium">{new Date(event.start_time).toLocaleDateString('zh-CN')}</span>
-                          <span className="text-sm text-gray-500">{new Date(event.start_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="text-sm font-medium">{formatEventDateInTimezone(event.start_time)}</span>
+                          <span className="text-sm text-gray-500">{formatEventTimeInTimezone(event.start_time)}</span>
                         </div>
                         <div className="flex items-start space-x-2">
                           <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
@@ -1406,9 +1407,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                             {event.event_type}
                           </span>
                         </div>
-                        <div className="text-center">
-                          <span className="text-sm font-bold text-red-600">{formatCurrency(event.fee)}</span>
-                        </div>
+                        {/* 费用暂不展示 */}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 w-20">
@@ -1775,19 +1774,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                               <div className="flex items-center">
                                 <Clock className="w-4 h-4 mr-2 text-gray-400" />
                                 <span>
-                                  {new Date(event.start_time).toLocaleString('zh-CN', {
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })} - {new Date(event.end_time).toLocaleString('zh-CN', {
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
+                                  {formatEventDateTimeInTimezone(event.start_time)} - {formatEventDateTimeInTimezone(event.end_time)}
                                 </span>
                               </div>
           </div>

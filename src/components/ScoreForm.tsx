@@ -3,6 +3,7 @@ import { X, Save, AlertCircle, Upload, CheckCircle, FileText, UserCheck } from '
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import { getEventStatus, getEventStatusText, getEventStatusStyles, canEnterScores } from '../utils/eventStatus'
+import { formatEventDateInTimezone } from '../utils/eventDateTime'
 import * as XLSX from 'xlsx'
 import { updateWithAudit, createAuditContext, logBatchOperation, type UserRole } from '../lib/audit'
 import { useAuth } from '../hooks/useAuth'
@@ -2979,7 +2980,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                       
                       <div className="text-sm text-gray-600 space-y-1">
                         <div>地点: {event.location}</div>
-                        <div>日期: {new Date(event.start_time).toLocaleDateString('zh-CN')}</div>
+                        <div>日期: {formatEventDateInTimezone(event.start_time)}</div>
                       </div>
                     </div>
                   )

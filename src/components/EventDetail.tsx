@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
-  X, Calendar, MapPin, Users, Clock, DollarSign, 
+  X, Calendar, MapPin, Users, Clock, 
   FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye, Maximize2, Minimize2, Share2, ChevronLeft, ShoppingCart, Image as ImageIcon, Upload
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -299,9 +299,6 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   }
 
   const formatEventDateTime = () => {
-    const startDate = new Date(event.start_time)
-    const endDate = new Date(event.end_time)
-    
     // 检查是否是同一天
     const isSameDay = getEventDateKeyInTimezone(event.start_time) === getEventDateKeyInTimezone(event.end_time)
     
@@ -585,12 +582,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                     </div>
                   </div>
 
-                  <div className="flex items-start">
-                    <DollarSign className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />
-                    <div className="font-medium text-gray-900">
-                      ¥{event.fee.toFixed(2)}
-                    </div>
-                  </div>
+                  {/* 费用暂不展示 */}
 
                   <div className="flex items-start">
                     <Users className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />
@@ -1090,12 +1082,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                     </div>
                   </div>
 
-                  <div className="flex items-start">
-                    <DollarSign className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />
-                    <div className="font-medium text-gray-900">
-                      ¥{event.fee.toFixed(2)}
-                    </div>
-                  </div>
+                  {/* 费用暂不展示 */}
 
                   <div className="flex items-start">
                     <Users className="w-5 h-5 text-golf-600 mr-3 mt-0.5" />

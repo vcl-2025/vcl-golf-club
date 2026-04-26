@@ -3,6 +3,7 @@ import { X, Users, Download, Search, Phone, Mail, CreditCard, Calendar } from 'l
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import { Event } from '../types'
+import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 
 interface EventRegistration {
   id: string
@@ -144,7 +145,7 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
         reg.user_phone,
         reg.user_email,
         reg.payment_status === 'paid' ? '已支付' : '待支付',
-        new Date(reg.registration_time).toLocaleString('zh-CN'),
+        formatEventDateTimeInTimezone(reg.registration_time),
         reg.notes || ''
       ].join(','))
     ].join('\n')
@@ -180,7 +181,7 @@ export default function EventRegistrations({ event, onClose }: EventRegistration
             <div>
               <h2 className="text-2xl font-bold text-gray-900">{event.title} - 报名管理</h2>
               <p className="text-gray-600 mt-1">
-                {new Date(event.start_time).toLocaleString('zh-CN')} | {event.location}
+                {formatEventDateTimeInTimezone(event.start_time)} | {event.location}
               </p>
             </div>
             <button
