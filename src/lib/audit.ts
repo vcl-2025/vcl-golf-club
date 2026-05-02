@@ -20,6 +20,7 @@ export interface AuditLogEntry {
   field_name?: string
   old_value?: any
   new_value?: any
+  remark?: string
   operation: 'INSERT' | 'UPDATE' | 'DELETE'
   user_id: string
   user_email?: string
@@ -329,7 +330,8 @@ export async function deleteWithAudit(
   tableName: string,
   recordId: string,
   context: AuditContext,
-  userRole: UserRole
+  userRole: UserRole,
+  remark?: string
 ): Promise<{ error: any }> {
   if (!supabase) {
     return { error: new Error('Supabase不可用') }
@@ -368,6 +370,7 @@ export async function deleteWithAudit(
     field_name: undefined, // 删除操作不记录具体字段
     old_value: oldData,
     new_value: null,
+    remark,
     operation: 'DELETE',
     user_id: context.userId,
     user_email: context.userEmail,

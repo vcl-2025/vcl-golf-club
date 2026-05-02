@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Check, X, Eye, AlertCircle, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react'
+import { Check, X, Eye, AlertCircle, AlertTriangle, CheckCircle, Clock, DollarSign, Download } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { useModal } from './ModalProvider'
 import { EventRegistration } from '../types'
+import { createAuditContext, deleteWithAudit } from '../lib/audit'
 
 interface EventRegistrationAdminProps {
   eventId: string
@@ -19,6 +21,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
   const [loading, setLoading] = useState(true)
   const [selectedRegistration, setSelectedRegistration] = useState<EventRegistration | null>(null)
   const [approvalNotes, setApprovalNotes] = useState('')
+  const [cancellationRemark, setCancellationRemark] = useState('')
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [showBatchApprovalModal, setShowBatchApprovalModal] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -33,6 +36,8 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
   // 发送审批邮件通知
   const sendApprovalEmail = async (registrationId: string, approved: boolean) => {
     try {
+      if (!supabase) return
+
       // 获取报名记录信息
       const registration = registrations.find(reg => reg.id === registrationId)
       if (!registration) return
@@ -100,7 +105,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
       // 获取用户资料
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
-        .select('id, full_name, phone')
+        .select('id, full_name, phone, golflive_name')
         .in('id', userIds)
 
       if (profilesError) throw profilesError
@@ -123,7 +128,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
     }
   }
 
-  const handleApproval = async (registrationId: string, approved: boolean) => {
+  const handleApproval = async (registrationId: string, approved: boolean, remark?: string) => {
     setProcessingId(registrationId)
     
     // 检查 supabase 连接
@@ -133,6 +138,8 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
     }
     
     try {
+      const currentRegistration = registrations.find(reg => reg.id === registrationId)
+
       if (approved) {
         // 批准：更新状态
         const { error } = await supabase
@@ -152,20 +159,32 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
         // 发送批准邮件通知
         await sendApprovalEmail(registrationId, true)
       } else {
-        // 取消：删除报名记录
-        const { error } = await supabase
-          .from('event_registrations')
-          .delete()
-          .eq('id', registrationId)
+        // 取消：删除报名记录，并写入审计日志
+        const authUser = (await supabase.auth.getUser()).data.user
+        if (!authUser) {
+          throw new Error('未登录，无法执行取消操作')
+        }
+
+        const auditContext = await createAuditContext(authUser.id)
+        const finalRemark = (remark || cancellationRemark || '').trim()
+        const { error } = await deleteWithAudit(
+          'event_registrations',
+          registrationId,
+          auditContext,
+          'admin',
+          finalRemark || undefined
+        )
 
         if (error) throw error
-        showSuccess('报名申请已取消')
+        const isApprovedRegistration = currentRegistration?.approval_status === 'approved'
+        showSuccess(isApprovedRegistration ? '报名已取消，会员可重新报名' : '报名申请已取消')
         
         // 发送取消邮件通知
         await sendApprovalEmail(registrationId, false)
       }
 
       setApprovalNotes('')
+      setCancellationRemark('')
       setSelectedRegistration(null) // 关闭详情模态框
       fetchRegistrations()
       
@@ -291,6 +310,35 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
     })
   }
 
+  const handleExportRegistrations = () => {
+    try {
+      if (registrations.length === 0) {
+        showError('暂无可导出的报名记录')
+        return
+      }
+
+      const exportRows = registrations.map((registration) => ({
+        full_name: registration.user_profiles?.full_name || '',
+        golflive_name: registration.user_profiles?.golflive_name || '',
+        registration_time: formatDateTime(registration.registration_time)
+      }))
+
+      const worksheet = XLSX.utils.json_to_sheet(exportRows, {
+        header: ['full_name', 'golflive_name', 'registration_time']
+      })
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, '报名列表')
+
+      const safeEventTitle = eventTitle.replace(/[\\/:*?"<>|]/g, '_')
+      const dateSuffix = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      XLSX.writeFile(workbook, `${safeEventTitle}_报名名单_${dateSuffix}.xlsx`)
+      showSuccess('报名名单Excel导出成功')
+    } catch (error) {
+      console.error('导出报名名单失败:', error)
+      showError('导出失败，请重试')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -306,6 +354,14 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
           {eventTitle} - 报名管理
         </h3>
         <div className="flex items-center space-x-4">
+          <button
+            onClick={handleExportRegistrations}
+            disabled={registrations.length === 0}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            导出Excel
+          </button>
           {(() => {
             const pendingCount = registrations.filter(reg => reg.approval_status === 'pending').length
             return pendingCount > 0 ? (
@@ -440,6 +496,19 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                         </button>
                       </>
                     )}
+                    {registration.approval_status === 'approved' && (
+                      <button
+                        onClick={() => {
+                          const reason = window.prompt('请输入取消原因（会写入审计日志，可留空）', '') || ''
+                          handleApproval(registration.id, false, reason)
+                        }}
+                        disabled={processingId === registration.id}
+                        className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm transition-colors disabled:opacity-50"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        {processingId === registration.id ? '处理中...' : '取消参加'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -527,38 +596,48 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
                 )}
 
                 {/* 审批操作区域 */}
-                {selectedRegistration.approval_status === 'pending' && (
+                {(selectedRegistration.approval_status === 'pending' || selectedRegistration.approval_status === 'approved') && (
                   <div className="bg-yellow-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-yellow-900 mb-3">审批操作</h4>
+                    <h4 className="font-semibold text-yellow-900 mb-3">
+                      {selectedRegistration.approval_status === 'approved' ? '取消参加' : '审批操作'}
+                    </h4>
                     <div className="space-y-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          审批备注 (可选)
+                          {selectedRegistration.approval_status === 'approved' ? '取消备注 (可选，会写入审计日志)' : '审批备注 (可选)'}
                         </label>
                         <textarea
-                          value={approvalNotes}
-                          onChange={(e) => setApprovalNotes(e.target.value)}
-                          placeholder="请输入审批备注..."
+                          value={selectedRegistration.approval_status === 'approved' ? cancellationRemark : approvalNotes}
+                          onChange={(e) => {
+                            if (selectedRegistration.approval_status === 'approved') {
+                              setCancellationRemark(e.target.value)
+                            } else {
+                              setApprovalNotes(e.target.value)
+                            }
+                          }}
+                          placeholder={selectedRegistration.approval_status === 'approved' ? '请输入取消原因...' : '请输入审批备注...'}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                           rows={3}
                         />
                       </div>
                       <div className="flex space-x-3">
+                        {selectedRegistration.approval_status === 'pending' && (
+                          <button
+                            onClick={() => handleApproval(selectedRegistration.id, true)}
+                            disabled={processingId === selectedRegistration.id}
+                            className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                          >
+                            <Check className="w-4 h-4 mr-2" />
+                            {processingId === selectedRegistration.id ? '处理中...' : '批准报名'}
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleApproval(selectedRegistration.id, true)}
-                          disabled={processingId === selectedRegistration.id}
-                          className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-                        >
-                          <Check className="w-4 h-4 mr-2" />
-                          {processingId === selectedRegistration.id ? '处理中...' : '批准报名'}
-                        </button>
-                        <button
-                          onClick={() => handleApproval(selectedRegistration.id, false)}
+                          onClick={() => handleApproval(selectedRegistration.id, false, cancellationRemark)}
                           disabled={processingId === selectedRegistration.id}
                           className="flex-1 flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
                         >
                           <X className="w-4 h-4 mr-2" />
-                          {processingId === selectedRegistration.id ? '处理中...' : '取消报名'}
+                          {processingId === selectedRegistration.id ? '处理中...' : (selectedRegistration.approval_status === 'approved' ? '取消参加' : '取消报名')}
                         </button>
                       </div>
                     </div>

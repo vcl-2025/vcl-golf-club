@@ -15,6 +15,7 @@ interface AuditLog {
   field_name: string | null
   old_value: any
   new_value: any
+  remark: string | null
   operation: 'INSERT' | 'UPDATE' | 'DELETE'
   user_id: string
   user_email: string | null
@@ -466,6 +467,12 @@ export default function AuditLogViewer() {
                             {log.record_id}
                           </span>
                         </div>
+                        {log.remark && (
+                          <div>
+                            <span className="text-gray-600">备注:</span>{' '}
+                            <span>{log.remark}</span>
+                          </div>
+                        )}
                         {log.user_role && (
                           <div>
                             <span className="text-gray-600">用户角色:</span>{' '}
