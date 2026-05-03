@@ -101,7 +101,7 @@ export default function ShareModal({ isOpen, onClose, url, title, description, i
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold flex items-center">
               <Share2 className="w-5 h-5 mr-2" />
-              分享活动
+              分享
             </h3>
             <button
               onClick={onClose}
@@ -179,7 +179,7 @@ export default function ShareModal({ isOpen, onClose, url, title, description, i
         {/* 提示文字 */}
         <div className="px-6 pb-6 text-center">
           <p className="text-xs text-gray-500">
-            将链接分享给朋友，让他们也能查看这个活动
+            将链接分享给朋友，让对方打开即可查看
           </p>
         </div>
       </div>

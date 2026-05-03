@@ -267,8 +267,8 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
 
   const handleShare = async () => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    // 使用公开的分享页面URL，这样社交媒体爬虫可以读取到meta标签
-    const shareUrl = `${window.location.origin}/information/${item.id}`
+    // 使用 /i/:id 短链，生产环境由 Edge Middleware 返回带 OG 的 HTML，便于微信预览
+    const shareUrl = `${window.location.origin}/i/${item.id}`
     
     if (navigator.share && (isMobile || window.location.protocol === 'https:')) {
       try {
@@ -535,7 +535,7 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
       <ShareModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        url={`${window.location.origin}/information/${item.id}`}
+        url={`${window.location.origin}/i/${item.id}`}
         title={item.title}
         description={stripHtml(item.content || item.excerpt || '')}
         imageUrl={item.featured_image_url}

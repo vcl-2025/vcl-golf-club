@@ -10,6 +10,8 @@ import EventDetailPage from './pages/EventDetailPage'
 import EventReviewSharePage from './pages/EventReviewSharePage'
 import EmailTestPage from './pages/EmailTestPage'
 import InstallApp from './pages/InstallApp'
+import InformationCenterDetailPage from './pages/InformationCenterDetailPage'
+import InformationShareBridge from './pages/InformationShareBridge'
 import { supabase } from './lib/supabase'
 import { ModalProvider } from './components/ModalProvider'
 import { initMobileViewport } from './utils/viewport'
@@ -167,6 +169,11 @@ function App() {
           
           {/* 活动回顾分享页（公开，不需要登录，用于分享预览） */}
           <Route path="/review/:id" element={<EventReviewSharePage />} />
+
+          {/* 信息中心：分享短链（本地会跳到正文）；生产环境由 Vercel middleware 返回 OG HTML */}
+          <Route path="/i/:id" element={<InformationShareBridge />} />
+          {/* 信息中心正文（公开） */}
+          <Route path="/information/:id" element={<InformationCenterDetailPage />} />
           
           {/* 邮件测试页面（需要登录） */}
           <Route path="/test-email" element={

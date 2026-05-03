@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Share2, ArrowLeft, Calendar, Eye, FileText, Download, Clock, Pin, AlertCircle } from 'lucide-react'
+import { Share2, ArrowLeft, Calendar, Eye, FileText, Download, Pin } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { InformationItem } from '../types'
-import { useAuth } from '../hooks/useAuth'
 import ShareModal from '../components/ShareModal'
 import TinyMCEViewer from '../components/TinyMCEViewer'
 
@@ -20,10 +19,21 @@ const priorityColors = {
   2: 'bg-[#F15B98]/40 text-[#F15B98]'
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function absoluteUrl(origin: string, url: string | null | undefined): string {
+  if (!url) return `${origin}/logo-192x192.png`
+  const u = url.trim()
+  if (u.startsWith('http://') || u.startsWith('https://')) return u
+  if (u.startsWith('/')) return `${origin}${u}`
+  return `${origin}/${u}`
+}
+
 export default function InformationCenterDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [item, setItem] = useState<InformationItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [viewCount, setViewCount] = useState(0)
@@ -50,14 +60,18 @@ export default function InformationCenterDetailPage() {
         meta.setAttribute('content', content)
       }
 
+      const origin = window.location.origin
+      const shareUrl = `${origin}/i/${item.id}`
+      const plainDesc = (item.excerpt && item.excerpt.trim())
+        ? stripHtml(item.excerpt)
+        : stripHtml(item.content || '')
+      const ogDesc = plainDesc.slice(0, 200) + (plainDesc.length > 200 ? '…' : '')
+
       setMetaTag('og:title', item.title)
-      setMetaTag('og:description', item.content || '')
-      setMetaTag('og:url', window.location.href)
+      setMetaTag('og:description', ogDesc || 'VCL Golf Club 信息中心')
+      setMetaTag('og:url', shareUrl)
       setMetaTag('og:type', 'article')
-      
-      if (item.image_url) {
-        setMetaTag('og:image', item.image_url)
-      }
+      setMetaTag('og:image', absoluteUrl(origin, item.featured_image_url))
     }
 
     return () => {
@@ -77,7 +91,7 @@ export default function InformationCenterDetailPage() {
 
       if (error) {
         console.error('获取信息失败:', error)
-        navigate('/dashboard')
+        navigate('/')
         return
       }
 
@@ -86,7 +100,7 @@ export default function InformationCenterDetailPage() {
       incrementViewCount(data.id)
     } catch (error) {
       console.error('获取信息失败:', error)
-      navigate('/dashboard')
+      navigate('/')
     } finally {
       setLoading(false)
     }
@@ -123,14 +137,20 @@ export default function InformationCenterDetailPage() {
   }
 
   const handleShare = async () => {
+    if (!item?.id) return
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    
+    const shareUrl = `${window.location.origin}/i/${item.id}`
+    const shareText =
+      (item.excerpt && item.excerpt.trim()
+        ? stripHtml(item.excerpt)
+        : stripHtml(item.content || '')) || item.title
+
     if (navigator.share && (isMobile || window.location.protocol === 'https:')) {
       try {
         await navigator.share({
-          title: item?.title || '信息中心',
-          text: item?.content || '',
-          url: window.location.href,
+          title: item.title || '信息中心',
+          text: shareText.slice(0, 500),
+          url: shareUrl,
         })
         return
       } catch (error: any) {
@@ -139,7 +159,7 @@ export default function InformationCenterDetailPage() {
         }
       }
     }
-    
+
     setShowShareModal(true)
   }
 
@@ -302,10 +322,10 @@ export default function InformationCenterDetailPage() {
       <ShareModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        url={window.location.href}
+        url={`${window.location.origin}/i/${item.id}`}
         title={item.title}
-        description={item.content}
-        imageUrl={item.image_url}
+        description={item.excerpt || item.content}
+        imageUrl={item.featured_image_url}
       />
     </div>
   )
