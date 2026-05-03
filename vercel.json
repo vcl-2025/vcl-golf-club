@@ -2,7 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/open-graph/information-og",
+      "destination": "/api/information-og"
+    },
+    {
+      "source": "^/(?!api/).*$",
       "destination": "/index.html"
     }
   ]

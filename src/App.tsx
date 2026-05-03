@@ -170,7 +170,7 @@ function App() {
           {/* 活动回顾分享页（公开，不需要登录，用于分享预览） */}
           <Route path="/review/:id" element={<EventReviewSharePage />} />
 
-          {/* 信息中心：/i/:id 本地会跳到正文；生产分享预览用 /api/information-og?id= */}
+          {/* 信息中心：/i/:id 本地会跳到正文；生产分享预览用 /open-graph/information-og?id=（CF Pages Function） */}
           <Route path="/i/:id" element={<InformationShareBridge />} />
           {/* 信息中心正文（公开） */}
           <Route path="/information/:id" element={<InformationCenterDetailPage />} />

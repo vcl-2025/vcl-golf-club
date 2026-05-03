@@ -1,4 +1,6 @@
-/** 微信等爬虫会请求的分享预览地址（Vercel `api/information-og` 返回带 OG 的 HTML） */
+import { informationOgPublicPath } from './informationOgShared'
+
+/** 微信等爬虫请求的分享预览地址（CF Pages Function 或 Vercel 重写至 api/information-og） */
 export function informationSharePreviewUrl(origin: string, itemId: string): string {
-  return `${origin}/api/information-og?id=${encodeURIComponent(itemId)}`
+  return `${origin}${informationOgPublicPath}?id=${encodeURIComponent(itemId)}`
 }

@@ -1,4 +1,5 @@
-# SPA 路由重定向
+# SPA 路由重定向（Cloudflare Pages：会匹配所有未命中静态文件的路径；
+# /open-graph/information-og 与 /api/information-og 由 Pages Functions 处理，见 public/_routes.json）
 /*    /index.html   200
 
 # 静态资源缓存
