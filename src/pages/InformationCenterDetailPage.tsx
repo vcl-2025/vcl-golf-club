@@ -256,7 +256,7 @@ export default function InformationCenterDetailPage() {
           {/* 正文内容 */}
           <div className="p-6 sm:p-8">
             <div className="prose max-w-none">
-              <TinyMCEViewer content={item.content || ''} />
+              <TinyMCEViewer content={item.content || ''} enableImageLightbox />
             </div>
 
             {/* 附件 */}
