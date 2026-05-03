@@ -8,6 +8,7 @@ import ShareModal from './ShareModal'
 import BatchRegistrationCart from './BatchRegistrationCart'
 import { canRegister, getEventStatus, getEventStatusText } from '../utils/eventStatus'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
+import { informationSharePreviewUrl } from '../lib/informationShareUrl'
 
 interface InformationCenterDetailProps {
   item: InformationItem
@@ -267,8 +268,7 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
 
   const handleShare = async () => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    // 使用 /i/:id 短链，生产环境由 Edge Middleware 返回带 OG 的 HTML，便于微信预览
-    const shareUrl = `${window.location.origin}/i/${item.id}`
+    const shareUrl = informationSharePreviewUrl(window.location.origin, item.id)
     
     if (navigator.share && (isMobile || window.location.protocol === 'https:')) {
       try {
@@ -535,7 +535,7 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
       <ShareModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        url={`${window.location.origin}/i/${item.id}`}
+        url={informationSharePreviewUrl(window.location.origin, item.id)}
         title={item.title}
         description={stripHtml(item.content || item.excerpt || '')}
         imageUrl={item.featured_image_url}

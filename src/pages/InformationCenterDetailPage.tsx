@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { InformationItem } from '../types'
 import ShareModal from '../components/ShareModal'
 import TinyMCEViewer from '../components/TinyMCEViewer'
+import { informationSharePreviewUrl } from '../lib/informationShareUrl'
 
 const categoryColors = {
   '公告': 'bg-[#F15B98]/20 text-[#F15B98]',
@@ -61,7 +62,7 @@ export default function InformationCenterDetailPage() {
       }
 
       const origin = window.location.origin
-      const shareUrl = `${origin}/i/${item.id}`
+      const shareUrl = informationSharePreviewUrl(origin, item.id)
       const plainDesc = (item.excerpt && item.excerpt.trim())
         ? stripHtml(item.excerpt)
         : stripHtml(item.content || '')
@@ -139,7 +140,7 @@ export default function InformationCenterDetailPage() {
   const handleShare = async () => {
     if (!item?.id) return
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    const shareUrl = `${window.location.origin}/i/${item.id}`
+    const shareUrl = informationSharePreviewUrl(window.location.origin, item.id)
     const shareText =
       (item.excerpt && item.excerpt.trim()
         ? stripHtml(item.excerpt)
@@ -322,7 +323,7 @@ export default function InformationCenterDetailPage() {
       <ShareModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        url={`${window.location.origin}/i/${item.id}`}
+        url={informationSharePreviewUrl(window.location.origin, item.id)}
         title={item.title}
         description={item.excerpt || item.content}
         imageUrl={item.featured_image_url}

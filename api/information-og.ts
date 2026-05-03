@@ -1,17 +1,11 @@
 /**
- * Vercel Edge Middleware：分享短链 /i/:uuid 返回带 Open Graph 的 HTML，
- * 供微信等爬虫读取（不执行 JS）。浏览器会再跳转到 SPA 正文 /information/:uuid。
+ * Vercel Serverless（Node）：返回带 Open Graph 的 HTML，供微信等抓取。
+ * 分享链接请使用：GET /api/information-og?id=<uuid>
  *
- * 在 Vercel 环境变量中配置（建议与前端 Supabase 变量一致，Edge 中 VITE_ 前缀可能不可用）：
+ * 环境变量（Vercel 控制台，建议同时配置无前缀变量，Serverless 一定能读到）：
  *   SUPABASE_URL 或 VITE_SUPABASE_URL
  *   SUPABASE_ANON_KEY 或 VITE_SUPABASE_ANON_KEY
  */
-export const config = {
-  matcher: ['/i/:path*'],
-}
-
-const UUID_IN_PATH =
-  /^\/i\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i
 
 function escapeHtml(text: string): string {
   return text
@@ -33,15 +27,46 @@ function toAbsoluteImageUrl(origin: string, url: string | null | undefined): str
   return `${origin}/${u}`
 }
 
-export default async function middleware(request: Request): Promise<Response> {
-  const url = new URL(request.url)
-  const m = url.pathname.match(UUID_IN_PATH)
-  if (!m) {
-    return new Response('Not Found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+type VercelApiReq = {
+  method?: string
+  query: { id?: string | string[] }
+  headers: { [k: string]: string | string[] | undefined }
+}
+
+type VercelApiRes = {
+  status: (n: number) => VercelApiRes
+  setHeader: (k: string, v: string) => void
+  send: (body: string) => void
+  end: (body?: string) => void
+}
+
+export default async function handler(req: VercelApiReq, res: VercelApiRes) {
+  if (req.method && req.method !== 'GET') {
+    res.status(405).end('Method Not Allowed')
+    return
   }
 
-  const id = m[1]
-  const origin = url.origin
+  const idRaw = req.query?.id
+  const id = typeof idRaw === 'string' ? idRaw : Array.isArray(idRaw) ? idRaw[0] : ''
+  if (!id || !UUID_RE.test(id)) {
+    res.status(400).end('Invalid id')
+    return
+  }
+
+  const protoHeader = req.headers['x-forwarded-proto']
+  const proto =
+    (typeof protoHeader === 'string' ? protoHeader : protoHeader?.[0] || 'https')
+      .split(',')[0]
+      .trim() || 'https'
+  const hostHeader = req.headers['x-forwarded-host'] || req.headers.host
+  const host =
+    (typeof hostHeader === 'string' ? hostHeader : hostHeader?.[0] || '')
+      .split(',')[0]
+      .trim() || 'localhost'
+  const origin = `${proto}://${host}`
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
   const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
@@ -52,7 +77,7 @@ export default async function middleware(request: Request): Promise<Response> {
 
   if (supabaseUrl && supabaseKey) {
     try {
-      const res = await fetch(
+      const r = await fetch(
         `${supabaseUrl}/rest/v1/information_items?id=eq.${encodeURIComponent(id)}&select=title,excerpt,content,featured_image_url,status`,
         {
           headers: {
@@ -62,8 +87,8 @@ export default async function middleware(request: Request): Promise<Response> {
           },
         }
       )
-      if (res.ok) {
-        const rows = (await res.json()) as Array<{
+      if (r.ok) {
+        const rows = (await r.json()) as Array<{
           title?: string
           excerpt?: string | null
           content?: string | null
@@ -88,7 +113,7 @@ export default async function middleware(request: Request): Promise<Response> {
   const title = escapeHtml(titleRaw)
   const description = escapeHtml(descRaw)
   const imageEsc = escapeHtml(imageAbs)
-  const canonical = `${origin}/i/${id}`
+  const canonical = `${origin}/api/information-og?id=${encodeURIComponent(id)}`
   const articleUrl = `${origin}/information/${id}`
 
   const html = `<!DOCTYPE html>
@@ -115,11 +140,7 @@ export default async function middleware(request: Request): Promise<Response> {
 </body>
 </html>`
 
-  return new Response(html, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
-    },
-  })
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=3600')
+  res.status(200).send(html)
 }
