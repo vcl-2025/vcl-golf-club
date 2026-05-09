@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useModal } from './ModalProvider'
 import { canRegister, getEventStatus } from '../utils/eventStatus'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
+import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
 
 interface BatchRegistrationCartProps {
   events: Event[]
@@ -227,6 +228,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
         .select('event_id')
         .in('event_id', eventIds)
         .eq('status', 'registered')
+        .or(REGISTRATION_OCCUPYING_SLOT_OR_FILTER)
 
       if (checkError) {
         console.error('❌ 检查报名名额失败:', checkError)

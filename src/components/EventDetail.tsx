@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
-  X, Calendar, MapPin, Users, Clock, 
+  X, Calendar, MapPin, Users, Clock, User, Check, CircleHelp,
   FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye, Maximize2, Minimize2, Share2, ChevronLeft, ShoppingCart, Image as ImageIcon, Upload
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -30,6 +30,123 @@ interface EventDetailProps {
   onRemoveFromCart?: (eventId: string) => void // 从购物车移除
 }
 
+interface PublicRegistrationRow {
+  user_id?: string
+  name: string
+  registered_at: string
+  photo_url?: string | null
+  registration_status?: 'approved' | 'pending'
+}
+
+function RegistrationGridCell({
+  photoUrl,
+  name,
+  approved,
+}: {
+  photoUrl: string | undefined | null
+  name: string
+  approved: boolean
+}) {
+  const [broken, setBroken] = React.useState(false)
+  const showImg = !!photoUrl && !broken
+
+  return (
+    <div className="flex flex-col items-center justify-start min-w-0">
+      <div className="relative shrink-0">
+        <div
+          className="h-14 w-14 rounded-full overflow-hidden ring-2 ring-gray-100 shadow-sm bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center"
+          title={approved ? `${name}：报名已通过` : `${name}：待审核`}
+        >
+          {showImg ? (
+            <img
+              src={photoUrl || ''}
+              alt=""
+              aria-label={`${name}的头像`}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              onError={() => setBroken(true)}
+            />
+          ) : (
+            <User className="h-7 w-7 text-gray-400" aria-hidden />
+          )}
+        </div>
+        {/* 照片上角标：通过打勾 · 待定问号 */}
+        <div
+          className={`absolute -bottom-0.5 -right-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[2.5px] border-white shadow-sm ${
+            approved ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-white'
+          }`}
+          aria-label={approved ? '报名已通过' : '待审核'}
+        >
+          {approved ? (
+            <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+          ) : (
+            <CircleHelp className="h-3 w-3" strokeWidth={2.5} aria-hidden />
+          )}
+        </div>
+      </div>
+      <p className="mt-2 max-w-[4.75rem] text-center text-xs font-medium text-gray-900 leading-tight line-clamp-2 break-words px-0.5">
+        {name}
+      </p>
+    </div>
+  )
+}
+
+/** 活动详情侧栏：报名名单（需登录；数据来自 RPC） */
+function PublicRegistrationListCard({
+  user,
+  listLoading,
+  listError,
+  participants,
+}: {
+  user: any
+  listLoading: boolean
+  listError: string | null
+  participants: PublicRegistrationRow[]
+}) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <Users className="w-5 h-5 text-golf-600 shrink-0" />
+        报名名单
+      </h3>
+      {!user ? (
+        <p className="text-sm text-gray-500 leading-relaxed">
+          登录后可查看本场报名会员（头像与进度状态，不含联系方式）。
+        </p>
+      ) : listError ? (
+        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          名单加载失败（多为数据库函数未部署或策略限制）：{listError}
+        </p>
+      ) : listLoading ? (
+        <p className="text-sm text-gray-500">名单加载中…</p>
+      ) : participants.length === 0 ? (
+        <p className="text-sm text-gray-500">暂无报名记录。</p>
+      ) : (
+        <ul className="max-h-[min(280px,calc(100vh-240px))] overflow-y-auto border-t border-gray-100 pt-3 pr-1 grid grid-cols-4 gap-x-2 gap-y-4 justify-items-center sm:grid-cols-5 list-none p-0 m-0">
+            {participants.map((p, i) => {
+              const approved = p.registration_status !== 'pending'
+              return (
+                <li key={p.user_id || `${p.registered_at}-${i}-${p.name}`} className="min-w-0">
+                  <RegistrationGridCell
+                    photoUrl={p.photo_url}
+                    name={p.name}
+                    approved={approved}
+                  />
+                </li>
+              )
+            })}
+        </ul>
+      )}
+      {user && !listError && !listLoading && participants.length > 0 && (
+        <p className="text-xs text-gray-400 mt-3 leading-snug">
+          <span className="text-emerald-600">打勾</span>：已通过审核 ·{' '}
+          <span className="text-amber-600">问号</span>：待审核
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function EventDetail({ event, onClose, user, userProfile, isStandalonePage = false, eventCart = new Set(), onAddToCart, onRemoveFromCart }: EventDetailProps) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -52,6 +169,9 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   const [isArticlePublished, setIsArticlePublished] = useState(event.article_published || false)
   const [articlePublishedAt, setArticlePublishedAt] = useState(event.article_published_at || '')
   const [isPublic, setIsPublic] = useState(event.is_public || false)
+  const [publicRegistrationList, setPublicRegistrationList] = useState<PublicRegistrationRow[]>([])
+  const [registrationListLoading, setRegistrationListLoading] = useState(false)
+  const [registrationListError, setRegistrationListError] = useState<string | null>(null)
   const { confirmAction, showError } = useModal()
 
   useEffect(() => {
@@ -99,6 +219,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   }, [isStandalonePage])
 
   const fetchEventData = async () => {
+    setRegistrationListLoading(true)
     try {
       // 获取活动统计
       const statsResponse = await supabase
@@ -137,11 +258,56 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
           .maybeSingle()
 
         setUserRegistration(registrationResponse?.data)
+      } else {
+        setUserRegistration(null)
+      }
+
+      // 已通过审核的报名名单（需登录；服务端 RPC；函数内需绕过 RLS）
+      if (user && supabase) {
+        const listRes = await supabase.rpc('get_public_event_registration_list', {
+          event_uuid: event.id,
+        })
+        if (listRes.error) {
+          console.error('获取报名名单失败:', listRes.error)
+          setRegistrationListError(listRes.error.message || '未知错误')
+          setPublicRegistrationList([])
+        } else {
+          setRegistrationListError(null)
+          let rows = listRes.data as unknown
+          if (rows != null && !Array.isArray(rows)) {
+            if (typeof rows === 'string') {
+              try {
+                rows = JSON.parse(rows)
+              } catch {
+                rows = []
+              }
+            } else {
+              rows = []
+            }
+          }
+          const raw = Array.isArray(rows) ? rows : []
+          setPublicRegistrationList(
+            raw.map((r: Record<string, unknown>) => ({
+              user_id: typeof r.user_id === 'string' ? r.user_id : undefined,
+              name: typeof r.name === 'string' ? r.name : '会员',
+              photo_url:
+                typeof r.photo_url === 'string' && r.photo_url.trim() !== '' ? r.photo_url.trim() : null,
+              registered_at:
+                typeof r.registered_at === 'string' ? r.registered_at : String(r.registered_at ?? ''),
+              registration_status:
+                r.registration_status === 'pending' ? 'pending' : 'approved',
+            }))
+          )
+        }
+      } else {
+        setRegistrationListError(null)
+        setPublicRegistrationList([])
       }
     } catch (error) {
       console.error('获取活动数据失败:', error)
     } finally {
       setLoading(false)
+      setRegistrationListLoading(false)
     }
   }
 
@@ -607,6 +773,13 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                   </div>
                 </div>
               </div>
+
+              <PublicRegistrationListCard
+                user={user}
+                listLoading={registrationListLoading}
+                listError={registrationListError}
+                participants={publicRegistrationList}
+              />
 
               {/* 报名状态按钮 */}
               <div className="bg-white border-2 border-gray-200 rounded-2xl p-6">
@@ -1107,6 +1280,13 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                   </div>
                 </div>
               </div>
+
+              <PublicRegistrationListCard
+                user={user}
+                listLoading={registrationListLoading}
+                listError={registrationListError}
+                participants={publicRegistrationList}
+              />
 
               {/* 报名状态按钮 */}
               <div className="bg-white border-2 border-gray-200 rounded-2xl p-6">

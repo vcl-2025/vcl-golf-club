@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Event, EventRegistration } from '../types'
 import { useModal } from './ModalProvider'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
+import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
 
 interface EventRegistrationModalProps {
   event: Event
@@ -192,6 +193,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         .select('id')
         .eq('event_id', event.id)
         .eq('status', 'registered')
+        .or(REGISTRATION_OCCUPYING_SLOT_OR_FILTER)
 
       if (countError) {
         console.error('检查报名名额失败:', countError)
