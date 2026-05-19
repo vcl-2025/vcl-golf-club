@@ -7,6 +7,7 @@ import { useModal } from './ModalProvider'
 import { canRegister, getEventStatus, getEventStatusText } from '../utils/eventStatus'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
+import { fetchRegistrationRequiresApproval } from '../lib/clubSettings'
 
 interface EventCartModalProps {
   eventIds: string[]
@@ -261,13 +262,17 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
       // 上传支付凭证
       const paymentProofUrl = await uploadPaymentProof(paymentProof)
 
+      const requiresApproval = await fetchRegistrationRequiresApproval(supabase)
+
       // 批量创建报名记录
       const registrations = events.map(event => ({
         event_id: event.id,
         user_id: user.id,
-        payment_status: 'pending' as const,
+        payment_status: requiresApproval ? ('pending' as const) : ('paid' as const),
         payment_proof: paymentProofUrl,
-        status: 'registered' as const
+        status: 'registered' as const,
+        approval_status: requiresApproval ? ('pending' as const) : ('approved' as const),
+        ...(requiresApproval ? {} : { approval_time: new Date().toISOString() }),
       }))
 
       const { data, error } = await supabase
@@ -279,7 +284,11 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
         throw error
       }
 
-      showSuccess(`成功报名 ${events.length} 个活动！报名申请已提交，等待管理员审核。审核通过后您将收到通知。`)
+      showSuccess(
+        requiresApproval
+          ? `成功报名 ${events.length} 个活动！报名申请已提交，等待管理员审核。审核通过后您将收到通知。`
+          : `成功报名 ${events.length} 个活动！`
+      )
       
       // 从购物车中移除已成功报名的活动
       events.forEach(event => {

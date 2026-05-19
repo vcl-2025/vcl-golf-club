@@ -9,6 +9,7 @@ import BatchRegistrationCart from './BatchRegistrationCart'
 import { canRegister, getEventStatus, getEventStatusText } from '../utils/eventStatus'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 import { informationSharePreviewUrl } from '../lib/informationShareUrl'
+import TinyMCEViewer from './TinyMCEViewer'
 
 interface InformationCenterDetailProps {
   item: InformationItem
@@ -378,10 +379,7 @@ export default function InformationCenterDetail({ item, onClose }: InformationCe
           {/* 正文内容 */}
           <div className="prose max-w-none mb-6">
             {item.content ? (
-              <div 
-                className="text-gray-700 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: item.content }}
-              />
+              <TinyMCEViewer content={item.content} enableImageLightbox />
             ) : (
               <p className="text-gray-600">{item.excerpt}</p>
             )}

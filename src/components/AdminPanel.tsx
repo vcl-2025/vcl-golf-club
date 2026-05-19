@@ -25,6 +25,7 @@ import { FileText as FileTextIcon, Shield } from 'lucide-react'
 import { deleteWithAudit, updateWithAudit, createAuditContext, logBatchOperation, type UserRole } from '../lib/audit'
 import { useAuth } from '../hooks/useAuth'
 import { getUserModulePermissions, type ModuleName, type ModulePermission } from '../lib/modulePermissions'
+import { fetchRegistrationRequiresApproval } from '../lib/clubSettings'
 
 interface AdminStats {
   // 活动统计
@@ -251,6 +252,10 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
   // 排序状态
   const [sortField, setSortField] = useState<string>('')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  /** 全站：报名是否需管理员审批（club_settings） */
+  const [registrationRequiresApproval, setRegistrationRequiresApproval] = useState(true)
+  const [clubSettingsSaving, setClubSettingsSaving] = useState(false)
   
   const { confirmDelete, showSuccess, showError } = useModal()
 
@@ -280,6 +285,46 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       })
     }
   }, [user])
+
+  useEffect(() => {
+    if (userRole !== 'admin' || !supabase) return
+    let cancelled = false
+    ;(async () => {
+      const v = await fetchRegistrationRequiresApproval(supabase)
+      if (!cancelled) setRegistrationRequiresApproval(v)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [userRole])
+
+  const persistRegistrationRequiresApproval = useCallback(
+    async (next: boolean) => {
+      if (!supabase || userRole !== 'admin') {
+        showError('仅管理员可修改此设置')
+        return
+      }
+      setClubSettingsSaving(true)
+      try {
+        const { error } = await supabase
+          .from('club_settings')
+          .update({
+            registration_requires_approval: next,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', 1)
+        if (error) throw error
+        setRegistrationRequiresApproval(next)
+        showSuccess(next ? '已开启：报名需管理员审批' : '已关闭：会员报名自动通过')
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : '保存失败'
+        showError(msg)
+      } finally {
+        setClubSettingsSaving(false)
+      }
+    },
+    [supabase, userRole, showSuccess, showError]
+  )
 
   useEffect(() => {
     fetchAdminData()
@@ -1196,6 +1241,29 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
       {/* 数据统计 */}
       {currentView === 'dashboard' && (
         <div className="p-[5px] lg:p-0 m-0.5 lg:m-0">
+          {userRole === 'admin' && (
+            <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Settings className="w-5 h-5 text-golf-600" />
+                <h3 className="text-lg font-semibold text-gray-900">全局报名设置</h3>
+              </div>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-[#F15B98] focus:ring-[#F15B98]"
+                  checked={registrationRequiresApproval}
+                  disabled={clubSettingsSaving || !supabase}
+                  onChange={(e) => persistRegistrationRequiresApproval(e.target.checked)}
+                />
+                <span>
+                  <span className="font-medium text-gray-900">报名需管理员审批</span>
+                  <span className="mt-1 block text-sm text-gray-500">
+                    关闭后，会员提交报名即为已通过（支付凭证与支付状态流程不变）。
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
           <div className="flex items-center mb-6">
             <BarChart3 className="w-6 h-6 text-golf-600 mr-3" />
             <h2 className="text-xl font-bold text-gray-900">数据统计</h2>

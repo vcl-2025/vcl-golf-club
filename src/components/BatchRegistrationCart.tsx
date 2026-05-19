@@ -7,6 +7,7 @@ import { useModal } from './ModalProvider'
 import { canRegister, getEventStatus } from '../utils/eventStatus'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
+import { fetchRegistrationRequiresApproval } from '../lib/clubSettings'
 
 interface BatchRegistrationCartProps {
   events: Event[]
@@ -261,15 +262,19 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
       const paymentProofUrl = await uploadPaymentProof(paymentProof)
       console.log('✅ 支付凭证上传成功:', paymentProofUrl)
 
+      const requiresApproval = await fetchRegistrationRequiresApproval(supabase)
+
       // 批量创建报名记录
       // 参考 EventRegistrationModal 的插入方式，只包含必需的字段
       const registrations = selectedEvents.map(event => {
         const registration: any = {
           event_id: event.id,
           user_id: user.id,
-          payment_status: 'pending' as const,
+          payment_status: requiresApproval ? 'pending' : 'paid',
           payment_proof: paymentProofUrl,
-          status: 'registered' as const
+          status: 'registered' as const,
+          approval_status: requiresApproval ? 'pending' : 'approved',
+          ...(requiresApproval ? {} : { approval_time: new Date().toISOString() }),
         }
         
         // 添加 notice_id（如果存在）
@@ -302,7 +307,11 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
       }
 
       console.log('✅ 报名成功!')
-      showSuccess(`成功报名 ${selectedEvents.length} 个活动！报名申请已提交，等待管理员审核。审核通过后您将收到通知。`)
+      showSuccess(
+        requiresApproval
+          ? `成功报名 ${selectedEvents.length} 个活动！报名申请已提交，等待管理员审核。审核通过后您将收到通知。`
+          : `成功报名 ${selectedEvents.length} 个活动！`
+      )
       
       // 发送刷新事件，确保 EventList 刷新
       window.dispatchEvent(new CustomEvent('eventRegistrationUpdated'))

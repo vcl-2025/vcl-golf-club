@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { 
-  Trophy, Medal, Award, TrendingUp, Star, Clock,
+  Trophy, Medal, Clock,
   ChevronDown, ChevronUp, ChevronRight, User, BarChart,
-  UserCheck, Crown, Badge, UserCircle
+  UserCheck
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -1562,21 +1562,11 @@ export default function UserScoreQuery() {
                                                       </div>
                                                       <div className="flex flex-col min-w-0">
                                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
-                                                      {!player.is_guest && (
-                                                        <div className="flex items-center gap-0.5">
-                                                          <Crown className="w-2.5 h-2.5 text-yellow-500" title="Crown" />
-                                                          <Star className="w-2.5 h-2.5 text-yellow-500" title="Star" />
-                                                          <Badge className="w-2.5 h-2.5 text-blue-500" title="Badge" />
-                                                          <Award className="w-2.5 h-2.5 text-purple-500" title="Award" />
-                                                          <UserCheck className="w-2.5 h-2.5 text-green-500" title="UserCheck" />
-                                                          <UserCircle className="w-2.5 h-2.5 text-pink-500" title="UserCircle" />
-                                                        </div>
-                                                      )}
-                                                    </div>
+                                                          <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
                                                           {!player.is_guest && (
-                                                            <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                                            <span className="inline-flex shrink-0" title="会员">
+                                                              <UserCheck className="w-4 h-4 text-emerald-600" aria-label="会员" />
+                                                            </span>
                                                           )}
                                                         </div>
                                                         <span className="text-xs text-gray-500">
@@ -1628,16 +1618,11 @@ export default function UserScoreQuery() {
                                                   </div>
                                                   <div className="flex flex-col min-w-0">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                                    <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
+                                                      <span className="text-sm text-gray-800 font-medium truncate">{player.name}</span>
                                                       {!player.is_guest && (
-                                                        <div className="flex items-center gap-0.5">
-                                                          <Crown className="w-2.5 h-2.5 text-yellow-500" title="Crown" />
-                                                          <Star className="w-2.5 h-2.5 text-yellow-500" title="Star" />
-                                                          <Badge className="w-2.5 h-2.5 text-blue-500" title="Badge" />
-                                                          <Award className="w-2.5 h-2.5 text-purple-500" title="Award" />
-                                                          <UserCheck className="w-2.5 h-2.5 text-green-500" title="UserCheck" />
-                                                          <UserCircle className="w-2.5 h-2.5 text-pink-500" title="UserCircle" />
-                                                        </div>
+                                                        <span className="inline-flex shrink-0" title="会员">
+                                                          <UserCheck className="w-4 h-4 text-emerald-600" aria-label="会员" />
+                                                        </span>
                                                       )}
                                                     </div>
                                                     <span className="text-xs text-gray-500">

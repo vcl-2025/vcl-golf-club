@@ -5,6 +5,7 @@ import { Event, EventRegistration } from '../types'
 import { useModal } from './ModalProvider'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
+import { fetchRegistrationRequiresApproval } from '../lib/clubSettings'
 
 interface EventRegistrationModalProps {
   event: Event
@@ -257,14 +258,19 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       }
       const registrationNotes = noteSections.length > 0 ? noteSections.join('\n\n') : null
 
+      const requiresApproval = await fetchRegistrationRequiresApproval(sb)
+
       const insertData = {
         event_id: event.id,
         user_id: user.id,
-        payment_status: 'pending',
-        approval_status: 'pending',
-        status: 'registered',
+        payment_status: requiresApproval ? ('pending' as const) : ('paid' as const),
+        approval_status: requiresApproval ? ('pending' as const) : ('approved' as const),
+        status: 'registered' as const,
         payment_proof: paymentProofUrl,
-        notes: registrationNotes
+        notes: registrationNotes,
+        ...(requiresApproval
+          ? {}
+          : { approval_time: new Date().toISOString() }),
       }
       
       // console.log('插入数据:', insertData)
@@ -286,7 +292,11 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       }
 
       // 显示成功提示
-      showSuccess('报名申请已提交，等待管理员审核。审核通过后您将收到通知。')
+      if (requiresApproval) {
+        showSuccess('报名申请已提交，等待管理员审核。审核通过后您将收到通知。')
+      } else {
+        showSuccess('报名成功，期待您的参与！')
+      }
       
       // 立即关闭modal，成功提示已经显示在上方
       onSuccess()
