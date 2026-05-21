@@ -1807,15 +1807,29 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
               {filteredEvents.map((event) => {
                 const eventScores = scores.filter(s => s.event_id === event.id)
                 const eventGuestScores = guestScores.filter(s => s.event_id === event.id)
-                // 统计所有成绩（会员+访客）
-                const totalScoresCount = eventScores.length + eventGuestScores.length
-                const participantsCount = eventScores.length
-                const hasScores = totalScoresCount > 0
+                // 统计所有成绩（会员 + 嘉宾/访客）
+                const memberScoresCount = eventScores.length
+                const guestScoresCount = eventGuestScores.length
+                const totalScoresCount = memberScoresCount + guestScoresCount
                 const isExpanded = expandedEvents.has(event.id)
                 
-                // 计算该活动的总报名人数
-                const totalRegistrations = eventRegistrations.filter(r => r.event_id === event.id).length
-                const progressPercentage = totalRegistrations > 0 ? Math.round((participantsCount / totalRegistrations) * 100) : 0
+                // 分母仅统计会员报名（与 get_event_stats / 报名名单口径一致）；嘉宾只在 guest_scores，不计入报名
+                const memberRegistrations = eventRegistrations.filter(
+                  (r) =>
+                    r.event_id === event.id &&
+                    (r.approval_status == null || r.approval_status !== 'rejected')
+                )
+                const totalMemberRegistrations = memberRegistrations.length
+                const scoresEntryComplete =
+                  totalMemberRegistrations > 0 &&
+                  memberScoresCount >= totalMemberRegistrations
+                const progressPercentage =
+                  totalMemberRegistrations > 0
+                    ? Math.min(
+                        100,
+                        Math.round((memberScoresCount / totalMemberRegistrations) * 100)
+                      )
+                    : 0
 
                 return (
                   <div
@@ -1849,13 +1863,17 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
                             <div className="flex items-center text-sm text-gray-600 mt-1">
                               <Users className="w-4 h-4 mr-2" />
-                              已录入成绩: {participantsCount}/{totalRegistrations}
-                              {eventGuestScores.length > 0 && (
+                              已录入成绩:{' '}
+                              {totalScoresCount}人参赛
+                              {guestScoresCount > 0 && (
+                                <span className="ml-1">嘉宾：{guestScoresCount}</span>
+                              )}
+                              {totalMemberRegistrations > 0 && (
                                 <span className="ml-2 text-xs text-gray-500">
-                                  (访客: {eventGuestScores.length})
+                                  会员报名 {totalMemberRegistrations} 人
                                 </span>
                               )}
-                              {totalRegistrations > 0 && (
+                              {totalMemberRegistrations > 0 && (
                                 <div className="ml-3 flex items-center space-x-2">
                                   <div className="w-16 bg-gray-200 rounded-full h-1.5">
                                     <div 
@@ -1873,13 +1891,13 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             totalScoresCount === 0 
                               ? 'bg-gray-100 text-gray-800' 
-                              : participantsCount === totalRegistrations && totalRegistrations > 0
+                              : scoresEntryComplete
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-yellow-100 text-yellow-800'
                           }`}>
                             {totalScoresCount === 0 
                               ? '尚未录入' 
-                              : participantsCount === totalRegistrations && totalRegistrations > 0
+                              : scoresEntryComplete
                               ? '录入完成' 
                               : '部分录入'
                             }

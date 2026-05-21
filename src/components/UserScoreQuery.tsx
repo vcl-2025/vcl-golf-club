@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import UnifiedSearch from './UnifiedSearch'
 import { formatEventDateInTimezone } from '../utils/eventDateTime'
+import { formatEventParticipationLabel } from '../utils/eventParticipationDisplay'
 
 interface ScoreData {
   id: string
@@ -47,6 +48,15 @@ interface UserStats {
   averageStrokes: number
   bestScore: number
   topThreeCount: number
+}
+
+function getScoreParticipantSummary(scores: ScoreData[]) {
+  const guests = scores.filter((s) => s.is_guest).length
+  return {
+    total: scores.length,
+    members: scores.length - guests,
+    guests,
+  }
 }
 
 export default function UserScoreQuery() {
@@ -501,6 +511,8 @@ export default function UserScoreQuery() {
               }
             }
             const userScore = group.scores.find(s => s.user_id === user?.id)
+            const participantSummary = getScoreParticipantSummary(group.scores)
+            const participantLabel = formatEventParticipationLabel(participantSummary)
             
             // 计算团队得分（莱德杯模式）
             const calculateTeamScore = (teamName: string) => {
@@ -668,8 +680,7 @@ export default function UserScoreQuery() {
                           <div className="flex items-center text-sm text-gray-600">
                             <div className="flex items-center space-x-4">
                               <div className="flex items-center">
-                                <span className="text-gray-500">参赛人数:</span>
-                                <span className="ml-2 font-medium">{group.scores.length}人</span>
+                                <span className="font-medium">{participantLabel}</span>
                               </div>
                               {scoreDisplay && (
                                 <>
@@ -706,8 +717,8 @@ export default function UserScoreQuery() {
                           {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
                         </span>
                       )}
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
-                        {group.scores.length}人参赛
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98] max-w-full text-right leading-snug">
+                        {participantLabel}
                       </span>
                   </div>
                 </div>

@@ -24,8 +24,13 @@ import MemberPhotoGallery from './MemberPhotoGallery'
 import InformationCenterList from './InformationCenterList'
 import InformationCenterDetail from './InformationCenterDetail'
 import EventCartModal from './EventCartModal'
-import { Event, InformationItem } from '../types'
+import { Event, EventStats, InformationItem } from '../types'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
+import {
+  computeTeamSummaryScores,
+  formatTeamScoreDisplay,
+  type ScoringMode,
+} from '../utils/teamEventScores'
 
 interface Poster {
   id: string
@@ -65,6 +70,7 @@ interface CompetitionResult {
   location?: string
   image_url?: string | null // 活动图片
   team_colors?: Record<string, string> // 队伍颜色配置：队伍名称 -> 颜色代码
+  scoring_mode?: ScoringMode
   // 个人赛前三名
   topThree?: Array<{
     name: string
@@ -342,6 +348,7 @@ export default function Dashboard() {
     }
   }, [searchParams, selectedInformationItem])
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([])
+  const [upcomingEventStats, setUpcomingEventStats] = useState<Record<string, EventStats>>({})
   const [recentScores, setRecentScores] = useState<CompetitionResult[]>([])
   const [recentInvestments, setRecentInvestments] = useState<InvestmentProject[]>([])
   const [recentExpenses, setRecentExpenses] = useState<any[]>([])
@@ -498,23 +505,41 @@ export default function Dashboard() {
       // 只显示未开始的活动（当前时间 < 活动开始时间）
       const now = new Date().toISOString()
       
-      // 查询未开始的活动，排除已取消的活动
-      const { data: events, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .gt('start_time', now)
-        .neq('status', 'cancelled')
-        .order('start_time', { ascending: true })
-        .limit(2)
-      
-      // 如果还是没有找到，就不显示任何活动
-      if (!events || events.length === 0) {
-        // console.log('没有找到即将举行的活动')
-        // events 已经是常量，不需要重新赋值
+      const [eventsResult, statsResult] = await Promise.all([
+        supabase
+          .from('events')
+          .select('*')
+          .gt('start_time', now)
+          .neq('status', 'cancelled')
+          .order('start_time', { ascending: true })
+          .limit(2),
+        supabase.rpc('get_batch_event_stats'),
+      ])
+
+      const { data: events, error: eventsError } = eventsResult
+      if (eventsError) {
+        console.error('获取即将举行的活动失败:', eventsError)
       }
-      
-      // console.log('活动查询结果:', { events, eventsError })
       setUpcomingEvents(events || [])
+
+      const statsMap: Record<string, EventStats> = {}
+      if (statsResult.error) {
+        console.error('获取活动报名统计失败:', statsResult.error)
+      } else if (statsResult.data) {
+        statsResult.data.forEach((stat: {
+          event_id: string
+          total_registrations: number
+          paid_registrations: number
+          available_spots: number
+        }) => {
+          statsMap[stat.event_id] = {
+            total_registrations: stat.total_registrations,
+            paid_registrations: stat.paid_registrations,
+            available_spots: stat.available_spots,
+          }
+        })
+      }
+      setUpcomingEventStats(statsMap)
 
       // 获取最新活动的成绩信息
       // 1. 获取所有成绩（包括会员成绩和访客成绩，和UserScoreQuery一样）
@@ -531,6 +556,7 @@ export default function Dashboard() {
             end_time,
             location,
             event_type,
+            scoring_mode,
             team_colors,
             image_url,
             article_featured_image_url
@@ -551,6 +577,7 @@ export default function Dashboard() {
             end_time,
             location,
             event_type,
+            scoring_mode,
             team_colors,
             image_url,
             article_featured_image_url
@@ -619,7 +646,7 @@ export default function Dashboard() {
           if (eventIds.length > 0) {
             const { data: eventsById } = await supabase
               .from('events')
-              .select('id, title, start_time, end_time, location, event_type, team_colors')
+              .select('id, title, start_time, end_time, location, event_type, scoring_mode, team_colors')
               .in('id', eventIds)
             
             eventsById?.forEach(event => {
@@ -631,7 +658,7 @@ export default function Dashboard() {
           if (competitionNames.length > 0) {
             const { data: eventsByTitle } = await supabase
               .from('events')
-              .select('id, title, start_time, end_time, location, event_type, team_colors')
+              .select('id, title, start_time, end_time, location, event_type, scoring_mode, team_colors')
               .in('title', competitionNames)
             
             eventsByTitle?.forEach(event => {
@@ -716,7 +743,7 @@ export default function Dashboard() {
             if (key.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               const { data: eventData } = await supabase
                 .from('events')
-                .select('id, title, event_type, location, end_time, team_colors, image_url, article_featured_image_url')
+                .select('id, title, event_type, scoring_mode, location, end_time, team_colors, image_url, article_featured_image_url')
                 .eq('id', key)
                 .single()
               event = eventData
@@ -724,7 +751,7 @@ export default function Dashboard() {
               // 如果key是title，尝试匹配
               const { data: eventData } = await supabase
                 .from('events')
-                .select('id, title, event_type, location, end_time, team_colors, image_url, article_featured_image_url')
+                .select('id, title, event_type, scoring_mode, location, end_time, team_colors, image_url, article_featured_image_url')
                 .eq('title', key)
                 .limit(1)
               event = eventData?.[0]
@@ -759,43 +786,26 @@ export default function Dashboard() {
               topThree: sortedScores.length > 0 ? sortedScores : undefined
             })
           } else if (eventType === '团体赛') {
-            // 团体赛：按team_name分组，计算每个队伍的净杆总数
-            const teamMap = new Map<string, number[]>()
-            scores.forEach(score => {
-              if (score.team_name) {
-                if (!teamMap.has(score.team_name)) {
-                  teamMap.set(score.team_name, [])
-                }
-                // 使用净杆数，如果没有净杆数则使用总杆数
-                const netStrokes = score.net_strokes != null ? score.net_strokes : score.total_strokes
-                if (netStrokes != null) {
-                  teamMap.get(score.team_name)!.push(netStrokes)
-                }
-              }
-            })
+            const scoringMode: ScoringMode =
+              (event as { scoring_mode?: ScoringMode })?.scoring_mode || 'ryder_cup'
+            const teamSummaries = computeTeamSummaryScores(scores, scoringMode)
+            const teams = teamSummaries.map((team, index) => ({
+              ...team,
+              rank: index + 1,
+            }))
 
-            // 计算每个队伍的净杆总数
-            const teams = Array.from(teamMap.entries())
-              .map(([teamName, netStrokes]) => ({
-                team_name: teamName,
-                score: Math.round(netStrokes.reduce((sum, s) => sum + s, 0)) // 净杆总数，四舍五入为整数
-              }))
-              .sort((a, b) => a.score - b.score) // 按分数升序（分数越低越好）
-              .map((team, index) => ({
-                ...team,
-                rank: index + 1
-              }))
-
-            // 即使没有队伍数据，只要有成绩就显示
             competitionResults.push({
               competition_name: competitionName,
               competition_date: competitionDate,
               event_type: eventType as '团体赛',
-              event_id: event?.id || key, // 保存活动ID
+              event_id: event?.id || key,
               location: event?.location,
-              team_colors: (event as any)?.team_colors || {},
-              image_url: (event as any)?.image_url || (event as any)?.article_featured_image_url || null,
-              teams: teams.length > 0 ? teams : undefined
+              team_colors: (event as { team_colors?: Record<string, string> })?.team_colors || {},
+              scoring_mode: scoringMode,
+              image_url: (event as { image_url?: string; article_featured_image_url?: string })?.image_url
+                || (event as { article_featured_image_url?: string })?.article_featured_image_url
+                || null,
+              teams: teams.length > 0 ? teams : undefined,
             })
           }
         }
@@ -2506,7 +2516,9 @@ export default function Dashboard() {
                                 <div className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                                   <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 text-golf-500/70" />
                                   <span className="flex-1 min-w-0 break-words">{event.location || '地点未设置'}</span>
-                                  <span className="text-[#F15B98] font-medium whitespace-nowrap">· {event.max_participants || 0}人</span>
+                                  <span className="text-[#F15B98] font-medium whitespace-nowrap">
+                                    · （{upcomingEventStats[event.id]?.total_registrations ?? 0}/{event.max_participants || 0}）
+                                  </span>
                           </div>
                               </div>
                           </div>
@@ -2683,7 +2695,13 @@ export default function Dashboard() {
                                         className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded flex-shrink-0" 
                                       style={{ backgroundColor: teamColor }}
                                     />
-                                      <span>{team.team_name} {Math.round(team.score)}分</span>
+                                      <span>
+                                        {team.team_name}{' '}
+                                        {formatTeamScoreDisplay(
+                                          team.score,
+                                          result.scoring_mode || 'ryder_cup'
+                                        )}
+                                      </span>
                                       {idx < Math.min(result.teams.length, 4) - 1 && <span className="mx-1 text-gray-400 hidden sm:inline">·</span>}
                                   </span>
                                 )

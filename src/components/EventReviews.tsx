@@ -13,6 +13,11 @@ import { useAuth } from '../hooks/useAuth'
 import { User } from '@supabase/supabase-js'
 import { uploadImageToSupabase, validateImageFile } from '../utils/imageUpload'
 import ShareModal from './ShareModal'
+import {
+  fetchEventParticipationSummary,
+  formatEventParticipationLabel,
+  type EventParticipationSummary,
+} from '../utils/eventParticipationDisplay'
 
 // 常用emoji列表
 const COMMON_EMOJIS = [
@@ -674,6 +679,9 @@ export default function EventReviews() {
   const [isClosing, setIsClosing] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [replyIdToDelete, setReplyIdToDelete] = useState<string | null>(null)
+  const [participationSummary, setParticipationSummary] =
+    useState<EventParticipationSummary | null>(null)
+  const [loadingParticipation, setLoadingParticipation] = useState(false)
 
   useEffect(() => {
     fetchPublishedArticles()
@@ -704,6 +712,26 @@ export default function EventReviews() {
   // 重置关闭状态
   useEffect(() => {
     setIsClosing(false)
+  }, [selectedEvent?.id])
+
+  useEffect(() => {
+    if (!selectedEvent) {
+      setParticipationSummary(null)
+      return
+    }
+
+    let cancelled = false
+    setLoadingParticipation(true)
+    fetchEventParticipationSummary(selectedEvent.id).then((summary) => {
+      if (!cancelled) {
+        setParticipationSummary(summary)
+        setLoadingParticipation(false)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [selectedEvent?.id])
 
   useEffect(() => {
@@ -1460,14 +1488,20 @@ export default function EventReviews() {
                   <Users className="w-5 h-5 mr-3 text-golf-500" />
                   <div>
                     <div className="font-medium">参与人数</div>
-                    <div className="text-sm">最多 {selectedEvent.max_participants} 人</div>
+                    <div className="text-sm">
+                      {loadingParticipation
+                        ? '加载中…'
+                        : participationSummary && participationSummary.total > 0
+                          ? formatEventParticipationLabel(participationSummary)
+                          : '暂无成绩数据'}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* 文章内容 */}
               <div className="prose max-w-none">
-                <TinyMCEViewer content={selectedEvent.article_content || ''} />
+                <TinyMCEViewer content={selectedEvent.article_content || ''} enableImageLightbox />
               </div>
 
               {/* 发布时间 */}

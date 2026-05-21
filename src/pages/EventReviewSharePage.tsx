@@ -5,6 +5,11 @@ import { supabase } from '../lib/supabase'
 import { Event } from '../types'
 import TinyMCEViewer from '../components/TinyMCEViewer'
 import { useAuth } from '../hooks/useAuth'
+import {
+  fetchEventParticipationSummary,
+  formatEventParticipationLabel,
+  type EventParticipationSummary,
+} from '../utils/eventParticipationDisplay'
 
 export default function EventReviewSharePage() {
   const { id } = useParams<{ id: string }>()
@@ -12,6 +17,8 @@ export default function EventReviewSharePage() {
   const { user } = useAuth()
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
+  const [participationSummary, setParticipationSummary] =
+    useState<EventParticipationSummary | null>(null)
 
   useEffect(() => {
     if (id) {
@@ -78,6 +85,8 @@ export default function EventReviewSharePage() {
       }
 
       setEvent(data)
+      const summary = await fetchEventParticipationSummary(data.id)
+      setParticipationSummary(summary)
     } catch (error) {
       console.error('获取活动失败:', error)
       navigate('/dashboard?view=reviews')
@@ -162,7 +171,11 @@ export default function EventReviewSharePage() {
               </div>
               <div className="flex items-center">
                 <span className="font-medium mr-2">参与人数：</span>
-                <span>最多 {event.max_participants} 人</span>
+                <span>
+                  {participationSummary && participationSummary.total > 0
+                    ? formatEventParticipationLabel(participationSummary)
+                    : '暂无成绩数据'}
+                </span>
               </div>
             </div>
           </div>
@@ -170,7 +183,7 @@ export default function EventReviewSharePage() {
           {/* 文章内容 */}
           <div className="p-6">
             <div className="prose max-w-none">
-              <TinyMCEViewer content={event.article_content || ''} />
+              <TinyMCEViewer content={event.article_content || ''} enableImageLightbox />
             </div>
           </div>
 
