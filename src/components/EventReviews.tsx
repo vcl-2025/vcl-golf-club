@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event } from '../types'
-import TinyMCEViewer from './TinyMCEViewer'
+import ReadableArticleContent from './ReadableArticleContent'
 import { useAuth } from '../hooks/useAuth'
 import { User } from '@supabase/supabase-js'
 import { uploadImageToSupabase, validateImageFile } from '../utils/imageUpload'
@@ -1499,10 +1499,8 @@ export default function EventReviews() {
                 </div>
               </div>
 
-              {/* 文章内容 */}
-              <div className="prose max-w-none">
-                <TinyMCEViewer content={selectedEvent.article_content || ''} enableImageLightbox />
-              </div>
+              {/* 文章内容（可读字号试用） */}
+              <ReadableArticleContent content={selectedEvent.article_content || ''} />
 
               {/* 发布时间 */}
               <div className="mt-8 pt-6 border-t border-gray-200">
