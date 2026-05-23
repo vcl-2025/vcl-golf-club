@@ -6,12 +6,12 @@ export interface EventParticipationSummary {
   guests: number
 }
 
-/** 例：40人参赛 嘉宾：2（已录入成绩人数） */
+/** 例：40人参赛 嘉宾2人（已录入成绩人数） */
 export function formatEventParticipationLabel(
   summary: Pick<EventParticipationSummary, 'total' | 'guests'>
 ): string {
   const base = `${summary.total}人参赛`
-  return summary.guests > 0 ? `${base} 嘉宾：${summary.guests}` : base
+  return summary.guests > 0 ? `${base} 嘉宾${summary.guests}人` : base
 }
 
 export async function fetchEventParticipationSummary(

@@ -638,16 +638,13 @@ export default function UserScoreQuery() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end space-x-2 mt-2">
-                      {group.event.event_type && (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
-                          {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
-                        </span>
-                      )}
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98] max-w-full text-right leading-snug">
-                        {participantLabel}
+                  {group.event.event_type && (
+                    <div className="flex items-center justify-end mt-2">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#F15B98]/20 text-[#F15B98]">
+                        {group.event.event_type === '团体赛' ? '团体赛' : '个人赛'}
                       </span>
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 折叠内容 - 团体赛显示详细结果，个人赛显示分组信息 */}

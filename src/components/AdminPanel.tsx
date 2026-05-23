@@ -1866,7 +1866,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                               已录入成绩:{' '}
                               {totalScoresCount}人参赛
                               {guestScoresCount > 0 && (
-                                <span className="ml-1">嘉宾：{guestScoresCount}</span>
+                                <span className="ml-1">嘉宾{guestScoresCount}人</span>
                               )}
                               {totalMemberRegistrations > 0 && (
                                 <span className="ml-2 text-xs text-gray-500">
