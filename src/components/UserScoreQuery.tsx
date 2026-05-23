@@ -514,81 +514,10 @@ export default function UserScoreQuery() {
             const participantSummary = getScoreParticipantSummary(group.scores)
             const participantLabel = formatEventParticipationLabel(participantSummary)
             
-            // 计算团队得分（莱德杯模式）
-            const calculateTeamScore = (teamName: string) => {
-              const teamScores = group.scores.filter(s => s.team_name === teamName && s.hole_scores && Array.isArray(s.hole_scores) && s.hole_scores.length === 18)
-              if (teamScores.length === 0) return 0
-              
-              // 按分组组织数据并计算得分
-              const groups = new Map<number, Map<string, Array<{ holeScores: number[] }>>>()
-              teamScores.forEach(score => {
-                const groupNum = score.group_number || 0
-                const tName = score.team_name || ''
-                if (!groups.has(groupNum)) {
-                  groups.set(groupNum, new Map())
-                }
-                const groupTeams = groups.get(groupNum)!
-                if (!groupTeams.has(tName)) {
-                  groupTeams.set(tName, [])
-                }
-                groupTeams.get(tName)!.push({
-                  holeScores: score.hole_scores || []
-                })
-              })
-              
-              // 计算所有组的团队得分
-              let totalTeamScore = 0
-              groups.forEach((teamsMap, groupNum) => {
-                const teamEntries = Array.from(teamsMap.entries())
-                if (teamEntries.length < 2) return
-                
-                const teamWins = new Map<string, number>()
-                teamEntries.forEach(([tName]) => {
-                  teamWins.set(tName, 0)
-                })
-                
-                for (let hole = 0; hole < 18; hole++) {
-                  const holeBestScores: Array<{ teamName: string; bestScore: number }> = []
-                  teamEntries.forEach(([tName, players]) => {
-                    const scores = players.map(p => {
-                      const score = p.holeScores?.[hole]
-                      return score !== undefined && score !== null && !isNaN(score) ? Number(score) : Infinity
-                    }).filter(s => s !== Infinity)
-                    const bestScore = scores.length > 0 ? Math.min(...scores) : Infinity
-                    if (bestScore !== Infinity) {
-                      holeBestScores.push({ teamName: tName, bestScore })
-                    }
-                  })
-                  
-                  if (holeBestScores.length === 0) continue
-                  const minBestScore = Math.min(...holeBestScores.map(h => h.bestScore))
-                  const winners = holeBestScores.filter(h => h.bestScore === minBestScore).map(w => w.teamName)
-                  const pointsPerTeam = 1 / winners.length
-                  winners.forEach(winner => {
-                    const currentWins = teamWins.get(winner) || 0
-                    teamWins.set(winner, currentWins + pointsPerTeam)
-                  })
-                }
-                
-                const userTeamWins = teamWins.get(teamName) || 0
-                totalTeamScore += userTeamWins
-              })
-              
-              return totalTeamScore
-            }
-            
-            // 计算用户成绩显示（团体赛莱德杯模式显示团队得分，其他显示个人总杆数）
+            // 卡片摘要：始终显示当前会员本场个人总杆数（团体赛比洞详情在展开区查看）
             const getUserScoreDisplay = () => {
-              if (!userScore) return null
-              
-              // 如果是团体赛且是莱德杯模式，计算团队得分
-              if (group.event.event_type === '团体赛' && group.event.scoring_mode === 'ryder_cup' && userScore.team_name && userScore.hole_scores) {
-                const teamScore = calculateTeamScore(userScore.team_name)
-                return { value: `${teamScore.toFixed(1)}`, isTeam: true }
-              }
-              
-              // 其他情况显示个人总杆数
-              return { value: `${userScore.total_strokes}杆`, isTeam: false }
+              if (!userScore || userScore.total_strokes == null) return null
+              return { value: `${userScore.total_strokes}杆` }
             }
             
             const scoreDisplay = getUserScoreDisplay()
@@ -649,29 +578,27 @@ export default function UserScoreQuery() {
 
                         {/* 移动端紧凑布局 */}
                         <div className="block sm:hidden">
-                          <div className="flex items-center justify-between text-sm text-gray-600">
-                            <div className="flex items-center space-x-3">
-                              {scoreDisplay && (
-                                <div className="flex items-center">
-                                  <span className="font-medium text-[#F15B98]">
-                                    {scoreDisplay.isTeam ? (
-                                      // 移动端也计算团队得分（简化版，只显示团队名称）
-                                      scoreDisplay.value
-                                    ) : (
-                                      scoreDisplay.value
-                                    )}
-                                  </span>
-                                  {userScore && userScore.rank && (
-                                    <div className="flex items-center ml-2">
-                                      {getRankIcon(userScore.rank)}
-                                      <span className={`ml-1 px-2 py-1 rounded text-xs font-medium ${getRankBadgeStyle(userScore.rank)}`}>
-                                        #{userScore.rank}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
+                            <span className="font-medium text-gray-700">{participantLabel}</span>
+                            {scoreDisplay && (
+                              <div className="flex items-center">
+                                <span className="text-gray-500">我的成绩:</span>
+                                <span className="ml-1 font-medium text-[#F15B98]">
+                                  {scoreDisplay.value}
+                                </span>
+                              </div>
+                            )}
+                            {userScore && userScore.rank && (
+                              <div className="flex items-center">
+                                <span className="text-gray-500">我的排名:</span>
+                                <span
+                                  className={`ml-1 px-2 py-0.5 rounded text-xs font-medium ${getRankBadgeStyle(userScore.rank)}`}
+                                >
+                                  #{userScore.rank}
+                                </span>
+                                {getRankIcon(userScore.rank)}
+                              </div>
+                            )}
                           </div>
                         </div>
 
