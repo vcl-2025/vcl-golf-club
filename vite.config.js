@@ -2,8 +2,40 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
+/** 构建时写入绝对 og:image，供微信等爬虫读取 SPA 壳页面时显示右下角 logo */
+function resolveSiteOrigin() {
+  const explicit = process.env.VITE_PUBLIC_SITE_ORIGIN?.trim().replace(/\/$/, '')
+  if (explicit) {
+    return explicit.startsWith('http://') || explicit.startsWith('https://')
+      ? explicit
+      : `https://${explicit}`
+  }
+  const vercel = process.env.VERCEL_URL?.trim()
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, '').replace(/\/$/, '')}`
+  const cf = process.env.CF_PAGES_URL?.trim()
+  if (!cf) return ''
+  return cf.startsWith('http://') || cf.startsWith('https://')
+    ? cf.replace(/\/$/, '')
+    : `https://${cf.replace(/\/$/, '')}`
+}
+
+function injectAbsoluteOgImage() {
+  return {
+    name: 'inject-absolute-og-image',
+    transformIndexHtml(html) {
+      const origin = resolveSiteOrigin()
+      if (!origin) return html
+      const imageUrl = `${origin}/logo-192x192.png`
+      return html.replace(
+        '<meta property="og:image" content="/logo-192x192.png" />',
+        `<meta property="og:image" content="${imageUrl}" />\n    <meta name="twitter:image" content="${imageUrl}" />`
+      )
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), injectAbsoluteOgImage()],
   define: {
     global: 'globalThis',
   },
