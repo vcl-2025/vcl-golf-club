@@ -270,7 +270,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
         const registration: any = {
           event_id: event.id,
           user_id: user.id,
-          payment_status: requiresApproval ? 'pending' : 'paid',
+          payment_status: 'pending',
           payment_proof: paymentProofUrl,
           status: 'registered' as const,
           approval_status: requiresApproval ? 'pending' : 'approved',
@@ -310,7 +310,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
       showSuccess(
         requiresApproval
           ? `成功报名 ${selectedEvents.length} 个活动！报名申请已提交，等待管理员审核。审核通过后您将收到通知。`
-          : `成功报名 ${selectedEvents.length} 个活动！`
+          : `成功报名 ${selectedEvents.length} 个活动！未标记已付款前可在报名截止前自行取消。`
       )
       
       // 发送刷新事件，确保 EventList 刷新

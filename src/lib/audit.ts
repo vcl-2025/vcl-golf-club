@@ -385,6 +385,80 @@ export async function deleteWithAudit(
 }
 
 /**
+ * 会员自助取消报名（带审计日志）
+ * - 只允许删除属于当前登录用户的报名记录
+ * - 必须提供取消原因（已在调用方校验），写入 audit_log.remark
+ * - 绕过 deleteWithAudit 的 admin 角色限制，但仍写入完整审计日志
+ */
+export async function cancelOwnRegistrationWithAudit(
+  registrationId: string,
+  reason: string
+): Promise<{ error: any }> {
+  if (!supabase) {
+    return { error: new Error('Supabase不可用') }
+  }
+
+  const trimmedReason = (reason || '').trim()
+  if (trimmedReason.length === 0) {
+    return { error: new Error('请填写取消原因') }
+  }
+
+  const { data: authData } = await supabase.auth.getUser()
+  const authUser = authData?.user
+  if (!authUser) {
+    return { error: new Error('未登录，无法取消报名') }
+  }
+
+  const { data: oldData, error: fetchError } = await supabase
+    .from('event_registrations')
+    .select('*')
+    .eq('id', registrationId)
+    .eq('user_id', authUser.id)
+    .single()
+
+  if (fetchError) {
+    return { error: fetchError }
+  }
+  if (!oldData) {
+    return { error: new Error('未找到对应的报名记录') }
+  }
+
+  const { error: deleteError, count } = await supabase
+    .from('event_registrations')
+    .delete({ count: 'exact' })
+    .eq('id', registrationId)
+    .eq('user_id', authUser.id)
+
+  if (deleteError) {
+    return { error: deleteError }
+  }
+  if (count === 0) {
+    return { error: new Error('取消失败：未删除任何记录') }
+  }
+
+  const context = await createAuditContext(authUser.id)
+
+  const auditEntry: AuditLogEntry = {
+    table_name: 'event_registrations',
+    record_id: registrationId,
+    field_name: undefined,
+    old_value: oldData,
+    new_value: null,
+    remark: trimmedReason,
+    operation: 'DELETE',
+    user_id: context.userId,
+    user_email: context.userEmail,
+    user_role: context.userRole || 'member',
+    ip_address: context.ipAddress,
+    user_agent: context.userAgent,
+  }
+
+  await logAudit([auditEntry])
+
+  return { error: null }
+}
+
+/**
  * 批量更新（带审计）
  * 用于一次更新多条记录
  */

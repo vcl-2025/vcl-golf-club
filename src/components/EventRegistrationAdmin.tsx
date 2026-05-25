@@ -1,10 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Check, X, Eye, AlertCircle, AlertTriangle, CheckCircle, Clock, DollarSign, Download } from 'lucide-react'
+import { Check, X, Eye, AlertCircle, AlertTriangle, CheckCircle, Clock, DollarSign, Download, RotateCcw } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useModal } from './ModalProvider'
 import { EventRegistration } from '../types'
 import { createAuditContext, deleteWithAudit } from '../lib/audit'
+
+interface CancellationRecord {
+  id: string
+  record_id: string
+  remark: string | null
+  user_id: string | null
+  user_email: string | null
+  user_role: string | null
+  user_name: string | null
+  created_at: string
+  registrant_name: string | null
+  registrant_id: string | null
+  registration_time: string | null
+  approval_status_when_cancelled: string | null
+  payment_status_when_cancelled: string | null
+}
 
 interface EventRegistrationAdminProps {
   eventId: string
@@ -26,11 +42,20 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
   const [showBatchApprovalModal, setShowBatchApprovalModal] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'list' | 'cancelled'>('list')
+  const [cancellations, setCancellations] = useState<CancellationRecord[]>([])
+  const [loadingCancellations, setLoadingCancellations] = useState(false)
   const { showSuccess, showError } = useModal()
 
   useEffect(() => {
     fetchRegistrations()
   }, [eventId])
+
+  useEffect(() => {
+    if (activeTab === 'cancelled') {
+      fetchCancellations()
+    }
+  }, [activeTab, eventId])
 
 
   // 发送审批邮件通知
@@ -74,6 +99,79 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
     } catch (error) {
       console.error('邮件发送异常:', error)
       // 邮件发送失败不影响审批流程
+    }
+  }
+
+  const fetchCancellations = async () => {
+    if (!supabase) {
+      showError('数据库连接不可用')
+      return
+    }
+    setLoadingCancellations(true)
+    try {
+      const { data: auditRows, error: auditError } = await supabase
+        .from('audit_log')
+        .select('id, record_id, remark, user_id, user_email, user_role, created_at, old_value')
+        .eq('table_name', 'event_registrations')
+        .eq('operation', 'DELETE')
+        .order('created_at', { ascending: false })
+
+      if (auditError) throw auditError
+
+      const matched = (auditRows || []).filter((row) => {
+        const ov: any = row.old_value
+        return ov && typeof ov === 'object' && ov.event_id === eventId
+      })
+
+      const registrantIds = Array.from(
+        new Set(
+          matched
+            .map((row: any) => (row.old_value as any)?.user_id)
+            .filter((id: any): id is string => typeof id === 'string')
+        )
+      )
+      const operatorIds = Array.from(
+        new Set(matched.map((row: any) => row.user_id).filter((v: any): v is string => typeof v === 'string'))
+      )
+
+      const allIds = Array.from(new Set([...registrantIds, ...operatorIds]))
+      let profileMap = new Map<string, string>()
+      if (allIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, full_name')
+          .in('id', allIds)
+        profileMap = new Map((profiles || []).map((p: any) => [p.id, p.full_name as string]))
+      }
+
+      const list: CancellationRecord[] = matched.map((row: any) => {
+        const ov = (row.old_value as any) || {}
+        const registrantId = typeof ov.user_id === 'string' ? ov.user_id : null
+        return {
+          id: row.id,
+          record_id: row.record_id,
+          remark: row.remark || null,
+          user_id: row.user_id || null,
+          user_email: row.user_email || null,
+          user_role: row.user_role || null,
+          user_name: (row.user_id && profileMap.get(row.user_id)) || null,
+          created_at: row.created_at,
+          registrant_id: registrantId,
+          registrant_name: registrantId ? profileMap.get(registrantId) || null : null,
+          registration_time: typeof ov.registration_time === 'string' ? ov.registration_time : null,
+          approval_status_when_cancelled:
+            typeof ov.approval_status === 'string' ? ov.approval_status : null,
+          payment_status_when_cancelled:
+            typeof ov.payment_status === 'string' ? ov.payment_status : null,
+        }
+      })
+
+      setCancellations(list)
+    } catch (error) {
+      console.error('获取取消记录失败:', error)
+      showError('获取取消记录失败，可能需要管理员权限')
+    } finally {
+      setLoadingCancellations(false)
     }
   }
 
@@ -149,7 +247,7 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
             approval_time: new Date().toISOString(),
             approved_by: (await supabase.auth.getUser()).data.user?.id,
             approval_notes: approvalNotes || '审批通过',
-            payment_status: 'paid'
+            // 审批通过不等于已收款；付款状态在报名管理里单独标记
           })
           .eq('id', registrationId)
 
@@ -219,7 +317,6 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
           approval_time: new Date().toISOString(),
           approved_by: (await supabase.auth.getUser()).data.user?.id,
           approval_notes: '批量审批通过',
-          payment_status: 'paid'
         })
         .in('id', selectedIds)
 
@@ -349,39 +446,135 @@ const EventRegistrationAdmin: React.FC<EventRegistrationAdminProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-gray-900">
           {eventTitle} - 报名管理
         </h3>
         <div className="flex items-center space-x-4">
-          <button
-            onClick={handleExportRegistrations}
-            disabled={registrations.length === 0}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            导出Excel
-          </button>
-          {(() => {
-            const pendingCount = registrations.filter(reg => reg.approval_status === 'pending').length
-            return pendingCount > 0 ? (
+          {activeTab === 'list' && (
+            <>
               <button
-                onClick={() => setShowBatchApprovalModal(true)}
-                disabled={processingId === 'batch' || selectedIds.length === 0}
-                className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                onClick={handleExportRegistrations}
+                disabled={registrations.length === 0}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                <Check className="w-4 h-4 mr-2" />
-                {processingId === 'batch' ? '处理中...' : `批量通过 (${selectedIds.length})`}
+                <Download className="w-4 h-4 mr-2" />
+                导出Excel
               </button>
-            ) : null
-          })()}
-          <div className="text-sm text-gray-500">
-            共 {registrations.length} 个报名记录
-          </div>
+              {(() => {
+                const pendingCount = registrations.filter(reg => reg.approval_status === 'pending').length
+                return pendingCount > 0 ? (
+                  <button
+                    onClick={() => setShowBatchApprovalModal(true)}
+                    disabled={processingId === 'batch' || selectedIds.length === 0}
+                    className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    {processingId === 'batch' ? '处理中...' : `批量通过 (${selectedIds.length})`}
+                  </button>
+                ) : null
+              })()}
+              <div className="text-sm text-gray-500">
+                共 {registrations.length} 个报名记录
+              </div>
+            </>
+          )}
+          {activeTab === 'cancelled' && (
+            <div className="text-sm text-gray-500">
+              共 {cancellations.length} 条取消记录
+            </div>
+          )}
         </div>
       </div>
 
-      {registrations.length === 0 ? (
+      {/* Tab 切换 */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-6">
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`whitespace-nowrap py-2 px-1 border-b-2 text-sm font-medium transition-colors ${
+              activeTab === 'list'
+                ? 'border-red-500 text-red-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            报名列表
+          </button>
+          <button
+            onClick={() => setActiveTab('cancelled')}
+            className={`whitespace-nowrap py-2 px-1 border-b-2 text-sm font-medium transition-colors flex items-center ${
+              activeTab === 'cancelled'
+                ? 'border-red-500 text-red-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <RotateCcw className="w-4 h-4 mr-1" />
+            取消明细
+          </button>
+        </nav>
+      </div>
+
+      {activeTab === 'cancelled' ? (
+        loadingCancellations ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-golf-600"></div>
+          </div>
+        ) : cancellations.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            暂无取消记录
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {cancellations.map((c) => {
+              const isMemberSelf = c.user_role === 'member' || (c.user_id && c.registrant_id && c.user_id === c.registrant_id)
+              const operatorLabel = isMemberSelf ? '会员自助取消' : '管理员取消'
+              return (
+                <div key={c.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex items-start space-x-3">
+                      <RotateCcw className="w-5 h-5 text-red-500 mt-0.5" />
+                      <div>
+                        <div className="font-semibold text-gray-900">
+                          {c.registrant_name || '未知会员'}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          报名时间：
+                          {c.registration_time ? formatDateTime(c.registration_time) : '—'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          取消时间：{formatDateTime(c.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        isMemberSelf ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+                      }`}>
+                        {operatorLabel}
+                      </span>
+                      {!isMemberSelf && c.user_name && (
+                        <span className="text-xs text-gray-500">操作人：{c.user_name}</span>
+                      )}
+                      <span className="text-xs text-gray-500">
+                        取消时状态：
+                        {c.approval_status_when_cancelled === 'approved' ? '已批准' :
+                          c.approval_status_when_cancelled === 'pending' ? '待审批' :
+                          c.approval_status_when_cancelled || '—'}
+                        {c.payment_status_when_cancelled === 'paid' ? ' / 已付款' :
+                          c.payment_status_when_cancelled === 'pending' ? ' / 未付款' : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-sm bg-gray-50 border border-gray-200 rounded p-2">
+                    <span className="text-gray-500">取消原因：</span>
+                    <span className="text-gray-900">{c.remark || '（未填写）'}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      ) : registrations.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           暂无报名记录
         </div>

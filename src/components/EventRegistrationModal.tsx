@@ -6,6 +6,9 @@ import { useModal } from './ModalProvider'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
 import { fetchRegistrationRequiresApproval } from '../lib/clubSettings'
+import { canMemberSelfCancelRegistration } from '../utils/registrationCancel'
+import { cancelOwnRegistrationWithAudit } from '../lib/audit'
+import RegistrationCancelForm from './RegistrationCancelForm'
 
 interface EventRegistrationModalProps {
   event: Event
@@ -33,6 +36,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
   }>({})
   const [paymentProof, setPaymentProof] = useState<File | null>(null)
   const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null)
+  const [showCancelForm, setShowCancelForm] = useState(false)
 
   if (!supabase) {
     return null
@@ -263,7 +267,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       const insertData = {
         event_id: event.id,
         user_id: user.id,
-        payment_status: requiresApproval ? ('pending' as const) : ('paid' as const),
+        payment_status: 'pending' as const,
         approval_status: requiresApproval ? ('pending' as const) : ('approved' as const),
         status: 'registered' as const,
         payment_proof: paymentProofUrl,
@@ -295,7 +299,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
       if (requiresApproval) {
         showSuccess('报名申请已提交，等待管理员审核。审核通过后您将收到通知。')
       } else {
-        showSuccess('报名成功，期待您的参与！')
+        showSuccess('报名已确认；未标记已付款前可在报名截止前自行取消。')
       }
       
       // 立即关闭modal，成功提示已经显示在上方
@@ -306,29 +310,48 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
     }
   }
 
-  // 取消报名功能
-  const handleCancelRegistration = async () => {
+  const isRegistrationOpen = () => new Date() < new Date(event.registration_deadline)
+
+  const canCancelRegistration = () =>
+    canMemberSelfCancelRegistration(existingRegistration, isRegistrationOpen())
+
+  const openCancelForm = () => {
+    setMessage('')
+    setShowCancelForm(true)
+  }
+
+  const closeCancelForm = () => {
+    if (loading) return
+    setShowCancelForm(false)
+    setMessage('')
+  }
+
+  // 取消报名：删除记录并写入审计日志
+  const handleCancelRegistration = async (reason: string) => {
+    if (!existingRegistration || !canCancelRegistration()) {
+      setMessage('当前状态无法取消报名')
+      return
+    }
+
+    const trimmed = (reason || '').trim()
+    if (trimmed.length === 0) {
+      setMessage('请填写取消原因')
+      return
+    }
+
     setLoading(true)
     setMessage('')
 
     try {
-      const { error } = await sb
-        .from('event_registrations')
-        .update({ 
-          status: 'cancelled',
-          approval_status: 'rejected' // 取消报名视为拒绝
-        })
-        .eq('event_id', event.id)
-        .eq('user_id', user.id)
-        .eq('approval_status', 'pending')
-
+      const { error } = await cancelOwnRegistrationWithAudit(existingRegistration.id, trimmed)
       if (error) throw error
 
       setMessage('报名已取消')
+      setShowCancelForm(false)
       setTimeout(() => {
         onSuccess()
         onClose()
-      }, 2000)
+      }, 1500)
     } catch (error: any) {
       setMessage(error.message || '取消报名失败，请重试')
     } finally {
@@ -347,7 +370,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
     } else if (registration.approval_status === 'approved' && registration.payment_status === 'pending') {
       return {
         icon: Clock,
-        label: '已批准，待支付',
+        label: '报名成功，待付款',
         color: 'text-blue-600 bg-blue-50 border-blue-200',
         iconColor: 'text-blue-600'
       }
@@ -418,7 +441,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                   <div className="font-semibold">{statusInfo.label}</div>
                   <div className="text-sm opacity-75">
                     {existingRegistration.approval_status === 'pending' && '请耐心等待管理员审核'}
-                    {existingRegistration.approval_status === 'approved' && existingRegistration.payment_status === 'pending' && '请完成支付'}
+                    {existingRegistration.approval_status === 'approved' && existingRegistration.payment_status === 'pending' && '请完成付款；未付款前可自行取消报名'}
                     {existingRegistration.approval_status === 'approved' && existingRegistration.payment_status === 'paid' && '报名成功，期待您的参与！'}
                     {existingRegistration.approval_status === 'rejected' && '您的报名申请未通过审核'}
                     {existingRegistration.status === 'cancelled' && '您已取消报名'}
@@ -446,14 +469,21 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
 
             {/* 操作按钮 */}
             <div className="space-y-3">
-              {existingRegistration.approval_status === 'pending' && (
+              {canCancelRegistration() && !showCancelForm && (
                 <button
-                  onClick={handleCancelRegistration}
+                  onClick={openCancelForm}
                   disabled={loading}
                   className="w-full py-3 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loading ? '处理中...' : '取消报名'}
+                  取消报名
                 </button>
+              )}
+              {canCancelRegistration() && showCancelForm && (
+                <RegistrationCancelForm
+                  submitting={loading}
+                  onSubmit={handleCancelRegistration}
+                  onCancel={closeCancelForm}
+                />
               )}
               
               <button
@@ -639,7 +669,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                     <ul className="space-y-1 text-xs">
                       <li>• 报名缴费后提交缴费证明，等待审核</li>
                       <li>• 审核通过后，报名正式生效</li>
-                      <li>• 审核期间可以自行取消报名</li>
+                      <li>• 审核中或未付款前（报名截止前）可自行取消报名</li>
                     </ul>
                   </div>
                 </div>

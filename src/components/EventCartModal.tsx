@@ -268,7 +268,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
       const registrations = events.map(event => ({
         event_id: event.id,
         user_id: user.id,
-        payment_status: requiresApproval ? ('pending' as const) : ('paid' as const),
+        payment_status: 'pending' as const,
         payment_proof: paymentProofUrl,
         status: 'registered' as const,
         approval_status: requiresApproval ? ('pending' as const) : ('approved' as const),
@@ -287,7 +287,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
       showSuccess(
         requiresApproval
           ? `成功报名 ${events.length} 个活动！报名申请已提交，等待管理员审核。审核通过后您将收到通知。`
-          : `成功报名 ${events.length} 个活动！`
+          : `成功报名 ${events.length} 个活动！未标记已付款前可在报名截止前自行取消。`
       )
       
       // 从购物车中移除已成功报名的活动

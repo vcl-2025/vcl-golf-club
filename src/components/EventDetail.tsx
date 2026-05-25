@@ -12,6 +12,9 @@ import TinyMCEEditor from './TinyMCEEditor'
 import ShareModal from './ShareModal'
 import { useModal } from './ModalProvider'
 import { getEventStatus } from '../utils/eventStatus'
+import { canMemberSelfCancelRegistration } from '../utils/registrationCancel'
+import { cancelOwnRegistrationWithAudit } from '../lib/audit'
+import RegistrationCancelForm from './RegistrationCancelForm'
 import {
   formatEventDateInTimezone,
   formatEventDateTimeInTimezone,
@@ -172,7 +175,9 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   const [publicRegistrationList, setPublicRegistrationList] = useState<PublicRegistrationRow[]>([])
   const [registrationListLoading, setRegistrationListLoading] = useState(false)
   const [registrationListError, setRegistrationListError] = useState<string | null>(null)
-  const { confirmAction, showError } = useModal()
+  const [showCancelForm, setShowCancelForm] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const { showError, showSuccess } = useModal()
 
   useEffect(() => {
     fetchEventData()
@@ -509,7 +514,11 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   }
 
   const canCancelRegistration = () => {
-    return userRegistration && userRegistration.approval_status === 'pending' && isRegistrationOpen()
+    return (
+      userRegistration != null &&
+      isRegistrationOpen() &&
+      canMemberSelfCancelRegistration(userRegistration, true)
+    )
   }
 
   const handleArticleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -573,43 +582,39 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
     }
   }
 
-  const handleCancelRegistration = async () => {
+  const openCancelForm = () => {
+    setShowCancelForm(true)
+  }
+
+  const closeCancelForm = () => {
+    if (cancelling) return
+    setShowCancelForm(false)
+  }
+
+  const handleCancelRegistration = async (reason: string) => {
     if (!userRegistration) return
 
-    confirmAction('确定要取消报名吗？', async () => {
-      try {
-        // console.log('开始删除报名记录，ID:', userRegistration.id)
-        
-        // 直接删除报名记录，就像没操作过一样
-        const deleteResponse = await supabase
-          ?.from('event_registrations')
-          .delete()
-          .eq('id', userRegistration.id)
+    const trimmed = (reason || '').trim()
+    if (trimmed.length === 0) {
+      showError('请填写取消原因')
+      return
+    }
 
-        // console.log('删除响应:', deleteResponse)
-        // console.log('删除的数据:', deleteResponse?.data)
-        // console.log('删除的计数:', deleteResponse?.count)
-
-        if (deleteResponse?.error) {
-          console.error('删除失败:', deleteResponse.error)
-          console.error('错误代码:', deleteResponse.error.code)
-          console.error('错误消息:', deleteResponse.error.message)
-          throw deleteResponse.error
-        }
-
-        if (deleteResponse?.count === 0) {
-          console.warn('删除操作执行了，但没有删除任何记录')
-          throw new Error('删除失败：没有找到要删除的记录')
-        }
-
-        // console.log('删除成功，清空本地状态')
-        // 清空本地状态
-        setUserRegistration(null)
-      } catch (error) {
-        console.error('取消报名失败:', error)
-        showError('取消报名失败，请重试')
+    setCancelling(true)
+    try {
+      const { error } = await cancelOwnRegistrationWithAudit(userRegistration.id, trimmed)
+      if (error) {
+        throw error
       }
-    })
+      setUserRegistration(null)
+      setShowCancelForm(false)
+      showSuccess('报名已取消')
+    } catch (error: any) {
+      console.error('取消报名失败:', error)
+      showError(error?.message || '取消报名失败，请重试')
+    } finally {
+      setCancelling(false)
+    }
   }
 
   const getRegistrationStatus = () => {
@@ -623,8 +628,16 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
       //   payment_status: userRegistration.payment_status,
       //   status: userRegistration.status
       // })
-      if (userRegistration.approval_status === 'approved') {
+      if (
+        userRegistration.approval_status === 'approved' &&
+        userRegistration.payment_status === 'paid'
+      ) {
         return { text: '完成报名', color: 'text-green-600', icon: CheckCircle }
+      } else if (
+        userRegistration.approval_status === 'approved' &&
+        userRegistration.payment_status === 'pending'
+      ) {
+        return { text: '报名成功，待付款', color: 'text-blue-600', icon: AlertCircle }
       } else if (userRegistration.approval_status === 'pending') {
         return { text: '已申请待审批', color: 'text-yellow-600', icon: AlertCircle }
       } else if (userRegistration.approval_status === 'rejected') {
@@ -821,12 +834,20 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                     <div className="text-sm text-gray-600 text-center">
                       报名时间：{formatDateTime(userRegistration!.registration_time)}
                     </div>
-                    <button
-                      onClick={handleCancelRegistration}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-colors"
-                    >
-                      取消报名
-                    </button>
+                    {!showCancelForm ? (
+                      <button
+                        onClick={openCancelForm}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-colors"
+                      >
+                        取消报名
+                      </button>
+                    ) : (
+                      <RegistrationCancelForm
+                        submitting={cancelling}
+                        onSubmit={handleCancelRegistration}
+                        onCancel={closeCancelForm}
+                      />
+                    )}
                   </div>
                 )}
 
@@ -1328,12 +1349,20 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                     <div className="text-sm text-gray-600 text-center">
                       报名时间：{formatDateTime(userRegistration!.registration_time)}
                     </div>
-                    <button
-                      onClick={handleCancelRegistration}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-colors"
-                    >
-                      取消报名
-                    </button>
+                    {!showCancelForm ? (
+                      <button
+                        onClick={openCancelForm}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-colors"
+                      >
+                        取消报名
+                      </button>
+                    ) : (
+                      <RegistrationCancelForm
+                        submitting={cancelling}
+                        onSubmit={handleCancelRegistration}
+                        onCancel={closeCancelForm}
+                      />
+                    )}
                   </div>
                 )}
 
