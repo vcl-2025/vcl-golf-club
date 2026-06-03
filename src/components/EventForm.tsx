@@ -59,7 +59,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
         start_time: convertUtcIsoToEventInputValue(event.start_time),
         end_time: convertUtcIsoToEventInputValue(event.end_time),
         location: event.location || '',
-        fee: event.fee ? event.fee.toString() : '',
+        fee: event.fee != null && event.fee !== undefined ? (event.fee === 0 ? '' : String(event.fee)) : '',
         max_participants: event.max_participants ? event.max_participants.toString() : '50',
         registration_deadline: convertUtcIsoToEventInputValue(event.registration_deadline),
         rules: event.rules || '',
@@ -566,7 +566,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <DollarSign className="w-4 h-4 inline mr-2" />
-                  报名费用 *
+                  报名费用
                 </label>
                 <input
                   type="text"
@@ -580,8 +580,7 @@ export default function EventForm({ event, onClose, onSuccess }: EventFormProps)
                     }}
                   onWheel={(e) => e.currentTarget.blur()}
                   className="input-field"
-                  placeholder="0.00"
-                  required
+                  placeholder="留空表示免费（0）"
                 />
               </div>
 

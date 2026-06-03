@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, Upload, X, Check, FileImage, Search, Filter, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react'
+import { Plus, Edit, Trash2, Receipt, Calendar, DollarSign, Upload, X, Check, FileImage, Search, Filter, ChevronLeft, ChevronRight, MoreVertical, CalendarDays } from 'lucide-react'
+import ExpenseMonthlyBatchForm from './ExpenseMonthlyBatchForm'
 import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import { insertWithAudit, updateWithAudit, deleteWithAudit, createAuditContext, type UserRole } from '../lib/audit'
@@ -42,6 +43,7 @@ export default function ExpenseAdmin() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showMonthlyBatch, setShowMonthlyBatch] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [uploading, setUploading] = useState(false)
   const { confirmDelete, showSuccess, showError, showWarning } = useModal()
@@ -62,6 +64,8 @@ export default function ExpenseAdmin() {
   
   // 操作菜单状态
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [batchDeleting, setBatchDeleting] = useState(false)
 
   // 键盘事件处理（用于凭证modal中切换图片）
   useEffect(() => {
@@ -183,6 +187,11 @@ export default function ExpenseAdmin() {
       setAvailableYears(years)
     }
   }, [expenses])
+
+  // 筛选条件变化时清空多选，避免误删已不可见的记录
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [searchTerm, transactionTypeFilter, typeFilter, yearFilter, monthFilter])
 
   const fetchExpenses = async () => {
     try {
@@ -418,40 +427,94 @@ export default function ExpenseAdmin() {
     setShowForm(true)
   }
 
+  const getAdminRoleForAudit = async (): Promise<UserRole | null> => {
+    if (!user || !supabase) return null
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    return (profile?.role || 'member') as UserRole
+  }
+
   const handleDelete = async (id: string) => {
     confirmDelete('确定要删除这条费用记录吗？', async () => {
       try {
-        if (!user || !supabase) {
+        const userRole = await getAdminRoleForAudit()
+        if (!userRole || !user) {
           showError('请先登录')
           return
         }
 
-        // 获取用户角色
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-
-        const userRole = (profile?.role || 'member') as UserRole
-
-        // 创建审计上下文
         const context = await createAuditContext(user.id)
-
-        // 使用审计功能删除
-        const { error } = await deleteWithAudit(
-          'expenses',
-          id,
-          context,
-          userRole
-        )
+        const { error } = await deleteWithAudit('expenses', id, context, userRole)
 
         if (error) throw error
+        setSelectedIds((prev) => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
         showSuccess('费用记录已删除')
         fetchExpenses()
       } catch (error: any) {
         console.error('删除失败:', error)
         showError(`删除失败: ${error.message || '请重试'}`)
+      }
+    })
+  }
+
+  const toggleSelectRow = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAllVisible = (visibleIds: string[]) => {
+    setSelectedIds((prev) => {
+      const allSelected =
+        visibleIds.length > 0 && visibleIds.every((id) => prev.has(id))
+      if (allSelected) return new Set()
+      return new Set(visibleIds)
+    })
+  }
+
+  const handleBatchDelete = () => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+
+    confirmDelete(`确定要删除选中的 ${ids.length} 条费用记录吗？此操作不可撤销。`, async () => {
+      setBatchDeleting(true)
+      try {
+        const userRole = await getAdminRoleForAudit()
+        if (!userRole || !user) {
+          showError('请先登录')
+          return
+        }
+
+        const context = await createAuditContext(user.id)
+        let failed = 0
+        for (const id of ids) {
+          const { error } = await deleteWithAudit('expenses', id, context, userRole)
+          if (error) failed++
+        }
+
+        setSelectedIds(new Set())
+        await fetchExpenses()
+
+        if (failed > 0) {
+          showError(`已删除 ${ids.length - failed} 条，${failed} 条删除失败`)
+        } else {
+          showSuccess(`已删除 ${ids.length} 条记录`)
+        }
+      } catch (error: any) {
+        console.error('批量删除失败:', error)
+        showError(`批量删除失败: ${error.message || '请重试'}`)
+      } finally {
+        setBatchDeleting(false)
       }
     })
   }
@@ -786,6 +849,15 @@ export default function ExpenseAdmin() {
     })
   }
 
+  const formatYearMonth = (dateString: string) => {
+    const dateOnly = dateString.split('T')[0].split(' ')[0]
+    const [year, month] = dateOnly.split('-')
+    if (year && month) {
+      return `${year}年${parseInt(month, 10)}月`
+    }
+    return '—'
+  }
+
   const formatDate = (dateString: string) => {
     // 避免时区问题：直接解析日期字符串的年月日，不使用 Date 对象解析
     // 这样可以避免 UTC 时区转换导致的日期偏移（如 2025-07-31 变成 2025-07-30）
@@ -803,6 +875,11 @@ export default function ExpenseAdmin() {
     // 如果解析失败，使用原来的方式（但可能会有时区问题）
     return new Date(dateString).toLocaleDateString('zh-CN')
   }
+
+  const sortedExpenses = getSortedExpenses()
+  const visibleIds = sortedExpenses.map((e) => e.id)
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id))
 
   if (loading) {
     return (
@@ -822,17 +899,26 @@ export default function ExpenseAdmin() {
             <p className="text-gray-600 mt-1">管理俱乐部所有费用支出记录</p>
           </div>
           {modulePermissions.can_create && (
-            <button
-              onClick={() => {
-                setShowForm(true)
-                setEditingExpense(null)
-                resetForm()
-              }}
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              添加费用
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setShowMonthlyBatch(true)}
+                className="flex items-center px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors"
+              >
+                <CalendarDays className="w-5 h-5 mr-2" />
+                月度批量录入
+              </button>
+              <button
+                onClick={() => {
+                  setShowForm(true)
+                  setEditingExpense(null)
+                  resetForm()
+                }}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                添加费用
+              </button>
+            </div>
           )}
         </div>
 
@@ -977,11 +1063,61 @@ export default function ExpenseAdmin() {
         </div>
         )}
 
-        {/* 费用列表 */}
-        <div className="overflow-x-auto bg-white rounded-2xl shadow-sm border border-gray-200">
-          <table className="w-full">
+        {modulePermissions.can_delete && selectedIds.size > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <span className="text-sm text-red-800">
+              已选中 <strong>{selectedIds.size}</strong> 条
+            </span>
+            <button
+              type="button"
+              onClick={handleBatchDelete}
+              disabled={batchDeleting}
+              className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+            >
+              {batchDeleting ? '删除中…' : '批量删除'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              disabled={batchDeleting}
+              className="px-4 py-2 text-sm border border-red-300 text-red-700 rounded-lg hover:bg-red-100 disabled:opacity-50"
+            >
+              取消选择
+            </button>
+          </div>
+        )}
+
+        {/* 费用列表：横向滚动 + 操作列吸右，避免删除按钮被裁切 */}
+        <div className="rounded-2xl shadow-sm border border-gray-200 overflow-hidden bg-white">
+          <div className="overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[1024px]">
             <thead className="bg-gray-50">
               <tr>
+                {modulePermissions.can_delete && (
+                  <th className="px-3 py-4 text-center w-12">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={() => toggleSelectAllVisible(visibleIds)}
+                      disabled={visibleIds.length === 0 || batchDeleting}
+                      className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      title="全选当前列表"
+                    />
+                  </th>
+                )}
+                <th
+                  className="px-4 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none whitespace-nowrap"
+                  onClick={() => handleSort('expense_date')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>年月</span>
+                    {sortField === 'expense_date' && (
+                      <span className="text-gray-400">
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </th>
                 <th 
                   className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
                   onClick={() => handleSort('transaction_type')}
@@ -1034,18 +1170,8 @@ export default function ExpenseAdmin() {
                     )}
                   </div>
                 </th>
-                <th 
-                  className="px-6 py-4 text-left text-base font-semibold text-gray-700 cursor-pointer hover:bg-green-100 select-none"
-                  onClick={() => handleSort('expense_date')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>日期</span>
-                    {sortField === 'expense_date' && (
-                      <span className="text-gray-400">
-                        {sortDirection === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </div>
+                <th className="px-4 py-4 text-left text-base font-semibold text-gray-700 whitespace-nowrap">
+                  记账日
                 </th>
                 <th className="px-6 py-4 text-left text-base font-semibold text-gray-700">收支方式</th>
                 <th 
@@ -1062,13 +1188,32 @@ export default function ExpenseAdmin() {
                   </div>
                 </th>
                 {(modulePermissions.can_update || modulePermissions.can_delete) && (
-                  <th className="px-2 md:px-6 py-4 text-left text-base font-semibold text-gray-700 min-w-[50px]">操作</th>
+                  <th className="sticky right-0 z-20 bg-gray-50 px-3 py-4 text-center text-base font-semibold text-gray-700 min-w-[88px] shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)]">
+                    操作
+                  </th>
                 )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {getSortedExpenses().map((expense) => (
-                <tr key={expense.id} className="hover:bg-green-50">
+              {sortedExpenses.map((expense) => (
+                <tr
+                  key={expense.id}
+                  className={`group ${selectedIds.has(expense.id) ? 'bg-green-50/80' : ''} hover:bg-green-50`}
+                >
+                  {modulePermissions.can_delete && (
+                    <td className="px-3 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(expense.id)}
+                        onChange={() => toggleSelectRow(expense.id)}
+                        disabled={batchDeleting}
+                        className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                    </td>
+                  )}
+                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-800">
+                    {formatYearMonth(expense.expense_date)}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
                       (expense.transaction_type || 'expense') === 'income'
@@ -1096,7 +1241,7 @@ export default function ExpenseAdmin() {
                   }`}>
                     {formatAmount(parseFloat(expense.amount.toString()))}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-base text-gray-600">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                     {formatDate(expense.expense_date)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -1114,9 +1259,15 @@ export default function ExpenseAdmin() {
                     </span>
                   </td>
                   {(modulePermissions.can_update || modulePermissions.can_delete) && (
-                    <td className="px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium min-w-[50px]">
-                      {/* 桌面端：横向图标 */}
-                      <div className="hidden md:flex items-center space-x-2">
+                    <td
+                      className={`sticky right-0 z-10 px-3 py-4 whitespace-nowrap text-sm font-medium min-w-[88px] shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)] ${
+                        selectedIds.has(expense.id)
+                          ? 'bg-green-50/80'
+                          : 'bg-white group-hover:bg-green-50'
+                      }`}
+                    >
+                      {/* 宽屏：横向图标；中等宽度用 ⋯ 菜单，避免按钮被挤裁切 */}
+                      <div className="hidden lg:flex items-center justify-center gap-1 shrink-0">
                         {expense.receipt_url && (() => {
                           const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
                           return (
@@ -1153,8 +1304,7 @@ export default function ExpenseAdmin() {
                         )}
                       </div>
                       
-                      {/* 手机端：三个点菜单 */}
-                      <div className="md:hidden relative action-menu-container flex items-center justify-center">
+                      <div className="lg:hidden relative action-menu-container flex items-center justify-center">
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
@@ -1219,6 +1369,7 @@ export default function ExpenseAdmin() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -1659,9 +1810,18 @@ export default function ExpenseAdmin() {
         <div className="text-center py-12">
           <Receipt className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">暂无费用记录</h3>
-          <p className="text-gray-600">点击"添加费用"按钮创建第一条费用记录</p>
+          <p className="text-gray-600">点击「添加费用」或「月度批量录入」创建记录</p>
         </div>
       )}
+
+      <ExpenseMonthlyBatchForm
+        isOpen={showMonthlyBatch}
+        onClose={() => setShowMonthlyBatch(false)}
+        onSaved={() => {
+          fetchExpenses()
+          setShowMonthlyBatch(false)
+        }}
+      />
     </div>
   )
 }

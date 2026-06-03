@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react'
 import { 
   Trophy, Medal, Clock,
   ChevronDown, ChevronUp, ChevronRight, User, BarChart,
-  UserCheck
+  UserCheck, TrendingUp
 } from 'lucide-react'
+import YearScoreTrendModal from './YearScoreTrendModal'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -75,6 +76,7 @@ export default function UserScoreQuery() {
   const [selectedMonth, setSelectedMonth] = useState('')
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set())
   const [pressedEventId, setPressedEventId] = useState<string | null>(null)
+  const [showYearTrendModal, setShowYearTrendModal] = useState(false)
   const [animatedStats, setAnimatedStats] = useState<UserStats>({
     totalRounds: 0,
     averageStrokes: 0,
@@ -320,20 +322,20 @@ export default function UserScoreQuery() {
     
     if (rank === 1) {
       return (
-        <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full shadow-lg">
-          <Medal className="w-5 h-5 text-white drop-shadow-sm" />
+        <div className="flex items-center justify-center w-4 h-4 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full shadow-md">
+          <Medal className="w-2.5 h-2.5 text-white drop-shadow-sm" />
         </div>
       )
     } else if (rank === 2) {
       return (
-        <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full shadow-lg">
-          <Medal className="w-5 h-5 text-white drop-shadow-sm" />
+        <div className="flex items-center justify-center w-4 h-4 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full shadow-md">
+          <Medal className="w-2.5 h-2.5 text-white drop-shadow-sm" />
         </div>
       )
     } else if (rank === 3) {
       return (
-        <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full shadow-lg">
-          <Medal className="w-5 h-5 text-white drop-shadow-sm" />
+        <div className="flex items-center justify-center w-4 h-4 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full shadow-md">
+          <Medal className="w-2.5 h-2.5 text-white drop-shadow-sm" />
         </div>
       )
     }
@@ -431,9 +433,20 @@ export default function UserScoreQuery() {
         </div>
         
         <div className="relative z-10">
-        <div className="flex items-center mb-3 sm:mb-4">
-            <BarChart className="w-6 h-6 sm:w-8 sm:h-8 text-golf-400 mr-2 sm:mr-3 animate-bounce" style={{ fill: 'none', animationDuration: '2s', animationIterationCount: 'infinite' }} />
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 animate-fade-in">个人统计</h2>
+        <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+            <div className="flex items-center min-w-0">
+              <BarChart className="w-6 h-6 sm:w-8 sm:h-8 text-golf-400 mr-2 sm:mr-3 animate-bounce shrink-0" style={{ fill: 'none', animationDuration: '2s', animationIterationCount: 'infinite' }} />
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 animate-fade-in truncate">个人统计</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowYearTrendModal(true)}
+              className="flex items-center gap-0.5 text-xs sm:text-sm font-medium text-[#F15B98] hover:text-[#d94a85] shrink-0 whitespace-nowrap"
+            >
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              今年走势
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
@@ -775,6 +788,40 @@ export default function UserScoreQuery() {
                       // 根据比赛模式确定计算方式
                       const scoringMode = group.event?.scoring_mode || 'ryder_cup'
                       const isTotalStrokesMode = scoringMode === 'total_strokes'
+
+                      // 团体赛全场个人名次（用于小组个人区冠亚季军图标）
+                      const getEventPlayerKey = (p: {
+                        name: string
+                        groupNumber?: number | null
+                        teamName?: string | null
+                      }) => `${p.name}::${p.groupNumber ?? ''}::${p.teamName ?? ''}`
+
+                      const eventOverallRankMap = new Map<string, number>()
+                      const playersSortedForEventRank = [...players].sort((a, b) => {
+                        if (isTotalStrokesMode) {
+                          const na = a.netStrokes
+                          const nb = b.netStrokes
+                          if (na != null && nb != null && na !== nb) return na - nb
+                          if (na != null && nb == null) return -1
+                          if (na == null && nb != null) return 1
+                        }
+                        return (a.totalStrokes || 0) - (b.totalStrokes || 0)
+                      })
+                      playersSortedForEventRank.forEach((p, index) => {
+                        if (index < 3) {
+                          eventOverallRankMap.set(getEventPlayerKey(p), index + 1)
+                        }
+                      })
+
+                      const renderEventRankBadge = (player: {
+                        name: string
+                        groupNumber?: number | null
+                        teamName?: string | null
+                      }) => {
+                        const rank = eventOverallRankMap.get(getEventPlayerKey(player))
+                        if (!rank || rank > 3) return null
+                        return <div className="flex-shrink-0">{getRankIcon(rank)}</div>
+                      }
                       
                       // 计算每组胜负和总比分
                       const groupDetails: Array<{
@@ -1153,203 +1200,176 @@ export default function UserScoreQuery() {
                                   {/* 左右分列布局 - 仅显示两个团队（仅莱德杯模式） */}
                                   {sortedGroupTeams.length === 2 && !isTotalStrokesMode ? (
                                     <>
-                                      <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
-                                        {/* 左侧团队 */}
-                                        {(() => {
-                                          const team = sortedGroupTeams[0]
-                                          const color = teamColorMap.get(team.teamName) || teamColors[0]
-                                          const displayName = teamDisplayNameMap.get(team.teamName) || team.teamName
-                                          return (
-                                            <div className="flex-1 relative">
-                                              <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
-                                              <div className="pl-3 sm:pl-4">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
-                                                  <span className="font-semibold text-gray-900">{displayName}</span>
-                                                </div>
-                                                <div className="space-y-2">
-                                                  {team.players.map((player, idx) => (
-                                                    <div key={idx} className="flex items-center gap-2 sm:gap-3">
-                                                      <div className="relative">
-                                                        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
-                                                             style={{ 
-                                                               backgroundColor: `${color.bg}20`,
-                                                               borderColor: `${color.bg}40`
-                                                             }}>
-                                                          {player.avatarUrl ? (
-                                                            <img 
-                                                              src={player.avatarUrl} 
-                                                              alt={player.name}
-                                                              className="w-full h-full object-cover"
-                                                              style={{
-                                                                objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                              }}
-                                                              onError={(e) => {
-                                                                e.currentTarget.style.display = 'none'
-                                                                const parent = e.currentTarget.parentElement
-                                                                if (parent) {
-                                                                  parent.innerHTML = `<svg class="w-5 h-5" style="color: ${color.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
-                                                                }
-                                                              }}
-                                                            />
-                                                          ) : (
-                                                            <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: color.text }} />
-                                                          )}
-                                                        </div>
-                                                      </div>
-                                                      <div className="flex flex-col">
-                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <span className="text-sm text-gray-800 font-medium">{player.name}</span>
-                                                          {!player.is_guest && (
-                                                            <UserCheck className="w-4 h-4 text-green-500" title="会员" />
-                                                          )}
-                                                        </div>
-                                                        <span className="text-xs text-gray-500">
-                                                          {isTotalStrokesMode 
-                                                            ? (player.netStrokes !== null && player.netStrokes !== undefined 
-                                                                ? `${player.netStrokes % 1 === 0 ? player.netStrokes.toString() : player.netStrokes.toFixed(1)}杆` 
-                                                                : '-')
-                                                            : `${player.totalStrokes || 0}杆`
-                                                          }
-                                                        </span>
-                                                      </div>
-                                                    </div>
-                                                  ))}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          )
-                                        })()}
-                                        
-                                        {/* 中间比分（仅莱德杯模式显示） */}
-                                        {!isTotalStrokesMode && (() => {
-                                          const team1 = sortedGroupTeams[0]
-                                          const team2 = sortedGroupTeams[1]
-                                          const wins1 = teamWinsCount.get(team1.teamName) || 0
-                                          const wins2 = teamWinsCount.get(team2.teamName) || 0
-                                          const color1 = teamColorMap.get(team1.teamName) || teamColors[0]
-                                          const color2 = teamColorMap.get(team2.teamName) || teamColors[1]
-                                          
-                                          // 莱德杯模式：显示胜负关系（1 - 0, 0 - 1, 0.5 - 0.5）
-                                          let score1: number, score2: number
-                                          if (wins1 > wins2) {
-                                            // 团队1获胜
-                                            score1 = 1
-                                            score2 = 0
-                                          } else if (wins2 > wins1) {
-                                            // 团队2获胜
-                                            score1 = 0
-                                            score2 = 1
-                                          } else {
-                                            // 平局
-                                            score1 = 0.5
-                                            score2 = 0.5
-                                          }
-                                          
-                                          return (
-                                            <div className="flex items-center justify-center px-2 sm:px-3">
-                                              <div 
-                                                className="flex items-center gap-2 sm:gap-3 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-200 shadow-lg"
-                                                style={{
-                                                  background: `linear-gradient(to right, ${color1.bg} 0%, ${color1.bg} 40%, rgba(255,255,255,0.3) 50%, ${color2.bg} 60%, ${color2.bg} 100%)`
-                                                }}
-                                              >
-                                                <span 
-                                                  className="font-bold text-xl sm:text-2xl"
-                                                  style={{ color: '#FFFFFF' }}
-                                                >
-                                                  {score1 === 0.5 ? '0.5' : score1.toString()}
-                                                </span>
-                                                <span className="text-white text-lg sm:text-xl font-medium opacity-90">-</span>
-                                                <span 
-                                                  className="font-bold text-xl sm:text-2xl"
-                                                  style={{ color: '#FFFFFF' }}
-                                                >
-                                                  {score2 === 0.5 ? '0.5' : score2.toString()}
-                                                </span>
-                                              </div>
-                                            </div>
-                                          )
-                                        })()}
-                                        
-                                        {/* 总杆数模式：显示团队总杆数 */}
-                                        {isTotalStrokesMode && sortedGroupTeams.length === 2 && (
-                                          <div className="flex items-center justify-center px-2 sm:px-3">
-                                            <div className="flex items-center gap-2 sm:gap-3 rounded-xl px-4 sm:px-6 py-2.5 sm:py-3 border border-gray-200 shadow-lg bg-gray-50">
-                                              <span className="text-sm text-gray-600">总杆数</span>
-                                              <span className="text-gray-400">vs</span>
-                                              <span className="text-sm text-gray-600">总杆数</span>
+                                      {(() => {
+                                        const team1 = sortedGroupTeams[0]
+                                        const team2 = sortedGroupTeams[1]
+                                        const color1 = teamColorMap.get(team1.teamName) || teamColors[0]
+                                        const color2 = teamColorMap.get(team2.teamName) || teamColors[1]
+                                        const displayName1 = teamDisplayNameMap.get(team1.teamName) || team1.teamName
+                                        const displayName2 = teamDisplayNameMap.get(team2.teamName) || team2.teamName
+                                        const wins1 = teamWinsCount.get(team1.teamName) || 0
+                                        const wins2 = teamWinsCount.get(team2.teamName) || 0
+                                        let score1: number
+                                        let score2: number
+                                        if (wins1 > wins2) {
+                                          score1 = 1
+                                          score2 = 0
+                                        } else if (wins2 > wins1) {
+                                          score1 = 0
+                                          score2 = 1
+                                        } else {
+                                          score1 = 0.5
+                                          score2 = 0.5
+                                        }
+
+                                        const renderAvatar = (
+                                          player: (typeof team1.players)[0],
+                                          color: typeof color1
+                                        ) => (
+                                          <div className="relative shrink-0">
+                                            <div
+                                              className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden"
+                                              style={{
+                                                backgroundColor: `${color.bg}20`,
+                                                borderColor: `${color.bg}40`,
+                                              }}
+                                            >
+                                              {player.avatarUrl ? (
+                                                <img
+                                                  src={player.avatarUrl}
+                                                  alt={player.name}
+                                                  className="w-full h-full object-cover"
+                                                  style={{
+                                                    objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`,
+                                                  }}
+                                                  onError={(e) => {
+                                                    e.currentTarget.style.display = 'none'
+                                                    const parent = e.currentTarget.parentElement
+                                                    if (parent) {
+                                                      parent.innerHTML = `<svg class="w-5 h-5" style="color: ${color.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
+                                                    }
+                                                  }}
+                                                />
+                                              ) : (
+                                                <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: color.text }} />
+                                              )}
                                             </div>
                                           </div>
-                                        )}
-                                        
-                                        {/* 右侧团队 */}
-                                        {(() => {
-                                          const team = sortedGroupTeams[1]
-                                          const color = teamColorMap.get(team.teamName) || teamColors[1]
-                                          const displayName = teamDisplayNameMap.get(team.teamName) || team.teamName
-                                          return (
-                                            <div className="flex-1 relative">
-                                              <div className="pr-3 sm:pr-4">
-                                                <div className="flex items-center justify-end gap-2 mb-2">
-                                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
-                                                  <span className="font-semibold text-gray-900">{displayName}</span>
+                                        )
+
+                                        return (
+                                          <>
+                                            {/* 队名 + 组比分（单独一行，不占成员横向空间） */}
+                                            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 px-0.5">
+                                              <div className="flex-1 min-w-0 flex items-center gap-2">
+                                                <div
+                                                  className="w-3 h-3 rounded shrink-0"
+                                                  style={{ backgroundColor: color1.dot }}
+                                                />
+                                                <span className="font-semibold text-gray-900 truncate">
+                                                  {displayName1}
+                                                </span>
+                                              </div>
+                                              <div className="flex-shrink-0">
+                                                <div
+                                                  className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 border border-gray-200 shadow-md"
+                                                  style={{
+                                                    background: `linear-gradient(to right, ${color1.bg} 0%, ${color1.bg} 40%, rgba(255,255,255,0.3) 50%, ${color2.bg} 60%, ${color2.bg} 100%)`,
+                                                  }}
+                                                >
+                                                  <span className="font-bold text-lg sm:text-xl text-white">
+                                                    {score1 === 0.5 ? '0.5' : score1.toString()}
+                                                  </span>
+                                                  <span className="text-white text-base sm:text-lg font-medium opacity-90">
+                                                    -
+                                                  </span>
+                                                  <span className="font-bold text-lg sm:text-xl text-white">
+                                                    {score2 === 0.5 ? '0.5' : score2.toString()}
+                                                  </span>
                                                 </div>
-                                                <div className="space-y-2">
-                                                  {team.players.map((player, idx) => (
-                                                    <div key={idx} className="flex items-center gap-2 sm:gap-3 justify-end">
-                                                      <div className="flex flex-col items-end">
-                                                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                                                        <span className="text-sm text-gray-800 font-medium">{player.name}</span>
+                                              </div>
+                                              <div className="flex-1 min-w-0 flex items-center justify-end gap-2">
+                                                <span className="font-semibold text-gray-900 truncate">
+                                                  {displayName2}
+                                                </span>
+                                                <div
+                                                  className="w-3 h-3 rounded shrink-0"
+                                                  style={{ backgroundColor: color2.dot }}
+                                                />
+                                              </div>
+                                            </div>
+
+                                            {/* 成员列表（整行宽度，不被中间比分挤压） */}
+                                            <div className="flex items-start gap-2 sm:gap-4 mb-4 sm:mb-6">
+                                              <div className="flex-1 min-w-0 relative">
+                                                <div
+                                                  className="absolute left-0 top-0 bottom-0 w-1 rounded-full"
+                                                  style={{ backgroundColor: color1.bg }}
+                                                />
+                                                <div className="pl-3 sm:pl-4 space-y-2">
+                                                  {team1.players.map((player, idx) => (
+                                                    <div key={idx} className="flex items-center gap-2 min-w-0">
+                                                      {renderEventRankBadge({
+                                                        name: player.name,
+                                                        groupNumber: group.group,
+                                                        teamName: team1.teamName,
+                                                      })}
+                                                      {renderAvatar(player, color1)}
+                                                      <div className="flex flex-col min-w-0 flex-1">
+                                                        <div className="flex items-center gap-1 min-w-0">
+                                                          <span className="text-sm text-gray-800 font-medium truncate">
+                                                            {player.name}
+                                                          </span>
                                                           {!player.is_guest && (
-                                                            <UserCheck className="w-4 h-4 text-green-500" title="会员" />
+                                                            <UserCheck className="w-4 h-4 text-green-500 shrink-0" />
                                                           )}
                                                         </div>
                                                         <span className="text-xs text-gray-500">
-                                                          {isTotalStrokesMode 
-                                                            ? (player.netStrokes !== null && player.netStrokes !== undefined 
-                                                                ? `${player.netStrokes % 1 === 0 ? player.netStrokes.toString() : player.netStrokes.toFixed(1)}杆` 
-                                                                : '-')
-                                                            : `${player.totalStrokes || 0}杆`
-                                                          }
+                                                          {player.totalStrokes || 0}杆
                                                         </span>
-                                                      </div>
-                                                      <div className="relative">
-                                                        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
-                                                             style={{ 
-                                                               backgroundColor: `${color.bg}20`,
-                                                               borderColor: `${color.bg}40`
-                                                             }}>
-                                                          {player.avatarUrl ? (
-                                                            <img 
-                                                              src={player.avatarUrl} 
-                                                              alt={player.name}
-                                                              className="w-full h-full object-cover"
-                                                              style={{
-                                                                objectPosition: `${player.avatarPositionX || 50}% ${player.avatarPositionY || 50}%`
-                                                              }}
-                                                              onError={(e) => {
-                                                                e.currentTarget.style.display = 'none'
-                                                                const parent = e.currentTarget.parentElement
-                                                                if (parent) {
-                                                                  parent.innerHTML = `<svg class="w-5 h-5" style="color: ${color.text}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`
-                                                                }
-                                                              }}
-                                                            />
-                                                          ) : (
-                                                            <User className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: color.text }} />
-                                                          )}
-                                                        </div>
                                                       </div>
                                                     </div>
                                                   ))}
                                                 </div>
                                               </div>
-                                              <div className="absolute right-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
+                                              <div className="flex-1 min-w-0 relative">
+                                                <div
+                                                  className="absolute right-0 top-0 bottom-0 w-1 rounded-full"
+                                                  style={{ backgroundColor: color2.bg }}
+                                                />
+                                                <div className="pr-3 sm:pr-4 space-y-2">
+                                                  {team2.players.map((player, idx) => (
+                                                    <div
+                                                      key={idx}
+                                                      className="flex flex-row-reverse items-center gap-2 min-w-0"
+                                                    >
+                                                      {renderEventRankBadge({
+                                                        name: player.name,
+                                                        groupNumber: group.group,
+                                                        teamName: team2.teamName,
+                                                      })}
+                                                      {renderAvatar(player, color2)}
+                                                      <div className="flex flex-col items-end min-w-0 flex-1">
+                                                        <div className="flex items-center gap-1 min-w-0 max-w-full justify-end">
+                                                          <span className="text-sm text-gray-800 font-medium truncate">
+                                                            {player.name}
+                                                          </span>
+                                                          {!player.is_guest && (
+                                                            <UserCheck className="w-4 h-4 text-green-500 shrink-0" />
+                                                          )}
+                                                        </div>
+                                                        <span className="text-xs text-gray-500">
+                                                          {player.totalStrokes || 0}杆
+                                                        </span>
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
                                             </div>
-                                          )
-                                        })()}
-                                      </div>
+                                          </>
+                                        )
+                                      })()}
                                       
                                       {/* 18洞结果和总结（仅莱德杯模式，两个团队） - 放在卡片下方 */}
                                       {(() => {
@@ -1468,6 +1488,11 @@ export default function UserScoreQuery() {
                                                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                                   {team.players.map((player, idx) => (
                                                     <div key={idx} className="flex items-center gap-2 sm:gap-3">
+                                                      {renderEventRankBadge({
+                                                        name: player.name,
+                                                        groupNumber: group.group,
+                                                        teamName: team.teamName,
+                                                      })}
                                                       <div className="relative flex-shrink-0">
                                                         <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
                                                              style={{ 
@@ -1524,6 +1549,11 @@ export default function UserScoreQuery() {
                                               <div key={`${team.teamName}-${idx}`} className="relative flex items-center gap-2 sm:gap-3">
                                                 <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
                                                 <div className="pl-3 sm:pl-4 flex items-center gap-2 sm:gap-3 flex-1">
+                                                  {renderEventRankBadge({
+                                                    name: player.name,
+                                                    groupNumber: group.group,
+                                                    teamName: team.teamName,
+                                                  })}
                                                   <div className="relative flex-shrink-0">
                                                     <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
                                                          style={{ 
@@ -1890,6 +1920,15 @@ export default function UserScoreQuery() {
           </div>
         )}
       </div>
+
+      {user && (
+        <YearScoreTrendModal
+          isOpen={showYearTrendModal}
+          onClose={() => setShowYearTrendModal(false)}
+          scores={scores}
+          userId={user.id}
+        />
+      )}
     </div>
   )
 }

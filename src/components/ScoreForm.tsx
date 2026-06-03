@@ -7,6 +7,10 @@ import { formatEventDateInTimezone } from '../utils/eventDateTime'
 import * as XLSX from 'xlsx'
 import { updateWithAudit, createAuditContext, logBatchOperation, type UserRole } from '../lib/audit'
 import { useAuth } from '../hooks/useAuth'
+import {
+  filterScoreEligibleRegistrations,
+  isScoreEligibleRegistration,
+} from '../utils/eventRegistrationEligibility'
 
 interface ScoreFormProps {
   onClose: () => void
@@ -140,7 +144,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     }
   }, [selectedEvent])
 
-  const normalizeName = (value: string | null | undefined) => (value || '').trim()
+  /** 成绩导入姓名比对：去掉首尾空格，不区分大小写 */
+  const normalizeName = (value: string | null | undefined) => (value || '').trim().toLowerCase()
+
+  const lookupUserId = (map: Map<string, string>, name: string) => map.get(normalizeName(name))
 
   const findUserByImportedName = (playerName: string) => {
     const target = normalizeName(playerName)
@@ -194,11 +201,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     if (!selectedEvent || !allUsers.length || !participants.length) return false
     
     // 如果已经在预览界面修复了，不再显示为未报名
-    if (previewFixedUsers.has(playerName.trim())) return false
+    if (previewFixedUsers.has(normalizeName(playerName))) return false
     
     // 检查是否是会员（在user_profiles中存在）
-    const trimmedName = playerName.trim()
-    const matchedUser = findUserByImportedName(trimmedName)
+    const matchedUser = findUserByImportedName(playerName)
     const isMemberCheck = !!matchedUser
     
     if (!isMemberCheck) return false // 不是会员，不需要警告
@@ -253,9 +259,10 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         // 获取该活动的报名人数
         const { data: registrations } = await supabase
           .from('event_registrations')
-          .select('id')
+          .select('id, status, approval_status, payment_status')
           .eq('event_id', event.id)
-          .eq('payment_status', 'paid')
+
+        const eligibleRegs = filterScoreEligibleRegistrations(registrations)
         
         // 获取已录入成绩的人数
         const { data: scores } = await supabase
@@ -266,7 +273,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         const uniqueScores = new Set(scores?.map(s => s.user_id) || [])
         
         stats[event.id] = {
-          total: registrations?.length || 0,
+          total: eligibleRegs.length,
           entered: uniqueScores.size
         }
       }
@@ -280,18 +287,20 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     try {
       const allParticipants: EventParticipant[] = []
       
-      // 1. 获取会员报名记录
+      // 1. 获取会员报名记录（已批准即可，含未付款；与导入校验一致）
       const { data: registrations, error: regError } = await supabase
         .from('event_registrations')
-        .select('id, user_id')
+        .select('id, user_id, status, approval_status, payment_status')
         .eq('event_id', eventId)
-        .eq('payment_status', 'paid')
+        .eq('status', 'registered')
 
       if (regError) throw regError
 
-      if (registrations && registrations.length > 0) {
+      const eligibleRegistrations = filterScoreEligibleRegistrations(registrations)
+
+      if (eligibleRegistrations.length > 0) {
         // 获取用户信息
-        const userIds = registrations.map(r => r.user_id)
+        const userIds = eligibleRegistrations.map(r => r.user_id)
         const { data: profiles, error: profileError } = await supabase
           .from('user_profiles')
           .select('id, full_name, email, golflive_name')
@@ -316,7 +325,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         }
 
         // 添加会员参与者
-        registrations.forEach((reg, index) => {
+        eligibleRegistrations.forEach((reg) => {
           const profile = profiles?.find(p => p.id === reg.user_id)
           const score = scoreMap.get(reg.user_id)
           allParticipants.push({
@@ -1499,10 +1508,23 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       
       const userMap = allUsers ? buildUserIdMap(allUsers) : new Map<string, string>()
 
+      const { data: existingGuestScores } = await supabase
+        .from('guest_scores')
+        .select('id, player_name')
+        .eq('event_id', selectedEvent.id)
+
+      const guestScoreByName = new Map<string, { id: string; player_name: string }>()
+      for (const g of existingGuestScores || []) {
+        const key = normalizeName(g.player_name)
+        if (key && !guestScoreByName.has(key)) {
+          guestScoreByName.set(key, g)
+        }
+      }
+
       // 保存每个球员的成绩
       for (const player of previewData.players) {
         try {
-          const userId = userMap.get(player.name.trim())
+          const userId = lookupUserId(userMap, player.name)
           
           // 如果找不到用户，作为访客处理
           if (!userId) {
@@ -1529,23 +1551,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
               notes: null
             }
 
-            // 检查是否已存在访客成绩
-            const { data: existingGuest, error: checkGuestError } = await supabase
-              .from('guest_scores')
-              .select('id')
-              .eq('player_name', player.name.trim())
-              .eq('event_id', selectedEvent.id)
-              .maybeSingle()
-
-            if (checkGuestError && checkGuestError.code !== 'PGRST116') {
-              console.error(`[导入] 检查访客成绩失败:`, checkGuestError)
-              failed.push(player.name)
-              errors.push({
-                message: `${player.name}: 检查访客成绩时出错`,
-                type: 'other'
-              })
-              continue
-            }
+            const existingGuest = guestScoreByName.get(normalizeName(player.name))
 
             if (existingGuest) {
               // 更新访客成绩（使用审计功能）
@@ -1596,9 +1602,11 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
               }
             } else {
               // 插入访客成绩（批量导入不逐条记录审计）
-              const { error: insertGuestError } = await supabase
+              const { data: insertedGuest, error: insertGuestError } = await supabase
                 .from('guest_scores')
                 .insert([guestScoreData])
+                .select('id, player_name')
+                .single()
 
               if (insertGuestError) {
                 console.error(`[导入] 插入访客成绩失败:`, insertGuestError)
@@ -1610,21 +1618,29 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
               } else {
                 success.push(player.name)
                 guestSuccessCount++
+                if (insertedGuest) {
+                  guestScoreByName.set(normalizeName(player.name), insertedGuest)
+                }
               }
             }
             
             continue // 访客成绩处理完成，继续下一个
           }
 
-          // 检查该用户是否已报名该活动
+          // 检查该用户是否已有效报名（已批准含未付款，与预览名单一致）
           const { data: registration, error: registrationError } = await supabase
             .from('event_registrations')
-            .select('id')
+            .select('id, status, approval_status, payment_status')
             .eq('event_id', selectedEvent.id)
             .eq('user_id', userId)
-            .single()
+            .eq('status', 'registered')
+            .maybeSingle()
 
-          if (!registration) {
+          if (registrationError && registrationError.code !== 'PGRST116') {
+            throw registrationError
+          }
+
+          if (!registration || !isScoreEligibleRegistration(registration)) {
             failed.push(player.name)
             errors.push({
               message: `${player.name}: 该用户未报名此活动`,
@@ -2005,7 +2021,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       }
 
       // 找到该玩家的数据并重新导入成绩
-      const player = previewData.players.find(p => p.name.trim() === error.playerName?.trim())
+      const player = previewData.players.find(
+        (p) => normalizeName(p.name) === normalizeName(error.playerName)
+      )
       if (!player) {
         throw new Error('找不到该玩家的成绩数据')
       }
@@ -2017,7 +2035,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
       const userMap = allUsers ? buildUserIdMap(allUsers) : new Map<string, string>()
 
-      const userId = userMap.get(player.name.trim())
+      const userId = lookupUserId(userMap, player.name)
       if (!userId) {
         throw new Error('找不到用户ID')
       }
@@ -2126,7 +2144,8 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       return
     }
 
-    setPreviewFixingUsers(prev => new Set(prev).add(playerName.trim()))
+    const nameKey = normalizeName(playerName)
+    setPreviewFixingUsers(prev => new Set(prev).add(nameKey))
 
     try {
       if (!user || !supabase) {
@@ -2157,11 +2176,11 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         showError(`${playerName} 已经报名此活动`)
         setPreviewFixingUsers(prev => {
           const newSet = new Set(prev)
-          newSet.delete(playerName.trim())
+          newSet.delete(nameKey)
           return newSet
         })
         // 即使已报名，也标记为已修复（避免重复显示）
-        setPreviewFixedUsers(prev => new Set(prev).add(playerName.trim()))
+        setPreviewFixedUsers(prev => new Set(prev).add(nameKey))
         // 刷新参与者列表
         await fetchParticipants(selectedEvent.id)
         return
@@ -2184,7 +2203,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       }
 
       // 标记为已修复
-      setPreviewFixedUsers(prev => new Set(prev).add(playerName.trim()))
+      setPreviewFixedUsers(prev => new Set(prev).add(nameKey))
       showSuccess(`${playerName} 已成功加入活动`)
 
       // 刷新参与者列表，这样 isUnregisteredMember 会正确识别
@@ -2196,7 +2215,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     } finally {
       setPreviewFixingUsers(prev => {
         const newSet = new Set(prev)
-        newSet.delete(playerName.trim())
+        newSet.delete(nameKey)
         return newSet
       })
     }
@@ -2209,18 +2228,21 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       return
     }
 
-    const selectedUserNames = Array.from(selectedUsers)
+    const selectedUserKeys = Array.from(selectedUsers)
+    const displayNames = selectedUserKeys.map(
+      (key) => previewData.players.find((p) => normalizeName(p.name) === key)?.name ?? key
+    )
     
     // 使用自定义确认对话框
     showConfirm({
       title: '批量加入活动',
-      message: `是否将以下 ${selectedUserNames.length} 个用户加入活动 "${selectedEvent.title}"？\n\n${selectedUserNames.join('、')}`,
+      message: `是否将以下 ${displayNames.length} 个用户加入活动 "${selectedEvent.title}"？\n\n${displayNames.join('、')}`,
       type: 'warning',
       confirmText: '确定',
       cancelText: '取消',
       onConfirm: async () => {
         // 用户确认后执行批量加入
-        await executeBatchAddToEvent(selectedUserNames)
+        await executeBatchAddToEvent(selectedUserKeys)
       }
     })
   }
@@ -2233,7 +2255,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
     // 标记所有用户为处理中
     userNames.forEach(name => {
-      setPreviewFixingUsers(prev => new Set(prev).add(name.trim()))
+      setPreviewFixingUsers(prev => new Set(prev).add(normalizeName(name)))
     })
 
     try {
@@ -2267,12 +2289,14 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       // 批量处理每个用户
       for (const playerName of userNames) {
         try {
-          const userId = userMap.get(playerName.trim())
+          const userId = lookupUserId(userMap, playerName)
           if (!userId) {
             errors.push(`${playerName}: 找不到用户ID`)
             failCount++
             continue
           }
+
+          const nameKey = normalizeName(playerName)
 
           // 检查是否已经报名（防止重复）
           const { data: existingRegistration } = await supabase
@@ -2284,7 +2308,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
           if (existingRegistration) {
             // 已报名，标记为已修复（避免重复显示）
-            setPreviewFixedUsers(prev => new Set(prev).add(playerName.trim()))
+            setPreviewFixedUsers(prev => new Set(prev).add(nameKey))
             successCount++
             continue
           }
@@ -2308,7 +2332,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
           }
 
           // 标记为已修复
-          setPreviewFixedUsers(prev => new Set(prev).add(playerName.trim()))
+          setPreviewFixedUsers(prev => new Set(prev).add(nameKey))
           successCount++
 
         } catch (err: any) {
@@ -2339,7 +2363,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       userNames.forEach(name => {
         setPreviewFixingUsers(prev => {
           const newSet = new Set(prev)
-          newSet.delete(name.trim())
+          newSet.delete(normalizeName(name))
           return newSet
         })
       })
@@ -2669,13 +2693,13 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                           checked={previewData.players.filter(p => {
                             const isUnregistered = isUnregisteredMember(p.name)
                             const canFix = isUnregistered && isMember(p.name)
-                            return canFix && !previewFixedUsers.has(p.name.trim())
+                            return canFix && !previewFixedUsers.has(normalizeName(p.name))
                           }).length > 0 && 
                           previewData.players.filter(p => {
                             const isUnregistered = isUnregisteredMember(p.name)
                             const canFix = isUnregistered && isMember(p.name)
-                            return canFix && !previewFixedUsers.has(p.name.trim())
-                          }).every(p => selectedUsers.has(p.name.trim()))}
+                            return canFix && !previewFixedUsers.has(normalizeName(p.name))
+                          }).every(p => selectedUsers.has(normalizeName(p.name)))}
                           onChange={(e) => {
                             if (e.target.checked) {
                               // 全选所有可加入的用户
@@ -2683,9 +2707,9 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                                 .filter(p => {
                                   const isUnregistered = isUnregisteredMember(p.name)
                                   const canFix = isUnregistered && isMember(p.name)
-                                  return canFix && !previewFixedUsers.has(p.name.trim())
+                                  return canFix && !previewFixedUsers.has(normalizeName(p.name))
                                 })
-                                .map(p => p.name.trim())
+                                .map(p => normalizeName(p.name))
                               setSelectedUsers(new Set(selectableUsers))
                             } else {
                               // 取消全选
@@ -2715,15 +2739,16 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {previewData.players.map((player, idx) => {
+                      const nameKey = normalizeName(player.name)
                       const isUnregistered = isUnregisteredMember(player.name)
-                      const isFixing = previewFixingUsers.has(player.name.trim())
-                      const isFixed = previewFixedUsers.has(player.name.trim())
+                      const isFixing = previewFixingUsers.has(nameKey)
+                      const isFixed = previewFixedUsers.has(nameKey)
                       const canFix = isUnregistered && isMember(player.name)
                       
                       // 获取用户ID
                       const userId = findUserByImportedName(player.name)?.id
                       
-                      const isSelected = selectedUsers.has(player.name.trim())
+                      const isSelected = selectedUsers.has(nameKey)
                       
                       return (
                       <tr 
@@ -2741,11 +2766,11 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                               checked={isSelected}
                               onChange={(e) => {
                                 if (e.target.checked) {
-                                  setSelectedUsers(prev => new Set(prev).add(player.name.trim()))
+                                  setSelectedUsers(prev => new Set(prev).add(nameKey))
                                 } else {
                                   setSelectedUsers(prev => {
                                     const newSet = new Set(prev)
-                                    newSet.delete(player.name.trim())
+                                    newSet.delete(nameKey)
                                     return newSet
                                   })
                                 }
