@@ -33,6 +33,7 @@ export const FIELD_PERMISSIONS: TablePermissions = {
     status: ['admin'],
     event_type: ['admin'],
     scoring_mode: ['admin'],
+    team_manual_scores: ['admin'],
     par_values: ['admin'],
     team_config: ['admin'],
     article_published: ['admin', 'editor'],

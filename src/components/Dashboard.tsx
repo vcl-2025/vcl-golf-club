@@ -646,7 +646,7 @@ export default function Dashboard() {
           if (eventIds.length > 0) {
             const { data: eventsById } = await supabase
               .from('events')
-              .select('id, title, start_time, end_time, location, event_type, scoring_mode, team_colors')
+              .select('id, title, start_time, end_time, location, event_type, scoring_mode, team_colors, team_manual_scores')
               .in('id', eventIds)
             
             eventsById?.forEach(event => {
@@ -658,7 +658,7 @@ export default function Dashboard() {
           if (competitionNames.length > 0) {
             const { data: eventsByTitle } = await supabase
               .from('events')
-              .select('id, title, start_time, end_time, location, event_type, scoring_mode, team_colors')
+              .select('id, title, start_time, end_time, location, event_type, scoring_mode, team_colors, team_manual_scores')
               .in('title', competitionNames)
             
             eventsByTitle?.forEach(event => {
@@ -743,7 +743,7 @@ export default function Dashboard() {
             if (key.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               const { data: eventData } = await supabase
                 .from('events')
-                .select('id, title, event_type, scoring_mode, location, end_time, team_colors, image_url, article_featured_image_url')
+                .select('id, title, event_type, scoring_mode, location, end_time, team_colors, team_manual_scores, image_url, article_featured_image_url')
                 .eq('id', key)
                 .single()
               event = eventData
@@ -751,7 +751,7 @@ export default function Dashboard() {
               // 如果key是title，尝试匹配
               const { data: eventData } = await supabase
                 .from('events')
-                .select('id, title, event_type, scoring_mode, location, end_time, team_colors, image_url, article_featured_image_url')
+                .select('id, title, event_type, scoring_mode, location, end_time, team_colors, team_manual_scores, image_url, article_featured_image_url')
                 .eq('title', key)
                 .limit(1)
               event = eventData?.[0]
@@ -788,7 +788,13 @@ export default function Dashboard() {
           } else if (eventType === '团体赛') {
             const scoringMode: ScoringMode =
               (event as { scoring_mode?: ScoringMode })?.scoring_mode || 'ryder_cup'
-            const teamSummaries = computeTeamSummaryScores(scores, scoringMode)
+            const manualTeamScores = (event as { team_manual_scores?: Record<string, number> })
+              ?.team_manual_scores
+            const teamSummaries = computeTeamSummaryScores(
+              scores,
+              scoringMode,
+              manualTeamScores
+            )
             const teams = teamSummaries.map((team, index) => ({
               ...team,
               rank: index + 1,

@@ -85,7 +85,13 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
     headers: string[]
     parValues: number[]
   } | null>(null)
-  const [importMode, setImportMode] = useState<'individual' | 'team_ryder' | 'team_strokes'>('individual')
+  const [importMode, setImportMode] = useState<
+    'individual' | 'team_ryder' | 'team_strokes' | 'team_stableford'
+  >('individual')
+  /** Stableford：各队总分（GolfLive 等手填） */
+  const [stablefordManualScores, setStablefordManualScores] = useState<
+    Record<string, string>
+  >({})
   // 队伍名称映射：Excel中的名称 -> 系统显示的名称
   const [teamNameMapping, setTeamNameMapping] = useState<Record<string, string>>({})
   // 队伍颜色配置：Excel中的队伍名称 -> 颜色
@@ -112,7 +118,11 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
         winner: string | 'tie'
         teams: Array<{ teamName: string; wins?: number; totalStrokes?: number; playerCount: number }>
       }>
-      importMode?: 'individual' | 'team_ryder' | 'team_strokes'
+      importMode?:
+        | 'individual'
+        | 'team_ryder'
+        | 'team_strokes'
+        | 'team_stableford'
     }
   } | null>(null)
   
@@ -1409,13 +1419,19 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       })
 
       // 尝试从数据库加载已保存的配置，但只保留当前Excel中存在的队伍
+      let eventData: {
+        team_name_mapping?: Record<string, string>
+        team_colors?: Record<string, string>
+        team_manual_scores?: Record<string, number>
+      } | null = null
       if (selectedEvent?.id) {
-        const { data: eventData } = await supabase
+        const { data: loadedEvent } = await supabase
           .from('events')
-          .select('team_name_mapping, team_colors')
+          .select('team_name_mapping, team_colors, team_manual_scores')
           .eq('id', selectedEvent.id)
           .single()
-        
+        eventData = loadedEvent
+
         // 只合并当前Excel中存在的队伍的配置
         if (eventData?.team_name_mapping) {
           Object.keys(eventData.team_name_mapping).forEach(excelName => {
@@ -1435,6 +1451,20 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
       setTeamNameMapping(initialTeamNameMapping)
       setTeamColors(initialTeamColors)
+
+      const initialStableford: Record<string, string> = {}
+      Array.from(uniqueTeams).forEach((teamName) => {
+        initialStableford[teamName] = ''
+      })
+      const savedManual = eventData?.team_manual_scores
+      if (savedManual) {
+        Object.entries(savedManual).forEach(([excelName, score]) => {
+          if (uniqueTeams.has(excelName)) {
+            initialStableford[excelName] = String(score)
+          }
+        })
+      }
+      setStablefordManualScores(initialStableford)
 
       // 解析表头（用于预览表格）
       const headers: string[] = []
@@ -1467,8 +1497,48 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
   }
 
   // 执行实际导入
+  const getStablefordTeamNames = () =>
+    Object.keys(teamNameMapping).sort((a, b) =>
+      a.localeCompare(b, 'zh-CN')
+    )
+
+  const buildStablefordManualScoresPayload = (): Record<string, number> => {
+    const payload: Record<string, number> = {}
+    for (const teamName of getStablefordTeamNames()) {
+      const raw = stablefordManualScores[teamName]?.trim()
+      if (!raw) continue
+      const score = Number(raw)
+      if (!Number.isFinite(score) || score < 0) {
+        throw new Error(`队伍「${teamName}」的 Stableford 总分无效`)
+      }
+      payload[teamName] = Math.round(score)
+    }
+    return payload
+  }
+
   const handleImport = async () => {
     if (!selectedEvent || !previewData) return
+
+    if (importMode === 'team_stableford') {
+      const teamNames = getStablefordTeamNames()
+      if (teamNames.length === 0) {
+        showError('未识别到队伍，请确认 Excel 中有「体对抗」列')
+        return
+      }
+      const missing = teamNames.filter(
+        (t) => !stablefordManualScores[t]?.trim()
+      )
+      if (missing.length > 0) {
+        showError(`请填写各队 Stableford 总分：${missing.join('、')}`)
+        return
+      }
+      try {
+        buildStablefordManualScoresPayload()
+      } catch (e: unknown) {
+        showError(e instanceof Error ? e.message : '团体总分格式不正确')
+        return
+      }
+    }
 
     setImportStep('importing')
     setIsImporting(true)
@@ -1852,6 +1922,16 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       let teamStats = undefined
       if (importMode === 'team_ryder' || importMode === 'team_strokes') {
         teamStats = calculateTeamStats(dbPlayers)
+      } else if (importMode === 'team_stableford') {
+        const manualPayload = buildStablefordManualScoresPayload()
+        teamStats = {
+          totalScores: Object.entries(manualPayload).map(([teamName, score]) => ({
+            teamName,
+            score,
+          })),
+          details: [],
+          importMode: 'team_stableford',
+        }
       }
 
       // 保存 scoring_mode、event_type、par、team_name_mapping 和 team_colors 到 events 表
@@ -1866,9 +1946,15 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
       if (importMode === 'team_ryder') {
         updateEventData.event_type = '团体赛'
         updateEventData.scoring_mode = 'ryder_cup'
+        updateEventData.team_manual_scores = {}
       } else if (importMode === 'team_strokes') {
         updateEventData.event_type = '团体赛'
         updateEventData.scoring_mode = 'total_strokes'
+        updateEventData.team_manual_scores = {}
+      } else if (importMode === 'team_stableford') {
+        updateEventData.event_type = '团体赛'
+        updateEventData.scoring_mode = 'stableford'
+        updateEventData.team_manual_scores = buildStablefordManualScoresPayload()
       } else if (importMode === 'individual') {
         updateEventData.event_type = '个人赛'
         // 个人赛不需要 scoring_mode
@@ -2599,6 +2685,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                     setPreviewData(null)
                     setTeamNameMapping({})
                     setTeamColors({})
+                    setStablefordManualScores({})
                     if (fileInputRef.current) {
                       fileInputRef.current.value = ''
                     }
@@ -2935,7 +3022,68 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                     </div>
                   </div>
                 </div>
+
+                <div
+                  onClick={() => setImportMode('team_stableford')}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    importMode === 'team_stableford'
+                      ? 'border-[#F15B98] bg-[#F15B98]/10'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={importMode === 'team_stableford'}
+                      onChange={() => setImportMode('team_stableford')}
+                      className="mr-3"
+                    />
+                    <div>
+                      <div className="font-semibold text-gray-900">团体赛（Stableford / 稳定分）</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        个人逐洞成绩照常导入；红绿团体总分请手填（如 GolfLive PK 结果），分高者胜
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {importMode === 'team_stableford' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                  <p className="text-sm text-amber-900 font-medium">
+                    填写各队 Stableford 团体总分（与 GolfLive 最终比分一致）
+                  </p>
+                  {getStablefordTeamNames().length === 0 ? (
+                    <p className="text-sm text-gray-600">预览数据中未识别到队伍，请检查「体对抗」列</p>
+                  ) : (
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {getStablefordTeamNames().map((teamName) => (
+                        <label key={teamName} className="block">
+                          <span className="text-sm text-gray-700 mb-1 block">
+                            {teamNameMapping[teamName] || teamName}
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            inputMode="numeric"
+                            placeholder="例如 521"
+                            value={stablefordManualScores[teamName] ?? ''}
+                            onChange={(e) =>
+                              setStablefordManualScores((prev) => ({
+                                ...prev,
+                                [teamName]: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               
               <div className="flex justify-end gap-3">
                 <button
@@ -2946,7 +3094,13 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                 </button>
                 <button
                   onClick={handleImport}
-                  disabled={isImporting}
+                  disabled={
+                    isImporting ||
+                    (importMode === 'team_stableford' &&
+                      getStablefordTeamNames().some(
+                        (t) => !stablefordManualScores[t]?.trim()
+                      ))
+                  }
                   className="px-6 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {isImporting ? (
@@ -3383,6 +3537,7 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
                     setPreviewData(null)
                     setTeamNameMapping({})
                     setTeamColors({})
+                    setStablefordManualScores({})
                     setPreviewFixedUsers(new Set())
                     setPreviewFixingUsers(new Set())
                     setSelectedUsers(new Set())
@@ -3420,12 +3575,21 @@ export default function ScoreForm({ onClose, onSuccess, preselectedEvent, presel
 
                 {importResult.teamStats && importResult.teamStats.totalScores.length > 0 && (
                   <div className="bg-white rounded-lg p-4">
-                    <div className="text-sm text-gray-600 mb-2">团队对抗统计</div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      {importResult.teamStats.importMode === 'team_stableford'
+                        ? 'Stableford 团体总分（手填）'
+                        : '团队对抗统计'}
+                    </div>
                     <div className="space-y-2">
                       {importResult.teamStats.totalScores.map((team, index) => (
                         <div key={index} className="flex items-center justify-between">
                           <span className="font-medium">{team.teamName}:</span>
-                          <span className="font-bold text-xl">{team.score}</span>
+                          <span className="font-bold text-xl">
+                            {team.score}
+                            {importResult.teamStats?.importMode === 'team_stableford' && (
+                              <span className="text-sm font-normal text-gray-500 ml-1">分</span>
+                            )}
+                          </span>
                         </div>
                       ))}
                     </div>

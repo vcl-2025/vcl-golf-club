@@ -1,6 +1,8 @@
 /** 团体赛成绩汇总（与 UserScoreQuery 比洞 / 总杆逻辑一致） */
 
-export type ScoringMode = 'ryder_cup' | 'total_strokes'
+export type ScoringMode = 'ryder_cup' | 'total_strokes' | 'stableford'
+
+export type TeamManualScores = Record<string, number>
 
 export interface TeamScoreRow {
   team_name?: string | null
@@ -129,10 +131,29 @@ function computeRyderCupTeamScores(scores: TeamScoreRow[]): TeamSummaryItem[] {
     .sort((a, b) => b.score - a.score)
 }
 
+function manualScoresToTeamSummary(
+  manualTeamScores: TeamManualScores
+): TeamSummaryItem[] {
+  return Object.entries(manualTeamScores)
+    .map(([team_name, raw]) => ({
+      team_name,
+      score: typeof raw === 'number' ? raw : Number(raw),
+    }))
+    .filter((t) => !Number.isNaN(t.score))
+    .sort((a, b) => b.score - a.score)
+}
+
 export function computeTeamSummaryScores(
   scores: TeamScoreRow[],
-  scoringMode: ScoringMode = 'ryder_cup'
+  scoringMode: ScoringMode = 'ryder_cup',
+  manualTeamScores?: TeamManualScores | null
 ): TeamSummaryItem[] {
+  if (scoringMode === 'stableford') {
+    if (manualTeamScores && Object.keys(manualTeamScores).length > 0) {
+      return manualScoresToTeamSummary(manualTeamScores)
+    }
+    return []
+  }
   if (scoringMode === 'total_strokes') {
     return computeTotalStrokesTeamScores(scores)
   }
@@ -146,8 +167,16 @@ export function formatTeamScoreDisplay(
   score: number,
   scoringMode: ScoringMode = 'ryder_cup'
 ): string {
+  if (scoringMode === 'stableford') {
+    return `${Math.round(score)}分`
+  }
   if (scoringMode === 'total_strokes') {
     return `${Math.round(score)}杆`
   }
   return score % 1 === 0 ? `${score}分` : `${score.toFixed(1)}分`
+}
+
+/** Stableford：分数高者胜 */
+export function isHigherTeamScoreBetter(scoringMode: ScoringMode): boolean {
+  return scoringMode === 'stableford'
 }

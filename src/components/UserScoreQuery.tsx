@@ -34,6 +34,10 @@ interface ScoreData {
     end_time: string
     location: string
     event_type?: string
+    scoring_mode?: string
+    team_name_mapping?: Record<string, string>
+    team_colors?: Record<string, string>
+    team_manual_scores?: Record<string, number>
   }
   user_profiles?: {
     id: string
@@ -218,7 +222,8 @@ export default function UserScoreQuery() {
             scoring_mode,
             par,
             team_name_mapping,
-            team_colors
+            team_colors,
+            team_manual_scores
           ),
           user_profiles (
             id,
@@ -247,7 +252,8 @@ export default function UserScoreQuery() {
             scoring_mode,
             par,
             team_name_mapping,
-            team_colors
+            team_colors,
+            team_manual_scores
           )
         `)
         .order('created_at', { ascending: false })
@@ -788,6 +794,8 @@ export default function UserScoreQuery() {
                       // 根据比赛模式确定计算方式
                       const scoringMode = group.event?.scoring_mode || 'ryder_cup'
                       const isTotalStrokesMode = scoringMode === 'total_strokes'
+                      const isStablefordMode = scoringMode === 'stableford'
+                      const manualTeamScores = group.event?.team_manual_scores || {}
 
                       // 团体赛全场个人名次（用于小组个人区冠亚季军图标）
                       const getEventPlayerKey = (p: {
@@ -962,6 +970,21 @@ export default function UserScoreQuery() {
                       
                       // 按组号排序
                       groupDetails.sort((a, b) => a.group - b.group)
+
+                      // Stableford：顶部团体总分为手填，不用净杆或比洞累计
+                      if (
+                        isStablefordMode &&
+                        manualTeamScores &&
+                        Object.keys(manualTeamScores).length > 0
+                      ) {
+                        totalScores.clear()
+                        Object.entries(manualTeamScores).forEach(([teamName, score]) => {
+                          const n = Number(score)
+                          if (!Number.isNaN(n)) {
+                            totalScores.set(teamName, n)
+                          }
+                        })
+                      }
                       
                       // 获取所有团队名称并按得分排序（使用原始名称）
                       const allTeamNames = Array.from(totalScores.keys())
@@ -970,9 +993,8 @@ export default function UserScoreQuery() {
                         const scoreB = totalScores.get(b) || 0
                         if (isTotalStrokesMode) {
                           return scoreA - scoreB // 总杆数模式：按总杆数升序（越少越好）
-                        } else {
-                          return scoreB - scoreA // 莱德杯模式：按得分降序
                         }
+                        return scoreB - scoreA // 比洞 / Stableford：分高越好
                       })
                       
                       // 定义颜色数组（支持多个团队）
@@ -1025,9 +1047,11 @@ export default function UserScoreQuery() {
                       })
                       
                       // 根据比赛模式确定标题
-                      const titleText = isTotalStrokesMode
-                        ? '团体赛（总杆数模式）' 
-                        : '团体赛 (比洞模式)'
+                      const titleText = isStablefordMode
+                        ? '团体赛（Stableford / 稳定分）'
+                        : isTotalStrokesMode
+                          ? '团体赛（总杆数模式）'
+                          : '团体赛 (比洞模式)'
                       
                       return (
                         <div className="space-y-4 sm:space-y-6 mt-4">
@@ -1055,8 +1079,18 @@ export default function UserScoreQuery() {
                                     <span className="font-medium text-gray-900">{displayName}</span>
                                   </div>
                                   <div className="text-white rounded-lg px-4 sm:px-6 py-2 font-bold text-lg sm:text-xl flex-shrink-0" style={{ backgroundColor: color.bg }}>
-                                    {isTotalStrokesMode ? (score % 1 === 0 ? score.toString() : score.toFixed(1)) : score.toFixed(1)}
-                                    {isTotalStrokesMode && <span className="text-sm ml-1">杆（净）</span>}
+                                    {isStablefordMode
+                                      ? Math.round(score).toString()
+                                      : isTotalStrokesMode
+                                        ? score % 1 === 0
+                                          ? score.toString()
+                                          : score.toFixed(1)
+                                        : score.toFixed(1)}
+                                    {isStablefordMode ? (
+                                      <span className="text-sm ml-1">分</span>
+                                    ) : isTotalStrokesMode ? (
+                                      <span className="text-sm ml-1">杆（净）</span>
+                                    ) : null}
                                   </div>
                                 </div>
                               )

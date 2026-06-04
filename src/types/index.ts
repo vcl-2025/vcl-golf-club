@@ -60,7 +60,8 @@ export interface Event {
   article_featured_image_url?: string
   is_public?: boolean // 是否对所有人公开（true=所有人可见，false=仅会员可见）
   // 比赛计算方式
-  scoring_mode?: 'ryder_cup' | 'total_strokes' // 莱德杯模式或总杆模式
+  scoring_mode?: 'ryder_cup' | 'total_strokes' | 'stableford' // 比洞 / 总杆净杆合计 / Stableford（团体分手填）
+  team_manual_scores?: Record<string, number> // Stableford 等：队伍名 -> 团体总分
   par?: number[] // 标准杆数数组，包含18洞的PAR值
   // 队伍配置
   team_name_mapping?: Record<string, string> // 队伍名称映射：Excel中的原始名称 -> 系统显示名称
