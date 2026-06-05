@@ -558,6 +558,7 @@ export default function Dashboard() {
             event_type,
             scoring_mode,
             team_colors,
+            team_manual_scores,
             image_url,
             article_featured_image_url
           ),
@@ -579,6 +580,7 @@ export default function Dashboard() {
             event_type,
             scoring_mode,
             team_colors,
+            team_manual_scores,
             image_url,
             article_featured_image_url
           )
@@ -786,10 +788,31 @@ export default function Dashboard() {
               topThree: sortedScores.length > 0 ? sortedScores : undefined
             })
           } else if (eventType === '团体赛') {
-            const scoringMode: ScoringMode =
+            let scoringMode: ScoringMode =
               (event as { scoring_mode?: ScoringMode })?.scoring_mode || 'ryder_cup'
-            const manualTeamScores = (event as { team_manual_scores?: Record<string, number> })
+            let manualTeamScores = (event as { team_manual_scores?: Record<string, number> })
               ?.team_manual_scores
+
+            // Stableford 依赖手填团体分；关联查询未带上时补查一次
+            if (
+              scoringMode === 'stableford' &&
+              (!manualTeamScores || Object.keys(manualTeamScores).length === 0) &&
+              event?.id
+            ) {
+              const { data: stablefordEvent } = await supabase
+                .from('events')
+                .select('scoring_mode, team_manual_scores')
+                .eq('id', event.id)
+                .single()
+              if (stablefordEvent) {
+                scoringMode =
+                  (stablefordEvent.scoring_mode as ScoringMode) || scoringMode
+                manualTeamScores = stablefordEvent.team_manual_scores as
+                  | Record<string, number>
+                  | undefined
+              }
+            }
+
             const teamSummaries = computeTeamSummaryScores(
               scores,
               scoringMode,

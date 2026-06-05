@@ -273,7 +273,10 @@ const AdminAnalytics = () => {
       // 为散点图准备数据，按活动组织数据
       const scatterData: any[] = []
       const trends = Object.entries(eventScores).map(([eventId, eventScoreList]: [string, any]) => {
-        const sortedScores = eventScoreList.sort((a: any, b: any) => a.rank - b.rank)
+        // 按总杆升序取前三（杆数越少越好）；不用 rank 字段，避免导入未写名次时错配
+        const sortedScores = [...eventScoreList]
+          .filter((s: any) => s.total_strokes != null && !Number.isNaN(Number(s.total_strokes)))
+          .sort((a: any, b: any) => Number(a.total_strokes) - Number(b.total_strokes))
         const gold = sortedScores[0]
         const silver = sortedScores[1]
         const bronze = sortedScores[2]
@@ -698,7 +701,7 @@ const AdminAnalytics = () => {
         },
         yAxis: {
           type: 'value',
-          name: '杆数'
+          name: '杆数（越少越好）'
         },
         series: [
           {

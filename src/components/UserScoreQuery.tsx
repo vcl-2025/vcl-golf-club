@@ -796,6 +796,9 @@ export default function UserScoreQuery() {
                       const isTotalStrokesMode = scoringMode === 'total_strokes'
                       const isStablefordMode = scoringMode === 'stableford'
                       const manualTeamScores = group.event?.team_manual_scores || {}
+                      /** 比洞：组内几比几、逐洞圆点；Stableford 仅展示名单 */
+                      const showRyderGroupMatch =
+                        !isTotalStrokesMode && !isStablefordMode
 
                       // 团体赛全场个人名次（用于小组个人区冠亚季军图标）
                       const getEventPlayerKey = (p: {
@@ -887,6 +890,19 @@ export default function UserScoreQuery() {
                             group: groupNumber,
                             teams: groupTeams,
                             winner
+                          })
+                        } else if (isStablefordMode) {
+                          const groupTeams = teamEntries.map(([teamName, players]) => ({
+                            teamName,
+                            wins: 0,
+                            totalStrokes: 0,
+                            playerCount: players.length,
+                            players,
+                          }))
+                          groupDetails.push({
+                            group: groupNumber,
+                            teams: groupTeams,
+                            winner: 'tie',
                           })
                         } else {
                           // 莱德杯模式：按洞比较胜负
@@ -1119,7 +1135,7 @@ export default function UserScoreQuery() {
                               const uniqueWinsCount = new Map<string, number>()
                               let summaryText = ''
                               
-                              if (!isTotalStrokesMode) {
+                              if (showRyderGroupMatch) {
                                 // 莱德杯模式：计算每洞胜负
                                 for (let hole = 0; hole < 18; hole++) {
                                   const holeBestScores: Array<{ teamName: string; bestScore: number }> = []
@@ -1207,7 +1223,7 @@ export default function UserScoreQuery() {
                               
                               // 计算每洞的胜负结果（用于显示圆点，仅莱德杯模式）
                               const holeResultsByTeam = new Map<string, Array<boolean>>()
-                              if (!isTotalStrokesMode) {
+                              if (showRyderGroupMatch) {
                                 sortedGroupTeams.forEach(team => {
                                   holeResultsByTeam.set(team.teamName, [])
                                 })
@@ -1231,8 +1247,9 @@ export default function UserScoreQuery() {
                                     </div>
                                   </div>
                                   
-                                  {/* 左右分列布局 - 仅显示两个团队（仅莱德杯模式） */}
-                                  {sortedGroupTeams.length === 2 && !isTotalStrokesMode ? (
+                                  {/* 左右分列：比洞显示组比分；Stableford 仅队员名单 */}
+                                  {sortedGroupTeams.length === 2 &&
+                                  (showRyderGroupMatch || isStablefordMode) ? (
                                     <>
                                       {(() => {
                                         const team1 = sortedGroupTeams[0]
@@ -1241,21 +1258,6 @@ export default function UserScoreQuery() {
                                         const color2 = teamColorMap.get(team2.teamName) || teamColors[1]
                                         const displayName1 = teamDisplayNameMap.get(team1.teamName) || team1.teamName
                                         const displayName2 = teamDisplayNameMap.get(team2.teamName) || team2.teamName
-                                        const wins1 = teamWinsCount.get(team1.teamName) || 0
-                                        const wins2 = teamWinsCount.get(team2.teamName) || 0
-                                        let score1: number
-                                        let score2: number
-                                        if (wins1 > wins2) {
-                                          score1 = 1
-                                          score2 = 0
-                                        } else if (wins2 > wins1) {
-                                          score1 = 0
-                                          score2 = 1
-                                        } else {
-                                          score1 = 0.5
-                                          score2 = 0.5
-                                        }
-
                                         const renderAvatar = (
                                           player: (typeof team1.players)[0],
                                           color: typeof color1
@@ -1304,24 +1306,48 @@ export default function UserScoreQuery() {
                                                   {displayName1}
                                                 </span>
                                               </div>
-                                              <div className="flex-shrink-0">
-                                                <div
-                                                  className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 border border-gray-200 shadow-md"
-                                                  style={{
-                                                    background: `linear-gradient(to right, ${color1.bg} 0%, ${color1.bg} 40%, rgba(255,255,255,0.3) 50%, ${color2.bg} 60%, ${color2.bg} 100%)`,
-                                                  }}
-                                                >
-                                                  <span className="font-bold text-lg sm:text-xl text-white">
-                                                    {score1 === 0.5 ? '0.5' : score1.toString()}
-                                                  </span>
-                                                  <span className="text-white text-base sm:text-lg font-medium opacity-90">
-                                                    -
-                                                  </span>
-                                                  <span className="font-bold text-lg sm:text-xl text-white">
-                                                    {score2 === 0.5 ? '0.5' : score2.toString()}
-                                                  </span>
-                                                </div>
-                                              </div>
+                                              {showRyderGroupMatch && (() => {
+                                                const wins1 =
+                                                  teamWinsCount.get(team1.teamName) || 0
+                                                const wins2 =
+                                                  teamWinsCount.get(team2.teamName) || 0
+                                                let score1: number
+                                                let score2: number
+                                                if (wins1 > wins2) {
+                                                  score1 = 1
+                                                  score2 = 0
+                                                } else if (wins2 > wins1) {
+                                                  score1 = 0
+                                                  score2 = 1
+                                                } else {
+                                                  score1 = 0.5
+                                                  score2 = 0.5
+                                                }
+                                                return (
+                                                  <div className="flex-shrink-0">
+                                                    <div
+                                                      className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 border border-gray-200 shadow-md"
+                                                      style={{
+                                                        background: `linear-gradient(to right, ${color1.bg} 0%, ${color1.bg} 40%, rgba(255,255,255,0.3) 50%, ${color2.bg} 60%, ${color2.bg} 100%)`,
+                                                      }}
+                                                    >
+                                                      <span className="font-bold text-lg sm:text-xl text-white">
+                                                        {score1 === 0.5
+                                                          ? '0.5'
+                                                          : score1.toString()}
+                                                      </span>
+                                                      <span className="text-white text-base sm:text-lg font-medium opacity-90">
+                                                        -
+                                                      </span>
+                                                      <span className="font-bold text-lg sm:text-xl text-white">
+                                                        {score2 === 0.5
+                                                          ? '0.5'
+                                                          : score2.toString()}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                )
+                                              })()}
                                               <div className="flex-1 min-w-0 flex items-center justify-end gap-2">
                                                 <span className="font-semibold text-gray-900 truncate">
                                                   {displayName2}
@@ -1405,8 +1431,8 @@ export default function UserScoreQuery() {
                                         )
                                       })()}
                                       
-                                      {/* 18洞结果和总结（仅莱德杯模式，两个团队） - 放在卡片下方 */}
-                                      {(() => {
+                                      {/* 18洞结果和总结（仅比洞模式） */}
+                                      {showRyderGroupMatch && (() => {
                                         const team1 = sortedGroupTeams[0]
                                         const team2 = sortedGroupTeams[1]
                                         const color1 = teamColorMap.get(team1.teamName) || teamColors[0]
@@ -1504,7 +1530,7 @@ export default function UserScoreQuery() {
                                           <div key={team.teamName} className="relative">
                                             <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
                                             <div className="pl-3 sm:pl-4">
-                                              {!isTotalStrokesMode ? (
+                                              {showRyderGroupMatch ? (
                                                 <div className="flex items-center justify-between mb-2">
                                                   <div className="flex items-center gap-2">
                                                     <div className="w-3 h-3 rounded" style={{ backgroundColor: color.dot }}></div>
