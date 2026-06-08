@@ -1369,11 +1369,6 @@ export default function UserScoreQuery() {
                                                 <div className="pl-3 sm:pl-4 space-y-2">
                                                   {team1.players.map((player, idx) => (
                                                     <div key={idx} className="flex items-center gap-2 min-w-0">
-                                                      {renderEventRankBadge({
-                                                        name: player.name,
-                                                        groupNumber: group.group,
-                                                        teamName: team1.teamName,
-                                                      })}
                                                       {renderAvatar(player, color1)}
                                                       <div className="flex flex-col min-w-0 flex-1">
                                                         <div className="flex items-center gap-1 min-w-0">
@@ -1384,8 +1379,13 @@ export default function UserScoreQuery() {
                                                             <UserCheck className="w-4 h-4 text-green-500 shrink-0" />
                                                           )}
                                                         </div>
-                                                        <span className="text-xs text-gray-500">
+                                                        <span className="text-xs text-gray-500 flex items-center gap-1">
                                                           {player.totalStrokes || 0}杆
+                                                          {renderEventRankBadge({
+                                                            name: player.name,
+                                                            groupNumber: group.group,
+                                                            teamName: team1.teamName,
+                                                          })}
                                                         </span>
                                                       </div>
                                                     </div>
@@ -1403,11 +1403,6 @@ export default function UserScoreQuery() {
                                                       key={idx}
                                                       className="flex flex-row-reverse items-center gap-2 min-w-0"
                                                     >
-                                                      {renderEventRankBadge({
-                                                        name: player.name,
-                                                        groupNumber: group.group,
-                                                        teamName: team2.teamName,
-                                                      })}
                                                       {renderAvatar(player, color2)}
                                                       <div className="flex flex-col items-end min-w-0 flex-1">
                                                         <div className="flex items-center gap-1 min-w-0 max-w-full justify-end">
@@ -1418,8 +1413,13 @@ export default function UserScoreQuery() {
                                                             <UserCheck className="w-4 h-4 text-green-500 shrink-0" />
                                                           )}
                                                         </div>
-                                                        <span className="text-xs text-gray-500">
+                                                        <span className="text-xs text-gray-500 flex items-center gap-1 justify-end">
                                                           {player.totalStrokes || 0}杆
+                                                          {renderEventRankBadge({
+                                                            name: player.name,
+                                                            groupNumber: group.group,
+                                                            teamName: team2.teamName,
+                                                          })}
                                                         </span>
                                                       </div>
                                                     </div>
@@ -1548,11 +1548,6 @@ export default function UserScoreQuery() {
                                                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                                   {team.players.map((player, idx) => (
                                                     <div key={idx} className="flex items-center gap-2 sm:gap-3">
-                                                      {renderEventRankBadge({
-                                                        name: player.name,
-                                                        groupNumber: group.group,
-                                                        teamName: team.teamName,
-                                                      })}
                                                       <div className="relative flex-shrink-0">
                                                         <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
                                                              style={{ 
@@ -1589,8 +1584,13 @@ export default function UserScoreQuery() {
                                                             </span>
                                                           )}
                                                         </div>
-                                                        <span className="text-xs text-gray-500">
+                                                        <span className="text-xs text-gray-500 flex items-center gap-1">
                                                           {player.totalStrokes || 0}杆
+                                                          {renderEventRankBadge({
+                                                            name: player.name,
+                                                            groupNumber: group.group,
+                                                            teamName: team.teamName,
+                                                          })}
                                                         </span>
                                                       </div>
                                                     </div>
@@ -1609,11 +1609,6 @@ export default function UserScoreQuery() {
                                               <div key={`${team.teamName}-${idx}`} className="relative flex items-center gap-2 sm:gap-3">
                                                 <div className="absolute left-0 top-0 bottom-0 w-1 rounded-full" style={{ backgroundColor: color.bg }}></div>
                                                 <div className="pl-3 sm:pl-4 flex items-center gap-2 sm:gap-3 flex-1">
-                                                  {renderEventRankBadge({
-                                                    name: player.name,
-                                                    groupNumber: group.group,
-                                                    teamName: team.teamName,
-                                                  })}
                                                   <div className="relative flex-shrink-0">
                                                     <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 shadow-sm flex items-center justify-center overflow-hidden" 
                                                          style={{ 
@@ -1650,10 +1645,15 @@ export default function UserScoreQuery() {
                                                         </span>
                                                       )}
                                                     </div>
-                                                    <span className="text-xs text-gray-500">
+                                                    <span className="text-xs text-gray-500 flex items-center gap-1">
                                                       {player.netStrokes !== null && player.netStrokes !== undefined 
                                                         ? `${player.netStrokes % 1 === 0 ? player.netStrokes.toString() : player.netStrokes.toFixed(1)}杆` 
                                                         : '-'}
+                                                      {renderEventRankBadge({
+                                                        name: player.name,
+                                                        groupNumber: group.group,
+                                                        teamName: team.teamName,
+                                                      })}
                                                     </span>
                                                   </div>
                                                 </div>
