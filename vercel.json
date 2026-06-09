@@ -6,6 +6,10 @@
       "destination": "/api/information-og"
     },
     {
+      "source": "/open-graph/review-og",
+      "destination": "/api/review-og"
+    },
+    {
       "source": "^/(?!api/).*$",
       "destination": "/index.html"
     }
