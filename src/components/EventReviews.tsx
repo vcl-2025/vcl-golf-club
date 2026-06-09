@@ -13,6 +13,7 @@ import { useAuth } from '../hooks/useAuth'
 import { User } from '@supabase/supabase-js'
 import { uploadImageToSupabase, validateImageFile } from '../utils/imageUpload'
 import ShareModal from './ShareModal'
+import { formatReviewShareDescription } from '../lib/reviewOgShared'
 import { reviewSharePreviewUrl } from '../lib/reviewShareUrl'
 import {
   fetchEventParticipationSummary,
@@ -1097,8 +1098,10 @@ export default function EventReviews() {
     if (navigator.share && (isMobile || window.location.protocol === 'https:')) {
       try {
         await navigator.share({
-          title: selectedEvent.title || '活动回顾',
-          text: selectedEvent.article_excerpt || selectedEvent.description || '',
+          title: selectedEvent.title || '活动精彩回顾',
+          text: formatReviewShareDescription(
+            selectedEvent.article_excerpt || selectedEvent.description || ''
+          ),
           url: shareUrl,
         })
         return
@@ -1760,7 +1763,9 @@ export default function EventReviews() {
           onClose={() => setShowShareModal(false)}
           url={reviewSharePreviewUrl(window.location.origin, selectedEvent.id)}
           title={selectedEvent.title}
-          description={selectedEvent.article_excerpt || selectedEvent.description}
+          description={formatReviewShareDescription(
+            selectedEvent.article_excerpt || selectedEvent.description || ''
+          )}
           imageUrl={selectedEvent.article_featured_image_url || selectedEvent.image_url}
         />
       )}

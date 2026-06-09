@@ -19,6 +19,16 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+const REVIEW_SHARE_LABEL = '活动精彩回顾'
+
+/** 微信等分享卡片副标题：固定带「活动精彩回顾」 */
+export function formatReviewShareDescription(plain: string): string {
+  const text = stripHtml(plain).trim()
+  if (!text) return `VCL Golf Club ${REVIEW_SHARE_LABEL}`
+  const snippet = text.slice(0, 180) + (text.length > 180 ? '…' : '')
+  return `${REVIEW_SHARE_LABEL} · ${snippet}`
+}
+
 function toAbsoluteImageUrl(origin: string, url: string | null | undefined): string {
   if (!url) return `${origin}/logo-192x192.png`
   const u = url.trim()
@@ -67,13 +77,13 @@ export async function loadPublishedReviewOg(
         }>
         const row = rows[0]
         if (row) {
-          titleRaw = row.title ? `${row.title} - 活动回顾` : titleRaw
+          titleRaw = row.title
+            ? `${row.title} - ${REVIEW_SHARE_LABEL}`
+            : titleRaw
           const plain = row.article_excerpt?.trim()
-            ? stripHtml(row.article_excerpt)
-            : stripHtml(row.article_content || row.description || '')
-          descRaw = plain
-            ? plain.slice(0, 200) + (plain.length > 200 ? '…' : '')
-            : 'VCL Golf Club 活动精彩回顾'
+            ? row.article_excerpt
+            : row.article_content || row.description || ''
+          descRaw = formatReviewShareDescription(plain)
           imageAbs = toAbsoluteImageUrl(
             origin,
             row.article_featured_image_url || row.image_url
