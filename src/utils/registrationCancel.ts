@@ -5,12 +5,11 @@ type RegistrationForCancel = Pick<
   'approval_status' | 'payment_status' | 'status'
 >
 
-/** 报名截止前，会员可自助取消：待审批，或已通过但未付款 */
+/** 会员可自助取消：待审批，或已通过但未付款（与报名截止时间无关） */
 export function canMemberSelfCancelRegistration(
-  registration: RegistrationForCancel | null | undefined,
-  registrationOpen: boolean
+  registration: RegistrationForCancel | null | undefined
 ): boolean {
-  if (!registration || !registrationOpen) return false
+  if (!registration) return false
   if (registration.status === 'cancelled') return false
   if (registration.approval_status === 'pending') return true
   if (

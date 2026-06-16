@@ -516,8 +516,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
   const canCancelRegistration = () => {
     return (
       userRegistration != null &&
-      isRegistrationOpen() &&
-      canMemberSelfCancelRegistration(userRegistration, true)
+      canMemberSelfCancelRegistration(userRegistration)
     )
   }
 

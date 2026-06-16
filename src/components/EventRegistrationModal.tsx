@@ -313,7 +313,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
   const isRegistrationOpen = () => new Date() < new Date(event.registration_deadline)
 
   const canCancelRegistration = () =>
-    canMemberSelfCancelRegistration(existingRegistration, isRegistrationOpen())
+    canMemberSelfCancelRegistration(existingRegistration)
 
   const openCancelForm = () => {
     setMessage('')
@@ -669,7 +669,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                     <ul className="space-y-1 text-xs">
                       <li>• 报名缴费后提交缴费证明，等待审核</li>
                       <li>• 审核通过后，报名正式生效</li>
-                      <li>• 审核中或未付款前（报名截止前）可自行取消报名</li>
+                      <li>• 审核中或未付款前可自行取消报名</li>
                     </ul>
                   </div>
                 </div>
