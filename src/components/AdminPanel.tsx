@@ -149,6 +149,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
 
   // 切换管理后台视图的辅助函数：同时更新 state 和 URL
   const handleAdminViewChange = useCallback((view: 'dashboard' | 'events' | 'registrations' | 'posters' | 'scores' | 'investments' | 'expenses' | 'members' | 'information' | 'audit' | 'role_permissions') => {
+    setOpenActionMenuId(null)
     setCurrentView(view)
     const newParams = new URLSearchParams(searchParams)
     
@@ -1435,7 +1436,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                       )}
                     </div>
                   </th>
-                  <th className="px-2 md:px-6 py-4 text-center text-base font-semibold text-gray-700 w-24 md:w-24 min-w-[50px]">操作</th>
+                  {(modulePermissions.events.can_update || modulePermissions.events.can_delete) && (
+                    <th className="sticky right-0 z-20 bg-gray-50 px-2 md:px-6 py-4 text-center text-base font-semibold text-gray-700 w-24 min-w-[50px] shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)]">操作</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1447,7 +1450,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                   const matchesStatus = statusFilter === 'all' || status === statusFilter
                   return matchesSearch && matchesStatus
                 }).map((event) => (
-                  <tr key={event.id} className="hover:bg-green-50">
+                  <tr key={event.id} className="group hover:bg-green-50">
                     <td className="px-6 py-4 w-56">
                       <div className="font-medium text-gray-900 truncate" title={event.title}>{event.title}</div>
                     </td>
@@ -1505,10 +1508,8 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                         </span>
                       </div>
                     </td>
-                    <td className="px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium w-24 md:w-24 min-w-[50px]">
-                      {/* 只有有操作权限时才显示操作列 */}
-                      {(modulePermissions.events.can_update || modulePermissions.events.can_delete) && (
-                        <>
+                    {(modulePermissions.events.can_update || modulePermissions.events.can_delete) && (
+                      <td className={`sticky right-0 px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium w-24 min-w-[50px] bg-white group-hover:bg-green-50 shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)] ${openActionMenuId === event.id ? 'z-50' : 'z-10'}`}>
                           {/* 桌面端：横向图标 */}
                           <div className="hidden md:flex items-center justify-center space-x-2">
                             {modulePermissions.events.can_update && (
@@ -1546,7 +1547,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                           </div>
                           
                           {/* 手机端：三个点菜单 */}
-                          <div className="md:hidden relative action-menu-container flex items-center justify-center">
+                          <div className={`md:hidden relative action-menu-container flex items-center justify-center ${openActionMenuId === event.id ? 'z-50' : ''}`}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -1560,7 +1561,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                             
                             {/* 下拉菜单 */}
                             {openActionMenuId === event.id && (
-                              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]">
+                              <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 z-[60] min-w-[140px]">
                                 {modulePermissions.events.can_update && (
                                   <>
                                     <button
@@ -1601,9 +1602,8 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                               </div>
                             )}
                           </div>
-                        </>
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -2263,7 +2263,9 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-center text-base font-semibold text-gray-700 w-28">操作</th>
+                  {(modulePermissions.information.can_update || modulePermissions.information.can_delete) && (
+                    <th className="sticky right-0 z-20 bg-gray-50 px-2 md:px-6 py-4 text-center text-base font-semibold text-gray-700 w-24 min-w-[50px] shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)]">操作</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -2276,7 +2278,7 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                   const matchesCategory = informationCategoryFilter === 'all' || item.category === informationCategoryFilter
                   return matchesSearch && matchesStatus && matchesCategory
                 }).map((item) => (
-                  <tr key={item.id} className="hover:bg-green-50">
+                  <tr key={item.id} className="group hover:bg-green-50">
                     <td className="px-6 py-4 w-48">
                       <div className="flex items-center space-x-2">
                         {item.is_pinned && (
@@ -2287,8 +2289,8 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center w-24">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-2 md:px-6 py-4 text-center w-24">
+                      <span className={`inline-flex whitespace-nowrap px-2 py-1 rounded-full text-xs font-medium ${
                         item.category === '公告' ? 'bg-blue-100 text-blue-800' :
                         item.category === '通知' ? 'bg-yellow-100 text-yellow-800' :
                         item.category === '重要资料' ? 'bg-green-100 text-green-800' :
@@ -2297,8 +2299,8 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                         {item.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center w-24">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-2 md:px-6 py-4 text-center w-24">
+                      <span className={`inline-flex whitespace-nowrap px-2 py-1 rounded-full text-xs font-medium ${
                         item.status === 'published' ? 'bg-green-100 text-green-800' :
                         item.status === 'draft' ? 'bg-gray-100 text-gray-800' :
                         'bg-red-100 text-red-800'
@@ -2336,31 +2338,78 @@ export default function AdminPanel({ adminMenuVisible = true }: AdminPanelProps)
                     <td className="px-6 py-4 text-center text-sm text-gray-600 w-20">
                       {item.view_count || 0}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium w-28">
-                      <div className="flex items-center justify-center space-x-2">
-                        {modulePermissions.information.can_update && (
+                    {(modulePermissions.information.can_update || modulePermissions.information.can_delete) && (
+                      <td className={`sticky right-0 px-2 md:px-6 py-4 whitespace-nowrap text-sm font-medium w-24 min-w-[50px] bg-white group-hover:bg-green-50 shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)] ${openActionMenuId === item.id ? 'z-50' : 'z-10'}`}>
+                        {/* 桌面端：横向图标 */}
+                        <div className="hidden md:flex items-center justify-center space-x-2">
+                          {modulePermissions.information.can_update && (
+                            <button
+                              onClick={() => {
+                                setSelectedInformationItem(item)
+                                setShowInformationForm(true)
+                              }}
+                              className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
+                              title="编辑"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
+                          {modulePermissions.information.can_delete && (
+                            <button
+                              onClick={() => handleDeleteInformation(item.id)}
+                              className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
+                              title="删除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* 手机端：三个点菜单 */}
+                        <div className={`md:hidden relative action-menu-container flex items-center justify-center ${openActionMenuId === item.id ? 'z-50' : ''}`}>
                           <button
-                            onClick={() => {
-                              setSelectedInformationItem(item)
-                              setShowInformationForm(true)
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setOpenActionMenuId(openActionMenuId === item.id ? null : item.id)
                             }}
-                            className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
-                            title="编辑"
+                            className="text-gray-600 hover:text-gray-800 p-1.5 rounded hover:bg-gray-50"
+                            title="操作"
                           >
-                            <Edit className="w-4 h-4" />
+                            <MoreVertical className="w-5 h-5" />
                           </button>
-                        )}
-                        {modulePermissions.information.can_delete && (
-                          <button
-                            onClick={() => handleDeleteInformation(item.id)}
-                            className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
-                            title="删除"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+
+                          {openActionMenuId === item.id && (
+                            <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 z-[60] min-w-[140px]">
+                              {modulePermissions.information.can_update && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedInformationItem(item)
+                                    setShowInformationForm(true)
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-green-50 flex items-center space-x-2"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  <span>编辑</span>
+                                </button>
+                              )}
+                              {modulePermissions.information.can_delete && (
+                                <button
+                                  onClick={() => {
+                                    handleDeleteInformation(item.id)
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span>删除</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

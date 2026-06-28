@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { 
   X, Calendar, MapPin, Users, Clock, User, Check, CircleHelp,
-  FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Save, Eye, Maximize2, Minimize2, Share2, ChevronLeft, ShoppingCart, Image as ImageIcon, Upload
+  FileText, AlertCircle, CheckCircle, ArrowLeft, Edit3, Maximize2, Share2, ChevronLeft, ShoppingCart, Image as ImageIcon, Upload
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Event, EventStats, EventRegistration } from '../types'
@@ -461,6 +461,58 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
     }
   }
 
+  const renderArticleEditorHeader = () => (
+    <div className="shrink-0 flex items-center gap-2 min-w-0 px-3 py-3 md:px-4 md:py-4 border-b border-gray-200 bg-white">
+      <button
+        type="button"
+        onClick={() => setIsFullscreenEditing(false)}
+        className="shrink-0 p-2 -ml-1 text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100 md:flex md:items-center md:px-0 md:py-0 md:hover:bg-transparent"
+        aria-label="返回"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span className="hidden md:inline ml-2">返回</span>
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-gray-500 md:hidden">编辑精彩回顾</p>
+        <h2 className="text-base md:text-xl font-semibold text-gray-900 truncate" title={event.title}>
+          <span className="hidden md:inline">全屏编辑 - </span>
+          {event.title}
+        </h2>
+      </div>
+    </div>
+  )
+
+  const renderArticleEditorFooter = () => (
+    <div className="shrink-0 border-t border-gray-200 bg-white px-3 py-2 md:px-4 md:py-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <div className="flex items-center gap-2 md:justify-end md:gap-3">
+        <button
+          type="button"
+          onClick={() => setIsFullscreenEditing(false)}
+          disabled={savingArticle}
+          className="flex-1 md:flex-none px-3 md:px-6 py-2 md:py-2.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          取消
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveArticle}
+          disabled={savingArticle}
+          className="flex-1 md:flex-none px-3 md:px-6 py-2 md:py-2.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {savingArticle ? '保存中' : '存草稿'}
+        </button>
+        <button
+          type="button"
+          onClick={handlePublishArticle}
+          disabled={savingArticle}
+          className="flex-1 md:flex-none px-3 md:px-6 py-2 md:py-2.5 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+        >
+          {savingArticle ? '发布中' : '发布'}
+        </button>
+      </div>
+    </div>
+  )
+
   const formatDate = (dateString: string) => {
     return formatEventDateInTimezone(dateString)
   }
@@ -884,52 +936,14 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
 
         {/* 全屏编辑模态窗口 */}
         {isFullscreenEditing && (
-          <div className="fixed inset-0 bg-white z-[80] flex flex-col">
-            {/* 全屏编辑器头部 */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-              <div className="flex items-center">
-                <button
-                  onClick={() => setIsFullscreenEditing(false)}
-                  className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
-                >
-                  <ArrowLeft className="w-5 h-5 mr-2" />
-                  返回
-                </button>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  全屏编辑 - {event.title}
-                </h2>
-              </div>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={handleSaveArticle}
-                  disabled={savingArticle}
-                  className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {savingArticle ? '保存中...' : '保存草稿'}
-                </button>
-                <button
-                  onClick={handlePublishArticle}
-                  disabled={savingArticle}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  {savingArticle ? '发布中...' : '发布文章'}
-                </button>
-                <button
-                  onClick={() => setIsFullscreenEditing(false)}
-                  className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  <Minimize2 className="w-4 h-4 mr-2" />
-                  退出全屏
-                </button>
-              </div>
-            </div>
+          <div className="fixed inset-0 bg-white z-[80] flex flex-col min-h-0">
+            {renderArticleEditorHeader()}
 
             {/* 全屏编辑器内容 */}
-            <div className="flex-1 flex flex-col p-6">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-3 md:p-6">
+              <div className="shrink-0 space-y-4 md:space-y-6 overflow-y-auto max-h-[28vh] md:max-h-[min(42vh,420px)] pr-1">
               {/* 发布设置 */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -947,7 +961,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
               </div>
 
               {/* 文章摘要 */}
-              <div className="mb-6">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   文章摘要
                 </label>
@@ -961,7 +975,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
               </div>
 
               {/* 回顾封面图 */}
-              <div className="mb-6">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <ImageIcon className="w-4 h-4 inline mr-2" />
                   回顾封面图
@@ -1031,24 +1045,26 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                   留空时，回顾列表会回退使用活动图片。
                 </p>
               </div>
+              </div>
 
               {/* 文章内容 */}
-              <div className="flex-1 flex flex-col">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="flex-1 flex flex-col min-h-0 mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
                   文章内容
                 </label>
-                <div className="flex-1">
+                <div className="flex-1 min-h-0">
                   <TinyMCEEditor
                     content={articleContent}
                     onChange={setArticleContent}
                     placeholder="请写下活动的精彩回顾..."
-                    editorId="fullscreen-article-editor"
-                    height={window.innerHeight - 300}
+                    editorId="fullscreen-article-editor-standalone"
+                    fillHeight
                   />
                 </div>
               </div>
 
             </div>
+            {renderArticleEditorFooter()}
           </div>
         )}
       </div>
@@ -1410,52 +1426,14 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
 
       {/* 全屏编辑模态窗口 */}
       {isFullscreenEditing && (
-        <div className="fixed inset-0 bg-white z-[80] flex flex-col">
-          {/* 全屏编辑器头部 */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-            <div className="flex items-center">
-              <button
-                onClick={() => setIsFullscreenEditing(false)}
-                className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
-              >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                返回
-              </button>
-              <h2 className="text-xl font-semibold text-gray-900">
-                全屏编辑 - {event.title}
-              </h2>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={handleSaveArticle}
-                disabled={savingArticle}
-                className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {savingArticle ? '保存中...' : '保存草稿'}
-              </button>
-              <button
-                onClick={handlePublishArticle}
-                disabled={savingArticle}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                {savingArticle ? '发布中...' : '发布文章'}
-              </button>
-              <button
-                onClick={() => setIsFullscreenEditing(false)}
-                className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <Minimize2 className="w-4 h-4 mr-2" />
-                退出全屏
-              </button>
-            </div>
-          </div>
+        <div className="fixed inset-0 bg-white z-[80] flex flex-col min-h-0">
+          {renderArticleEditorHeader()}
 
           {/* 全屏编辑器内容 */}
-          <div className="flex-1 flex flex-col p-6">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-3 md:p-6">
+            <div className="shrink-0 space-y-4 md:space-y-6 overflow-y-auto max-h-[28vh] md:max-h-[min(42vh,420px)] pr-1">
             {/* 发布设置 */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className="flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -1473,7 +1451,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
             </div>
 
             {/* 文章摘要 */}
-            <div className="mb-6">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 文章摘要
               </label>
@@ -1487,7 +1465,7 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
             </div>
 
             {/* 回顾封面图 */}
-            <div className="mb-6">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <ImageIcon className="w-4 h-4 inline mr-2" />
                 回顾封面图
@@ -1557,24 +1535,26 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
                 留空时，回顾列表会回退使用活动图片。
               </p>
             </div>
+            </div>
 
             {/* 文章内容 */}
-            <div className="flex-1 flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="flex-1 flex flex-col min-h-0 mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
                 文章内容
               </label>
-              <div className="flex-1">
+              <div className="flex-1 min-h-0">
                 <TinyMCEEditor
                   content={articleContent}
                   onChange={setArticleContent}
                   placeholder="请写下活动的精彩回顾..."
-                  editorId="fullscreen-article-editor"
-                  height={window.innerHeight - 300}
+                  editorId="fullscreen-article-editor-modal"
+                  fillHeight
                 />
               </div>
             </div>
 
           </div>
+          {renderArticleEditorFooter()}
         </div>
       )}
     </>

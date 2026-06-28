@@ -6,21 +6,54 @@ interface TinyMCEEditorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   height?: number;
+  /** 填满父容器高度（父级需 flex-1 + min-h-0） */
+  fillHeight?: boolean;
   editorId?: string;
 }
+
+const EDITOR_CONTENT_STYLE =
+  'body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; } img { max-width: 100%; height: auto; }';
 
 export default function TinyMCEEditor({
   content,
   onChange,
   placeholder = "请输入内容...",
   height = 300,
+  fillHeight = false,
   editorId: propEditorId,
 }: TinyMCEEditorProps) {
   const editorId = useRef(propEditorId || `editor-${Math.random().toString(36).substr(2, 9)}`);
+  const containerRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [tinymceLoaded, setTinymceLoaded] = useState(false);
   const [tinymceError, setTinymceError] = useState(false);
+
+  const resizeEditorToContainer = () => {
+    if (!fillHeight || !containerRef.current || !window.tinymce) return;
+    const editor = window.tinymce.get(editorId.current);
+    if (!editor) return;
+
+    const nextHeight = Math.max(Math.floor(containerRef.current.clientHeight), 240);
+    const container = editor.getContainer?.();
+    if (container) {
+      container.style.height = `${nextHeight}px`;
+    }
+    if (typeof editor.theme?.resizeTo === 'function') {
+      editor.theme.resizeTo(container?.clientWidth || null, nextHeight);
+    }
+  };
+
+  useEffect(() => {
+    if (!fillHeight || !containerRef.current) return;
+
+    const observer = new ResizeObserver(() => {
+      resizeEditorToContainer();
+    });
+    observer.observe(containerRef.current);
+
+    return () => observer.disconnect();
+  }, [fillHeight, tinymceLoaded]);
 
   // 检测是否为移动设备和微信浏览器
   useEffect(() => {
@@ -56,9 +89,13 @@ export default function TinyMCEEditor({
         const mobileConfig = getMobileConfig();
         console.log('移动端配置:', mobileConfig);
         
+        const initialHeight = fillHeight
+          ? Math.max(containerRef.current?.clientHeight || height, 240)
+          : height;
+
         window.tinymce.init({
           selector: `#${editorId.current}`,
-          height: height,
+          height: initialHeight,
           theme: 'silver',
           skin: 'oxide',
           plugins: isMobileDevice ? [
@@ -94,7 +131,7 @@ export default function TinyMCEEditor({
           branding: false,
           statusbar: true,
           promotion: false,
-          content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; }',
+          content_style: EDITOR_CONTENT_STYLE,
           font_family_formats: '微软雅黑=Microsoft YaHei,Helvetica Neue,PingFang SC,sans-serif;苹果苹方=PingFang SC,Microsoft YaHei,sans-serif;宋体=simsun,serif;仿宋体=FangSong,serif;黑体=SimHei,sans-serif;Arial=arial,helvetica,sans-serif;Arial Black=arial black,avant garde;Times New Roman=times new roman,times;Courier New=courier new,courier;',
           font_size_formats: '8pt 9pt 10pt 11pt 12pt 13pt 14pt 15pt 16pt 17pt 18pt 19pt 20pt 21pt 22pt 23pt 24pt 25pt 26pt 27pt 28pt 29pt 30pt 32pt 34pt 36pt 38pt 40pt 42pt 44pt 46pt 48pt 50pt 52pt 54pt 56pt 58pt 60pt 62pt 64pt 66pt 68pt 70pt 72pt 74pt 76pt 78pt 80pt 82pt 84pt 86pt 88pt 90pt 92pt 94pt 96pt 98pt 100pt',
           image_advtab: true,
@@ -188,6 +225,7 @@ export default function TinyMCEEditor({
                 if (content) {
                   editor.setContent(content);
                 }
+                resizeEditorToContainer();
               }, 0);
             });
             editor.on('change keyup', () => {
@@ -239,9 +277,13 @@ export default function TinyMCEEditor({
           const isMobileDevice = window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
           const mobileConfig = getMobileConfig();
           
+          const initialHeight = fillHeight
+            ? Math.max(containerRef.current?.clientHeight || height, 240)
+            : height;
+
           window.tinymce.init({
             selector: `#${editorId.current}`,
-            height: height,
+            height: initialHeight,
             plugins: isMobileDevice ? [
               'lists', 'link', 'image', 'emoticons', 'wordcount'
             ] : [
@@ -277,6 +319,7 @@ export default function TinyMCEEditor({
             promotion: false,
             license_key: 'gpl',
             language: 'zh_CN',
+            content_style: EDITOR_CONTENT_STYLE,
             font_family_formats: '微软雅黑=Microsoft YaHei,Helvetica Neue,PingFang SC,sans-serif;苹果苹方=PingFang SC,Microsoft YaHei,sans-serif;宋体=simsun,serif;仿宋体=FangSong,serif;黑体=SimHei,sans-serif;Arial=arial,helvetica,sans-serif;Arial Black=arial black,avant garde;Times New Roman=times new roman,times;Courier New=courier new,courier;',
             font_size_formats: '8pt 9pt 10pt 11pt 12pt 13pt 14pt 15pt 16pt 17pt 18pt 19pt 20pt 21pt 22pt 23pt 24pt 25pt 26pt 27pt 28pt 29pt 30pt 32pt 34pt 36pt 38pt 40pt 42pt 44pt 46pt 48pt 50pt 52pt 54pt 56pt 58pt 60pt 62pt 64pt 66pt 68pt 70pt 72pt 74pt 76pt 78pt 80pt 82pt 84pt 86pt 88pt 90pt 92pt 94pt 96pt 98pt 100pt',
             setup: (editor: any) => {
@@ -287,6 +330,7 @@ export default function TinyMCEEditor({
                   if (content) {
                     editor.setContent(content);
                   }
+                  resizeEditorToContainer();
                 }, 0);
               });
               
@@ -425,7 +469,17 @@ export default function TinyMCEEditor({
     return renderMobileFallback();
   }
 
-  return <textarea id={editorId.current} />;
+  const textarea = <textarea id={editorId.current} />;
+
+  if (fillHeight) {
+    return (
+      <div ref={containerRef} className="tinymce-container h-full min-h-[240px] w-full">
+        {textarea}
+      </div>
+    );
+  }
+
+  return textarea;
 }
 
 declare global {

@@ -1260,14 +1260,14 @@ export default function ExpenseAdmin() {
                   </td>
                   {(modulePermissions.can_update || modulePermissions.can_delete) && (
                     <td
-                      className={`sticky right-0 z-10 px-3 py-4 whitespace-nowrap text-sm font-medium min-w-[88px] shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)] ${
+                      className={`sticky right-0 px-3 py-4 whitespace-nowrap text-sm font-medium min-w-[88px] shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.08)] ${
                         selectedIds.has(expense.id)
                           ? 'bg-green-50/80'
                           : 'bg-white group-hover:bg-green-50'
-                      }`}
+                      } ${openActionMenuId === expense.id ? 'z-50' : 'z-10'}`}
                     >
                       {/* 宽屏：横向图标；中等宽度用 ⋯ 菜单，避免按钮被挤裁切 */}
-                      <div className="hidden lg:flex items-center justify-center gap-1 shrink-0">
+                      <div className="hidden md:flex items-center justify-center gap-1 shrink-0">
                         {expense.receipt_url && (() => {
                           const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
                           return (
@@ -1304,7 +1304,7 @@ export default function ExpenseAdmin() {
                         )}
                       </div>
                       
-                      <div className="lg:hidden relative action-menu-container flex items-center justify-center">
+                      <div className="md:hidden relative action-menu-container flex items-center justify-center">
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
@@ -1318,7 +1318,7 @@ export default function ExpenseAdmin() {
                         
                         {/* 下拉菜单 */}
                         {openActionMenuId === expense.id && (
-                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 min-w-[140px]">
+                          <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 z-[60] min-w-[140px]">
                             {expense.receipt_url && (() => {
                               const urls = expense.receipt_url.split(',').map(url => url.trim()).filter(url => url)
                               return (

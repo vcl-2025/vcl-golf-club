@@ -145,6 +145,10 @@ select {
   .tinymce-container .tox-statusbar {
     @apply bg-gray-50 border-t border-gray-200;
   }
+
+  .tinymce-container.h-full .tox-tinymce {
+    height: 100% !important;
+  }
   
   /* TinyMCE Viewer Styles */
   .tinymce-viewer {
