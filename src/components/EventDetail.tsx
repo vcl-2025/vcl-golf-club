@@ -715,8 +715,8 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
     return (
       <div className="bg-white rounded-2xl w-full overflow-y-auto relative">
         <div className="p-6">
-          {/* 活动图片横幅 */}
-          <div className="aspect-[16/9] bg-gradient-to-br from-golf-200 to-golf-300 rounded-2xl overflow-hidden mb-8">
+          {/* 活动图片横幅（暂时隐藏） */}
+          <div className="hidden aspect-[16/9] bg-gradient-to-br from-golf-200 to-golf-300 rounded-2xl overflow-hidden mb-8">
             <img
               src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
               alt={event.title}
@@ -1194,8 +1194,8 @@ export default function EventDetail({ event, onClose, user, userProfile, isStand
           {/* 可滚动内容 */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 sm:p-6">
-          {/* 活动图片横幅 */}
-          <div className="aspect-[16/9] bg-gradient-to-br from-golf-200 to-golf-300 rounded-2xl overflow-hidden mb-8">
+          {/* 活动图片横幅（暂时隐藏） */}
+          <div className="hidden aspect-[16/9] bg-gradient-to-br from-golf-200 to-golf-300 rounded-2xl overflow-hidden mb-8">
             <img
               src={event.image_url || 'https://images.pexels.com/photos/1325735/pexels-photo-1325735.jpeg?auto=compress&cs=tinysrgb&w=800'}
               alt={event.title}
