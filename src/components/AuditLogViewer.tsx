@@ -3,10 +3,10 @@
  * 管理员可以查看所有数据变更的审计日志
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { Search, Filter, ChevronDown, ChevronUp, Calendar, User, Database, FileText } from 'lucide-react'
+import { Search, Filter, ChevronDown, ChevronUp, Calendar, User, Database, FileText, X } from 'lucide-react'
 
 interface AuditLog {
   id: string
@@ -35,6 +35,11 @@ interface FilterState {
   searchTerm: string
 }
 
+function sanitizeSearchTerm(raw: string): string {
+  // PostgREST or() 里逗号/括号会破坏过滤语法
+  return raw.trim().replace(/[,.()]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 export default function AuditLogViewer() {
   const { user, loading: authLoading } = useAuth()
   const [logs, setLogs] = useState<AuditLog[]>([])
@@ -48,13 +53,28 @@ export default function AuditLogViewer() {
     dateTo: '',
     searchTerm: '',
   })
+  const [searchInput, setSearchInput] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const pageSize = 50
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   // 获取可用的表名列表
   const [tableNames, setTableNames] = useState<string[]>([])
+
+  // 搜索防抖：输入后写入 filters，并回到第 1 页
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const next = sanitizeSearchTerm(searchInput)
+      setFilters((prev) => {
+        if (prev.searchTerm === next) return prev
+        return { ...prev, searchTerm: next }
+      })
+      setPage(1)
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchInput])
 
   useEffect(() => {
     // 等待认证加载完成后再查询
@@ -126,28 +146,97 @@ export default function AuditLogViewer() {
       }
 
       if (filters.searchTerm) {
-        query = query.or(
-          `table_name.ilike.%${filters.searchTerm}%,field_name.ilike.%${filters.searchTerm}%,user_email.ilike.%${filters.searchTerm}%`
-        )
+        const term = filters.searchTerm
+        // audit_log 无 user_name 列；姓名通过 user_profiles 反查 user_id
+        const { data: matchedProfiles } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .ilike('full_name', `%${term}%`)
+          .limit(50)
+        const matchedIds = (matchedProfiles || []).map((p: any) => p.id).filter(Boolean)
+
+        const orParts = [
+          `table_name.ilike.%${term}%`,
+          `field_name.ilike.%${term}%`,
+          `user_email.ilike.%${term}%`,
+          `remark.ilike.%${term}%`,
+          `record_id::text.ilike.%${term}%`,
+          `old_value::text.ilike.%${term}%`,
+          `new_value::text.ilike.%${term}%`,
+        ]
+        if (matchedIds.length > 0) {
+          orParts.push(`user_id.in.(${matchedIds.join(',')})`)
+        }
+        query = query.or(orParts.join(','))
       }
 
-      const { data, error, count } = await query
+      let { data, error, count } = await query
+
+      // 若 jsonb::text / record_id::text 过滤不被支持，退回仅搜文本字段
+      if (error && filters.searchTerm) {
+        const term = filters.searchTerm
+        let fallbackQuery = supabase
+          .from('audit_log')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range((page - 1) * pageSize, page * pageSize - 1)
+
+        if (filters.tableName) fallbackQuery = fallbackQuery.eq('table_name', filters.tableName)
+        if (filters.operation) fallbackQuery = fallbackQuery.eq('operation', filters.operation)
+        if (filters.userId) fallbackQuery = fallbackQuery.eq('user_id', filters.userId)
+        if (filters.dateFrom) fallbackQuery = fallbackQuery.gte('created_at', filters.dateFrom)
+        if (filters.dateTo) fallbackQuery = fallbackQuery.lte('created_at', filters.dateTo + 'T23:59:59')
+
+        const { data: matchedProfiles } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .ilike('full_name', `%${term}%`)
+          .limit(50)
+        const matchedIds = (matchedProfiles || []).map((p: any) => p.id).filter(Boolean)
+
+        const orParts = [
+          `table_name.ilike.%${term}%`,
+          `field_name.ilike.%${term}%`,
+          `user_email.ilike.%${term}%`,
+          `remark.ilike.%${term}%`,
+        ]
+        if (matchedIds.length > 0) {
+          orParts.push(`user_id.in.(${matchedIds.join(',')})`)
+        }
+        fallbackQuery = fallbackQuery.or(orParts.join(','))
+
+        const fallback = await fallbackQuery
+        data = fallback.data
+        error = fallback.error
+        count = fallback.count
+      }
 
       if (error) {
         console.error('获取审计日志失败:', error)
         console.error('错误详情:', JSON.stringify(error, null, 2))
-        // 显示错误信息
         alert(`获取审计日志失败: ${error.message}\n\n请检查：\n1. 数据库迁移是否已运行\n2. 您是否有管理员权限\n3. RLS策略是否正确`)
         throw error
       }
 
-      console.log('查询到的审计日志:', data?.length || 0, '条')
-      console.log('总数:', count)
+      const rows = data || []
+      const userIds = Array.from(
+        new Set(rows.map((log: any) => log.user_id).filter(Boolean))
+      ) as string[]
 
-      // 处理数据
-      const processedData = (data || []).map((log: any) => ({
+      let nameById: Record<string, string> = {}
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('id, full_name')
+          .in('id', userIds)
+        for (const profile of profiles || []) {
+          if (profile.full_name) nameById[profile.id] = profile.full_name
+        }
+      }
+
+      const processedData = rows.map((log: any) => ({
         ...log,
-        user_name: log.user_name || null
+        user_name: nameById[log.user_id] || null,
       }))
 
       setLogs(processedData)
@@ -251,35 +340,74 @@ export default function AuditLogViewer() {
   return (
     <div className="space-y-6">
       {/* 标题和搜索 */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">审计日志</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            查看所有数据变更记录，共 {totalCount} 条
-          </p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">审计日志</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              查看所有数据变更记录，共 {totalCount} 条
+              {filters.searchTerm ? `（搜索「${filters.searchTerm}」）` : ''}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Filter className="w-4 h-4" />
+            <span>高级筛选</span>
+            {(filters.tableName || filters.operation || filters.dateFrom || filters.dateTo) && (
+              <span className="w-2 h-2 rounded-full bg-[#F15B98]" />
+            )}
+          </button>
         </div>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <Filter className="w-4 h-4" />
-          <span>筛选</span>
-        </button>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <input
+            ref={searchInputRef}
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setSearchInput('')
+                searchInputRef.current?.blur()
+              }
+            }}
+            placeholder="搜索姓名、邮箱、备注、表名、字段、记录ID、旧值/新值…"
+            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent bg-white"
+            autoComplete="off"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchInput('')
+                searchInputRef.current?.focus()
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label="清除搜索"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 筛选器 */}
       {showFilters && (
         <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 表名
               </label>
               <select
                 value={filters.tableName}
-                onChange={(e) =>
+                onChange={(e) => {
+                  setPage(1)
                   setFilters({ ...filters, tableName: e.target.value })
-                }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
               >
                 <option value="">全部表</option>
@@ -297,9 +425,10 @@ export default function AuditLogViewer() {
               </label>
               <select
                 value={filters.operation}
-                onChange={(e) =>
+                onChange={(e) => {
+                  setPage(1)
                   setFilters({ ...filters, operation: e.target.value })
-                }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
               >
                 <option value="">全部操作</option>
@@ -316,9 +445,10 @@ export default function AuditLogViewer() {
               <input
                 type="date"
                 value={filters.dateFrom}
-                onChange={(e) =>
+                onChange={(e) => {
+                  setPage(1)
                   setFilters({ ...filters, dateFrom: e.target.value })
-                }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
               />
             </div>
@@ -330,35 +460,20 @@ export default function AuditLogViewer() {
               <input
                 type="date"
                 value={filters.dateTo}
-                onChange={(e) =>
+                onChange={(e) => {
+                  setPage(1)
                   setFilters({ ...filters, dateTo: e.target.value })
-                }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                搜索
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={filters.searchTerm}
-                  onChange={(e) =>
-                    setFilters({ ...filters, searchTerm: e.target.value })
-                  }
-                  placeholder="搜索表名、字段名、用户邮箱..."
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-transparent"
-                />
-              </div>
             </div>
           </div>
 
           <div className="flex justify-end">
             <button
-              onClick={() =>
+              onClick={() => {
+                setSearchInput('')
+                setPage(1)
                 setFilters({
                   tableName: '',
                   operation: '',
@@ -367,7 +482,7 @@ export default function AuditLogViewer() {
                   dateTo: '',
                   searchTerm: '',
                 })
-              }
+              }}
               className="px-4 py-2 text-gray-700 hover:text-gray-900"
             >
               清除筛选
@@ -382,7 +497,9 @@ export default function AuditLogViewer() {
           <div className="p-8 text-center text-gray-500">加载中...</div>
         ) : logs.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            暂无审计日志
+            {filters.searchTerm || filters.tableName || filters.operation || filters.dateFrom || filters.dateTo
+              ? '没有符合条件的审计日志'
+              : '暂无审计日志'}
             {!user && (
               <div className="mt-2 text-sm text-gray-400">
                 请确保已登录并具有管理员权限

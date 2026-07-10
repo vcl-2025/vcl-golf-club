@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, Trophy } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { logPasswordChangeEvent } from '../lib/audit'
 import { logUserLogin } from '../utils/loginLogger'
 
 interface MemberLoginProps {
@@ -141,6 +142,15 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
           password: password
         })
         if (error) throw error
+        const { data: authData } = await supabase.auth.getUser()
+        if (authData.user) {
+          await logPasswordChangeEvent({
+            targetUserId: authData.user.id,
+            targetEmail: authData.user.email || email || undefined,
+            method: 'email_reset',
+            remark: '通过邮件链接重置密码',
+          })
+        }
         setMessage('密码重置成功！请使用新密码登录。')
         setMode('login')
       } else if (mode === 'changePassword') {
@@ -193,6 +203,16 @@ export default function MemberLogin({ onLoginSuccess }: MemberLoginProps) {
         })
         
         if (updateError) throw updateError
+
+        const { data: authData } = await supabase.auth.getUser()
+        if (authData.user) {
+          await logPasswordChangeEvent({
+            targetUserId: authData.user.id,
+            targetEmail: authData.user.email || email || undefined,
+            method: 'self_change',
+            remark: '用户自行修改密码',
+          })
+        }
         
         // 如果选择了记住新密码，保存到localStorage
         if (rememberNewPassword) {

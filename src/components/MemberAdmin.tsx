@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { useModal } from './ModalProvider'
 import { getUserModulePermissions } from '../lib/modulePermissions'
 import { useAuth } from '../hooks/useAuth'
+import { logPasswordChangeEvent } from '../lib/audit'
 
 interface Member {
   id: string
@@ -310,6 +311,14 @@ export default function MemberAdmin() {
         modal.showError(payload?.error || '重置密码失败')
         return
       }
+
+      // 只记「管理员重置了谁的密码」，绝不写入密码内容
+      await logPasswordChangeEvent({
+        targetUserId: memberId,
+        targetEmail: selectedMemberForPermission?.email,
+        method: 'admin_reset',
+        remark: '管理员重置会员密码',
+      })
 
       modal.showSuccess('密码已重置为 12345678')
       setShowResetPasswordModal(false)

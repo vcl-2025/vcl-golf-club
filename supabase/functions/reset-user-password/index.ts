@@ -94,6 +94,36 @@ serve(async (req) => {
       return json({ success: false, error: resetError.message || '重置密码失败' })
     }
 
+    // 审计：只记事件，绝不写入密码
+    const { data: targetProfile } = await adminClient
+      .from('user_profiles')
+      .select('full_name')
+      .eq('id', String(userId))
+      .maybeSingle()
+
+    const { data: targetAuth } = await adminClient.auth.admin.getUserById(String(userId))
+    const targetEmail = targetAuth?.user?.email || null
+
+    await adminClient.from('audit_log').insert({
+      table_name: 'auth.users',
+      record_id: String(userId),
+      field_name: 'password',
+      old_value: { changed: true, note: '密码内容不记录' },
+      new_value: {
+        changed: true,
+        method: 'admin_reset',
+        note: '密码内容不记录',
+        target_email: targetEmail,
+        target_name: targetProfile?.full_name || null,
+      },
+      remark: '管理员重置会员密码',
+      operation: 'UPDATE',
+      user_id: requesterId,
+      user_email: authData.user.email || null,
+      user_role: role,
+      user_agent: req.headers.get('user-agent'),
+    })
+
     return json({ success: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)

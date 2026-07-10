@@ -581,3 +581,81 @@ export async function logBatchOperation(
   }
 }
 
+export type PasswordChangeMethod =
+  | 'self_change' // 登录后自行修改
+  | 'email_reset' // 邮件链接重置
+  | 'admin_reset' // 管理员重置
+
+/**
+ * 记录密码变更事件（绝不写入密码明文或哈希）
+ */
+export async function logPasswordChangeEvent(options: {
+  targetUserId: string
+  method: PasswordChangeMethod
+  actorUserId?: string
+  actorEmail?: string
+  actorRole?: string
+  targetEmail?: string
+  remark?: string
+}): Promise<void> {
+  if (!supabase) {
+    console.warn('Supabase不可用，无法记录密码变更审计')
+    return
+  }
+
+  try {
+    const clientInfo = getClientInfo()
+    let actorUserId = options.actorUserId
+    let actorEmail = options.actorEmail
+    let actorRole = options.actorRole
+
+    if (!actorUserId) {
+      const { data: authData } = await supabase.auth.getUser()
+      actorUserId = authData?.user?.id
+      actorEmail = actorEmail || authData?.user?.email || undefined
+    }
+
+    if (!actorUserId) {
+      console.warn('无法记录密码变更审计：缺少操作用户')
+      return
+    }
+
+    if (!actorRole || !actorEmail) {
+      const info = await getUserInfo(actorUserId)
+      actorEmail = actorEmail || info.email
+      actorRole = actorRole || info.role
+    }
+
+    const methodLabel =
+      options.method === 'self_change'
+        ? '用户自行修改密码'
+        : options.method === 'email_reset'
+          ? '通过邮件链接重置密码'
+          : '管理员重置密码'
+
+    const auditEntry: AuditLogEntry = {
+      table_name: 'auth.users',
+      record_id: options.targetUserId,
+      field_name: 'password',
+      old_value: { changed: true, note: '密码内容不记录' },
+      new_value: {
+        changed: true,
+        method: options.method,
+        note: '密码内容不记录',
+        target_email: options.targetEmail || null,
+      },
+      remark: options.remark || methodLabel,
+      operation: 'UPDATE',
+      user_id: actorUserId,
+      user_email: actorEmail,
+      user_role: actorRole,
+      ip_address: clientInfo.ipAddress,
+      user_agent: clientInfo.userAgent,
+    }
+
+    await logAudit([auditEntry])
+  } catch (error) {
+    console.error('记录密码变更审计失败:', error)
+  }
+}
+

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
+import { logPasswordChangeEvent } from '../lib/audit'
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('')
@@ -47,6 +48,15 @@ export default function ResetPassword() {
       }
       setMessage('❌ 修改失败：' + errorMessage)
     } else {
+      const { data: authData } = await supabase.auth.getUser()
+      if (authData.user) {
+        await logPasswordChangeEvent({
+          targetUserId: authData.user.id,
+          targetEmail: authData.user.email || undefined,
+          method: 'email_reset',
+          remark: '通过邮件链接重置密码',
+        })
+      }
       setMessage('✅ 密码修改成功，正在登出...')
       setTimeout(async () => {
         await supabase.auth.signOut()

@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Calendar, Trophy, Image, Heart, LogOut, User, Menu, X, Settings, ChevronDown, ChevronRight, ArrowRight, Receipt, BookOpen, Bell, Users, Lock, Eye, EyeOff, ChevronUp, Plus, Minus, Medal, MapPin, Cloud, Sun, CloudRain, CloudSun, ShoppingCart, AlertCircle, Archive, Download } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
+import { logPasswordChangeEvent } from '../lib/audit'
 import { getUserModulePermissions, type ModuleName, type ModulePermission } from '../lib/modulePermissions'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 import ProfileModal from './ProfileModal'
@@ -133,6 +134,7 @@ export default function Dashboard() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [rememberNewPassword, setRememberNewPassword] = useState(false)
   const [passwordChangeLoading, setPasswordChangeLoading] = useState(false)
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false)
   const [passwordChangeMessage, setPasswordChangeMessage] = useState('')
   
   // 从URL参数读取view，如果没有则使用默认值
@@ -1283,6 +1285,8 @@ export default function Dashboard() {
                           e.preventDefault()
                           e.stopPropagation()
                           setChangePasswordModalOpen(true)
+                          setPasswordChangeSuccess(false)
+                          setPasswordChangeMessage('')
                           setUserMenuOpen(false)
                           // 恢复管理员菜单显示
                           if (currentView === 'admin') {
@@ -1550,6 +1554,8 @@ export default function Dashboard() {
                 <button
                   onClick={() => {
                     setChangePasswordModalOpen(true)
+                    setPasswordChangeSuccess(false)
+                    setPasswordChangeMessage('')
                     setMobileMenuOpen(false)
                   }}
                   className="flex items-center space-x-3 px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-[#F15B98] font-medium text-sm text-left w-full rounded-lg transition-colors"
@@ -2992,7 +2998,15 @@ export default function Dashboard() {
       {changePasswordModalOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80] p-4"
-          onClick={() => setChangePasswordModalOpen(false)}
+          onClick={() => {
+            if (passwordChangeLoading || passwordChangeSuccess) return
+            setChangePasswordModalOpen(false)
+            setOldPassword('')
+            setNewPassword('')
+            setConfirmPassword('')
+            setPasswordChangeMessage('')
+            setPasswordChangeSuccess(false)
+          }}
         >
           <div 
             className="bg-white rounded-2xl w-full max-w-md shadow-xl"
@@ -3002,14 +3016,18 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">修改密码</h2>
                 <button
+                  type="button"
+                  disabled={passwordChangeLoading || passwordChangeSuccess}
                   onClick={() => {
+                    if (passwordChangeLoading || passwordChangeSuccess) return
                     setChangePasswordModalOpen(false)
                     setOldPassword('')
                     setNewPassword('')
                     setConfirmPassword('')
                     setPasswordChangeMessage('')
+                    setPasswordChangeSuccess(false)
                   }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -3017,37 +3035,40 @@ export default function Dashboard() {
 
               <form onSubmit={async (e) => {
                 e.preventDefault()
+                if (passwordChangeLoading || passwordChangeSuccess) return
+
                 setPasswordChangeLoading(true)
+                setPasswordChangeSuccess(false)
                 setPasswordChangeMessage('')
 
                 try {
                   if (!oldPassword || !newPassword || !confirmPassword) {
                     setPasswordChangeMessage('请填写所有密码字段')
-                    setPasswordChangeLoading(false)
                     return
                   }
 
                   if (newPassword !== confirmPassword) {
                     setPasswordChangeMessage('新密码和确认密码不一致')
-                    setPasswordChangeLoading(false)
                     return
                   }
 
                   if (newPassword.length < 6) {
                     setPasswordChangeMessage('新密码长度至少为6位')
-                    setPasswordChangeLoading(false)
                     return
                   }
 
                   if (oldPassword === newPassword) {
                     setPasswordChangeMessage('新密码不能与旧密码相同')
-                    setPasswordChangeLoading(false)
                     return
                   }
 
                   if (!user?.email) {
                     setPasswordChangeMessage('无法获取用户邮箱')
-                    setPasswordChangeLoading(false)
+                    return
+                  }
+
+                  if (!supabase) {
+                    setPasswordChangeMessage('系统未初始化，请刷新后重试')
                     return
                   }
 
@@ -3059,7 +3080,6 @@ export default function Dashboard() {
 
                   if (verifyError) {
                     setPasswordChangeMessage('旧密码错误，请重新输入')
-                    setPasswordChangeLoading(false)
                     return
                   }
 
@@ -3070,6 +3090,13 @@ export default function Dashboard() {
 
                   if (updateError) throw updateError
 
+                  await logPasswordChangeEvent({
+                    targetUserId: user.id,
+                    targetEmail: user.email || undefined,
+                    method: 'self_change',
+                    remark: '用户自行修改密码（头像菜单）',
+                  })
+
                   // 如果选择了记住新密码，保存到localStorage
                   if (rememberNewPassword) {
                     localStorage.setItem('rememberedPassword', newPassword)
@@ -3079,22 +3106,31 @@ export default function Dashboard() {
                     localStorage.removeItem('rememberPasswordChecked')
                   }
 
-                  setPasswordChangeMessage('密码修改成功！系统将自动退出，请使用新密码重新登录。')
-
-                  // 等待2秒后登出并返回登录页面
-                  setTimeout(async () => {
-                    await supabase.auth.signOut()
-                    setChangePasswordModalOpen(false)
-                    setOldPassword('')
-                    setNewPassword('')
-                    setConfirmPassword('')
-                    setPasswordChangeMessage('')
-                  }, 2000)
+                  // 成功后保持禁用，避免用户以为没点上又点一次
+                  setPasswordChangeSuccess(true)
+                  setPasswordChangeMessage('密码修改成功，正在退出登录…')
+                  // 成功路径不在 finally 里解锁按钮
+                  window.setTimeout(async () => {
+                    try {
+                      await supabase.auth.signOut()
+                    } finally {
+                      setChangePasswordModalOpen(false)
+                      setOldPassword('')
+                      setNewPassword('')
+                      setConfirmPassword('')
+                      setPasswordChangeMessage('')
+                      setPasswordChangeSuccess(false)
+                      setPasswordChangeLoading(false)
+                    }
+                  }, 800)
+                  return
 
                 } catch (error: any) {
                   console.error('修改密码失败:', error)
                   setPasswordChangeMessage(error.message || '修改密码失败，请重试')
+                  setPasswordChangeSuccess(false)
                 } finally {
+                  // 成功时按钮仍由 passwordChangeSuccess 保持禁用
                   setPasswordChangeLoading(false)
                 }
               }} className="space-y-4">
@@ -3108,14 +3144,16 @@ export default function Dashboard() {
                       type={showOldPassword ? 'text' : 'password'}
                       value={oldPassword}
                       onChange={(e) => setOldPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all"
+                      disabled={passwordChangeLoading || passwordChangeSuccess}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="请输入您的旧密码"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowOldPassword(!showOldPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      disabled={passwordChangeLoading || passwordChangeSuccess}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:cursor-not-allowed"
                     >
                       {showOldPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -3132,7 +3170,8 @@ export default function Dashboard() {
                       type={showNewPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all"
+                      disabled={passwordChangeLoading || passwordChangeSuccess}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="请输入您的新密码（至少6位）"
                       required
                       minLength={6}
@@ -3140,7 +3179,8 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      disabled={passwordChangeLoading || passwordChangeSuccess}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:cursor-not-allowed"
                     >
                       {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -3157,7 +3197,8 @@ export default function Dashboard() {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all"
+                      disabled={passwordChangeLoading || passwordChangeSuccess}
+                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F15B98] focus:border-[#F15B98] transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
                       placeholder="请再次输入新密码"
                       required
                       minLength={6}
@@ -3165,7 +3206,8 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      disabled={passwordChangeLoading || passwordChangeSuccess}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:cursor-not-allowed"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -3178,7 +3220,8 @@ export default function Dashboard() {
                     type="checkbox"
                     checked={rememberNewPassword}
                     onChange={(e) => setRememberNewPassword(e.target.checked)}
-                    className="h-4 w-4 text-[#F15B98] focus:ring-[#F15B98] border-gray-300 rounded"
+                    disabled={passwordChangeLoading || passwordChangeSuccess}
+                    className="h-4 w-4 text-[#F15B98] focus:ring-[#F15B98] border-gray-300 rounded disabled:cursor-not-allowed"
                   />
                   <label htmlFor="remember-new-password-checkbox" className="ml-2 block text-sm text-gray-700">
                     记住新密码
@@ -3187,7 +3230,7 @@ export default function Dashboard() {
 
                 {passwordChangeMessage && (
                   <div className={`p-3 rounded-lg text-sm border ${
-                    passwordChangeMessage.includes('成功')
+                    passwordChangeSuccess || passwordChangeMessage.includes('成功')
                       ? 'bg-green-50 text-green-700 border-green-200' 
                       : 'bg-red-50 text-red-700 border-red-200'
                   }`}>
@@ -3199,23 +3242,33 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (passwordChangeLoading || passwordChangeSuccess) return
                       setChangePasswordModalOpen(false)
                       setOldPassword('')
                       setNewPassword('')
                       setConfirmPassword('')
                       setPasswordChangeMessage('')
+                      setPasswordChangeSuccess(false)
                     }}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    disabled={passwordChangeLoading}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={passwordChangeLoading || passwordChangeSuccess}
                   >
                     取消
                   </button>
                   <button
                     type="submit"
-                    disabled={passwordChangeLoading || !oldPassword || !newPassword || !confirmPassword}
-                    className="px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={
+                      passwordChangeLoading ||
+                      passwordChangeSuccess ||
+                      !oldPassword ||
+                      !newPassword ||
+                      !confirmPassword
+                    }
+                    className="px-4 py-2 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[7.5rem]"
                   >
-                    {passwordChangeLoading ? (
+                    {passwordChangeSuccess ? (
+                      '已完成'
+                    ) : passwordChangeLoading ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
                         修改中...
