@@ -21,6 +21,39 @@ export interface AnnualMemberRankingResult {
   rows: AnnualMemberRankingRow[]
 }
 
+/** 会员本年度单场成绩（用于榜单下钻） */
+export interface MemberYearScoreEvent {
+  scoreId: string
+  eventId: string
+  eventTitle: string
+  startTime: string
+  location: string | null
+  eventType: string | null
+  totalStrokes: number
+  netStrokes: number | null
+  handicap: number
+  rank: number | null
+  notes: string | null
+  holeScores: number[] | null
+  groupNumber: number | null
+  teamName: string | null
+  par: number[] | null
+}
+
+function normalizeHoleScores(raw: unknown): number[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null
+  const nums = raw.map((v) => Number(v))
+  if (nums.every((n) => !Number.isFinite(n) || n <= 0)) return null
+  return nums.map((n) => (Number.isFinite(n) ? n : 0))
+}
+
+function normalizePar(raw: unknown): number[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null
+  const nums = raw.map((v) => Number(v))
+  if (!nums.some((n) => Number.isFinite(n) && n > 0)) return null
+  return nums.map((n) => (Number.isFinite(n) ? n : 0))
+}
+
 function vancouverYear(date = new Date()): number {
   return Number(
     new Intl.DateTimeFormat('en-US', {
@@ -188,4 +221,125 @@ export async function fetchAnnualMemberRanking(options?: {
     asOfDate: vancouverDateLabel(),
     rows: rows.map((row, index) => ({ ...row, rank: index + 1 })),
   }
+}
+
+/**
+ * 某会员本年度参赛成绩列表（与榜单同一套温哥华年过滤 + 同场取更优净杆）。
+ */
+export async function fetchMemberYearScores(options: {
+  userId: string
+  year?: number
+}): Promise<MemberYearScoreEvent[]> {
+  const year = options.year ?? vancouverYear()
+  const userId = options.userId
+
+  if (!supabase || !userId) return []
+
+  const { data, error } = await supabase
+    .from('scores')
+    .select(
+      `
+      id,
+      user_id,
+      event_id,
+      total_strokes,
+      net_strokes,
+      handicap,
+      rank,
+      notes,
+      hole_scores,
+      group_number,
+      team_name,
+      events!inner (
+        id,
+        title,
+        start_time,
+        location,
+        event_type,
+        par
+      )
+    `
+    )
+    .eq('user_id', userId)
+    .not('net_strokes', 'is', null)
+
+  if (error) {
+    console.error('获取会员年度成绩失败:', error)
+    throw error
+  }
+
+  type Raw = {
+    id: string
+    user_id: string
+    event_id: string
+    total_strokes: number | string | null
+    net_strokes: number | string | null
+    handicap: number | string | null
+    rank: number | string | null
+    notes: string | null
+    hole_scores: unknown
+    group_number: number | string | null
+    team_name: string | null
+    events:
+      | {
+          id?: string
+          title?: string | null
+          start_time?: string | null
+          location?: string | null
+          event_type?: string | null
+          par?: unknown
+        }
+      | {
+          id?: string
+          title?: string | null
+          start_time?: string | null
+          location?: string | null
+          event_type?: string | null
+          par?: unknown
+        }[]
+      | null
+  }
+
+  const byEvent = new Map<string, MemberYearScoreEvent>()
+
+  for (const raw of (data || []) as Raw[]) {
+    const event = Array.isArray(raw.events) ? raw.events[0] : raw.events
+    const startTime = event?.start_time || ''
+    if (eventYearInVancouver(startTime) !== year) continue
+
+    const net = Number(raw.net_strokes)
+    if (!Number.isFinite(net)) continue
+
+    const eventId = String(raw.event_id)
+    const total = Number(raw.total_strokes)
+    const item: MemberYearScoreEvent = {
+      scoreId: String(raw.id),
+      eventId,
+      eventTitle: (event?.title || '未命名活动').trim() || '未命名活动',
+      startTime,
+      location: event?.location || null,
+      eventType: event?.event_type || null,
+      totalStrokes: Number.isFinite(total) ? total : 0,
+      netStrokes: net,
+      handicap: Number(raw.handicap) || 0,
+      rank: raw.rank == null || raw.rank === '' ? null : Number(raw.rank),
+      notes: raw.notes || null,
+      holeScores: normalizeHoleScores(raw.hole_scores),
+      groupNumber:
+        raw.group_number == null || raw.group_number === ''
+          ? null
+          : Number(raw.group_number),
+      teamName: raw.team_name || null,
+      par: normalizePar(event?.par),
+    }
+
+    const existing = byEvent.get(eventId)
+    if (!existing || (item.netStrokes ?? Infinity) < (existing.netStrokes ?? Infinity)) {
+      byEvent.set(eventId, item)
+    }
+  }
+
+  return Array.from(byEvent.values()).sort(
+    (a, b) => Date.parse(b.startTime) - Date.parse(a.startTime)
+  )
 }
