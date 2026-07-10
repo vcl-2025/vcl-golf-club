@@ -33,6 +33,10 @@ import {
   formatTeamScoreDisplay,
   type ScoringMode,
 } from '../utils/teamEventScores'
+import TwoTeamBattleBar, {
+  orderTwoTeams,
+  resolveTeamBattleColor,
+} from './TwoTeamBattleBar'
 
 interface Poster {
   id: string
@@ -2609,10 +2613,15 @@ export default function Dashboard() {
                   </div>
                 ) : recentScores.length > 0 ? (
                     <div className="space-y-4">
-                    {recentScores.map((result, index) => (
+                    {recentScores.map((result, index) => {
+                      const twoTeams =
+                        result.event_type === '团体赛' && result.teams
+                          ? orderTwoTeams(result.teams)
+                          : null
+                      return (
                         <div 
                           key={index} 
-                          className="group relative p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-300/80 rounded-2xl hover:bg-white hover:border-[#F15B98]/40 hover:shadow-sm transition-all duration-300 cursor-pointer"
+                          className="group relative p-3 sm:p-4 bg-white/80 backdrop-blur-sm border border-gray-300/80 rounded-2xl hover:bg-white hover:border-[#F15B98]/40 hover:shadow-sm transition-all duration-300 cursor-pointer overflow-hidden"
                           style={{
                             boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)'
                           }}
@@ -2649,6 +2658,13 @@ export default function Dashboard() {
                             e.currentTarget.style.borderColor = ''
                           }}
                         >
+                          {/* 最新成绩角标（两队对决样板） */}
+                          {twoTeams && (
+                            <div className="pointer-events-none absolute -right-8 top-3 z-20 w-28 rotate-45 bg-[#F15B98] py-1 text-center text-[10px] font-bold tracking-wide text-white shadow-sm">
+                              最新成绩
+                            </div>
+                          )}
+
                           {/* 悬停时的背景渐变 */}
                           <div className="absolute inset-0 bg-gradient-to-r from-[#F15B98]/0 via-[#F15B98]/0 to-golf-400/0 group-hover:from-[#F15B98]/5 group-hover:via-transparent group-hover:to-golf-400/5 transition-all duration-300"></div>
                           {/* 按压时的绿色渐变层 */}
@@ -2676,7 +2692,7 @@ export default function Dashboard() {
                         </div>
                         
                             {/* 右侧内容 - grid第二列自动占满剩余空间 */}
-                            <div className="min-w-0">
+                            <div className="min-w-0 pr-6">
                           {/* 活动标题和日期 */}
                               <div className="mb-2">
                                 <div className="font-bold text-gray-900 text-sm sm:text-base mb-1.5 line-clamp-2 group-hover:text-[#F15B98] transition-colors duration-300 leading-tight">
@@ -2696,14 +2712,14 @@ export default function Dashboard() {
                             </div>
                           </div>
 
-                          {/* 成绩信息 - 一行显示 */}
+                          {/* 个人赛前三 */}
                           {result.event_type === '个人赛' && result.topThree && result.topThree.length > 0 && (
                               <div className="flex flex-row items-center gap-2 text-xs sm:text-sm flex-wrap">
                               {result.topThree.slice(0, 3).map((player, idx) => {
                                 const medalColors = [
-                                  { color: '#FFD700', name: 'gold' }, // 金色
-                                  { color: '#C0C0C0', name: 'silver' }, // 银色
-                                  { color: '#CD7F32', name: 'bronze' } // 铜色
+                                  { color: '#FFD700', name: 'gold' },
+                                  { color: '#C0C0C0', name: 'silver' },
+                                  { color: '#CD7F32', name: 'bronze' }
                                 ]
                                 const medal = medalColors[player.rank - 1]
                                 return (
@@ -2712,20 +2728,19 @@ export default function Dashboard() {
                                         <Medal className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" style={{ color: medal.color }} />
                                     )}
                                     <span className="font-medium">{player.name}</span>
-                                    {idx < Math.min(result.topThree.length, 3) - 1 && <span className="mx-1.5 text-gray-400">·</span>}
+                                    {idx < Math.min(result.topThree?.length || 0, 3) - 1 && <span className="mx-1.5 text-gray-400">·</span>}
                                   </span>
                                 )
                               })}
                             </div>
                           )}
 
-                          {result.event_type === '团体赛' && result.teams && result.teams.length > 0 && (
+                          {/* 多队（非两队）仍用简洁色点列表 */}
+                          {result.event_type === '团体赛' && result.teams && result.teams.length > 0 && !twoTeams && (
                               <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 text-xs sm:text-sm">
                               {result.teams.slice(0, 4).map((team, idx) => {
-                                // 根据队伍名称查找颜色，team_colors的key可能是原始名称或显示名称
                                 const teamColors = result.team_colors || {}
-                                let teamColor = '#6B7280' // 默认灰色
-                                // 先尝试用team_name直接查找
+                                let teamColor = '#6B7280'
                                 if (teamColors[team.team_name]) {
                                   teamColor = teamColors[team.team_name]
                                 }
@@ -2742,7 +2757,7 @@ export default function Dashboard() {
                                           result.scoring_mode || 'ryder_cup'
                                         )}
                                       </span>
-                                      {idx < Math.min(result.teams.length, 4) - 1 && <span className="mx-1 text-gray-400 hidden sm:inline">·</span>}
+                                      {idx < Math.min(result.teams?.length || 0, 4) - 1 && <span className="mx-1 text-gray-400 hidden sm:inline">·</span>}
                                   </span>
                                 )
                               })}
@@ -2750,8 +2765,36 @@ export default function Dashboard() {
                           )}
                           </div>
                         </div>
+
+                          {/* 两队：样板同款 VS 对决条 */}
+                          {twoTeams && (
+                            <div className="relative z-10 mt-3 col-span-full">
+                              <TwoTeamBattleBar
+                                left={{
+                                  name: twoTeams[0].team_name,
+                                  score: twoTeams[0].score,
+                                  color: resolveTeamBattleColor(
+                                    twoTeams[0].team_name,
+                                    result.team_colors,
+                                    0
+                                  ),
+                                }}
+                                right={{
+                                  name: twoTeams[1].team_name,
+                                  score: twoTeams[1].score,
+                                  color: resolveTeamBattleColor(
+                                    twoTeams[1].team_name,
+                                    result.team_colors,
+                                    1
+                                  ),
+                                }}
+                                scoringMode={result.scoring_mode || 'ryder_cup'}
+                              />
+                            </div>
+                          )}
                       </div>
-                    ))}
+                      )
+                    })}
                       <div className="text-center pt-3">
                       <button 
                         onClick={() => handleViewChange('scores')}

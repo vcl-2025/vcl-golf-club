@@ -11,6 +11,11 @@ import { useAuth } from '../hooks/useAuth'
 import UnifiedSearch from './UnifiedSearch'
 import { formatEventDateInTimezone } from '../utils/eventDateTime'
 import { formatEventParticipationLabel } from '../utils/eventParticipationDisplay'
+import TwoTeamBattleBar, {
+  orderTwoTeams,
+  resolveTeamBattleColor,
+} from './TwoTeamBattleBar'
+import type { ScoringMode } from '../utils/teamEventScores'
 
 interface ScoreData {
   id: string
@@ -1073,7 +1078,58 @@ export default function UserScoreQuery() {
                         <div className="space-y-4 sm:space-y-6 mt-4">
                           <h4 className="text-base sm:text-lg font-semibold text-gray-900 mx-1 sm:mx-0">{titleText}</h4>
                           
-                          {/* 总比分 - 显示所有团队 */}
+                          {/* 总比分 - 两队用样板对决条，多队仍用卡片列表 */}
+                          {sortedTeamNames.length === 2 ? (
+                            (() => {
+                              const ordered = orderTwoTeams(
+                                sortedTeamNames.map((name) => ({
+                                  team_name: teamDisplayNameMap.get(name) || name,
+                                  score: totalScores.get(name) ?? 0,
+                                  original: name,
+                                }))
+                              )
+                              // 若显示名排序后对不上，按原始名再排一次
+                              const pair =
+                                ordered ||
+                                orderTwoTeams(
+                                  sortedTeamNames.map((name) => ({
+                                    team_name: name,
+                                    score: totalScores.get(name) ?? 0,
+                                    original: name,
+                                  }))
+                                )
+                              if (!pair) return null
+                              const mode: ScoringMode = isStablefordMode
+                                ? 'stableford'
+                                : isTotalStrokesMode
+                                  ? 'total_strokes'
+                                  : 'ryder_cup'
+                              return (
+                                <TwoTeamBattleBar
+                                  className="mx-1 sm:mx-0"
+                                  left={{
+                                    name: pair[0].team_name,
+                                    score: pair[0].score,
+                                    color: resolveTeamBattleColor(
+                                      pair[0].original || pair[0].team_name,
+                                      eventTeamColors,
+                                      0
+                                    ),
+                                  }}
+                                  right={{
+                                    name: pair[1].team_name,
+                                    score: pair[1].score,
+                                    color: resolveTeamBattleColor(
+                                      pair[1].original || pair[1].team_name,
+                                      eventTeamColors,
+                                      1
+                                    ),
+                                  }}
+                                  scoringMode={mode}
+                                />
+                              )
+                            })()
+                          ) : (
                           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mx-1 sm:mx-0 flex-wrap">
                             {sortedTeamNames.map(originalTeamName => {
                               const displayName = teamDisplayNameMap.get(originalTeamName) || originalTeamName
@@ -1112,6 +1168,7 @@ export default function UserScoreQuery() {
                               )
                             })}
                           </div>
+                          )}
                           
                           {/* 各组详细结果 */}
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mx-1 sm:mx-0">

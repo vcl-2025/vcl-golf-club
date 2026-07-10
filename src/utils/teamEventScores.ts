@@ -176,7 +176,7 @@ export function formatTeamScoreDisplay(
   return score % 1 === 0 ? `${score}分` : `${score.toFixed(1)}分`
 }
 
-/** Stableford：分数高者胜 */
+/** Stableford / 比洞：分数高者胜；总杆模式：杆数低者胜 */
 export function isHigherTeamScoreBetter(scoringMode: ScoringMode): boolean {
-  return scoringMode === 'stableford'
+  return scoringMode === 'stableford' || scoringMode === 'ryder_cup'
 }

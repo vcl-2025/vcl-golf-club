@@ -10,6 +10,11 @@ import {
   type AnnualMemberRankingResult,
   type MemberYearScoreEvent,
 } from '../utils/annualMemberRanking'
+import {
+  fetchAnnualTeamStanding,
+  type AnnualTeamStandingResult,
+} from '../utils/annualTeamStanding'
+import { formatTeamScoreDisplay } from '../utils/teamEventScores'
 
 /** 金银铜奖牌：直接使用设计样板图，不用 SVG 重画 */
 function RankMedal({ rank }: { rank: number }) {
@@ -230,9 +235,13 @@ function SheetShell({
 }
 
 export default function AnnualMemberRankingCard() {
+  const [boardTab, setBoardTab] = useState<'member' | 'team'>('member')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<AnnualMemberRankingResult | null>(null)
+  const [teamLoading, setTeamLoading] = useState(true)
+  const [teamError, setTeamError] = useState<string | null>(null)
+  const [teamStanding, setTeamStanding] = useState<AnnualTeamStandingResult | null>(null)
   const [showFull, setShowFull] = useState(false)
   const [selectedMember, setSelectedMember] = useState<AnnualMemberRankingRow | null>(null)
   const [memberScores, setMemberScores] = useState<MemberYearScoreEvent[]>([])
@@ -253,6 +262,26 @@ export default function AnnualMemberRankingCard() {
         if (!cancelled) setError('暂时无法加载会员榜')
       } finally {
         if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setTeamLoading(true)
+      setTeamError(null)
+      try {
+        const data = await fetchAnnualTeamStanding()
+        if (!cancelled) setTeamStanding(data)
+      } catch (err) {
+        console.error(err)
+        if (!cancelled) setTeamError('暂时无法加载团体成绩榜')
+      } finally {
+        if (!cancelled) setTeamLoading(false)
       }
     })()
     return () => {
@@ -301,8 +330,8 @@ export default function AnnualMemberRankingCard() {
   }, [showFull, selectedMember, selectedScore])
 
   const topRows = result?.rows.slice(0, 5) || []
-  const year = result?.year ?? new Date().getFullYear()
-  const asOf = result?.asOfDate || ''
+  const year = result?.year ?? teamStanding?.year ?? new Date().getFullYear()
+  const asOf = result?.asOfDate || teamStanding?.asOfDate || ''
 
   const openMember = (row: AnnualMemberRankingRow) => {
     setSelectedMember(row)
@@ -325,9 +354,9 @@ export default function AnnualMemberRankingCard() {
           <div className="flex items-center justify-between gap-3">
             <h3 className="flex min-w-0 items-center text-lg font-bold text-gray-900 sm:text-xl">
               <span className="mr-3 inline-block h-6 w-1.5 shrink-0 rounded-full bg-[#F15B98]" />
-              本年度会员榜
+              {boardTab === 'member' ? '本年度会员榜' : '本年度团体成绩榜'}
             </h3>
-            {result && result.rows.length > 0 && (
+            {boardTab === 'member' && result && result.rows.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowFull(true)}
@@ -338,42 +367,170 @@ export default function AnnualMemberRankingCard() {
               </button>
             )}
           </div>
-          <p className="mt-1.5 pl-[18px] text-xs text-gray-400 sm:text-sm">
-            按平均净杆 · 至少参赛 {ANNUAL_RANKING_MIN_EVENTS} 场
-            {asOf ? ` · 统计至 ${asOf}` : ''}
-          </p>
 
-          {loading ? (
-            <div className="py-8 text-center">
-              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-[#F15B98] border-t-transparent" />
-              <p className="mt-3 text-sm text-gray-500">加载中...</p>
-            </div>
-          ) : error ? (
-            <div className="py-8 text-center text-sm text-gray-500">{error}</div>
-          ) : topRows.length === 0 ? (
-            <div className="py-8 text-center sm:py-10">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F15B98]/10">
-                <Trophy className="h-8 w-8 text-[#F15B98]/60" />
-              </div>
-              <p className="text-sm font-medium text-gray-600 sm:text-base">
-                {year} 年暂无上榜会员
+          {/* 会员榜 / 团体成绩榜 切换 */}
+          <div className="mt-3 flex rounded-xl bg-gray-100/90 p-1">
+            <button
+              type="button"
+              onClick={() => setBoardTab('member')}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
+                boardTab === 'member'
+                  ? 'bg-white text-[#F15B98] shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              会员榜
+            </button>
+            <button
+              type="button"
+              onClick={() => setBoardTab('team')}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
+                boardTab === 'team'
+                  ? 'bg-white text-[#F15B98] shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              团体成绩榜
+            </button>
+          </div>
+
+          {boardTab === 'member' ? (
+            <>
+              <p className="mt-3 pl-[18px] text-xs text-gray-400 sm:text-sm">
+                按平均净杆 · 至少参赛 {ANNUAL_RANKING_MIN_EVENTS} 场
+                {asOf ? ` · 统计至 ${asOf}` : ''}
               </p>
-              <p className="mt-2 text-xs text-gray-400 sm:text-sm">
-                需至少有 {ANNUAL_RANKING_MIN_EVENTS} 场有效净杆成绩
-              </p>
-            </div>
+
+              {loading ? (
+                <div className="py-8 text-center">
+                  <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-[#F15B98] border-t-transparent" />
+                  <p className="mt-3 text-sm text-gray-500">加载中...</p>
+                </div>
+              ) : error ? (
+                <div className="py-8 text-center text-sm text-gray-500">{error}</div>
+              ) : topRows.length === 0 ? (
+                <div className="py-8 text-center sm:py-10">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F15B98]/10">
+                    <Trophy className="h-8 w-8 text-[#F15B98]/60" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600 sm:text-base">
+                    {year} 年暂无上榜会员
+                  </p>
+                  <p className="mt-2 text-xs text-gray-400 sm:text-sm">
+                    需至少有 {ANNUAL_RANKING_MIN_EVENTS} 场有效净杆成绩
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  {topRows.map((row, index) => (
+                    <RankingRow
+                      key={row.userId}
+                      row={row}
+                      highlight={row.rank === 1}
+                      showDivider={index > 0}
+                      onClick={() => openMember(row)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
-            <div className="mt-4">
-              {topRows.map((row, index) => (
-                <RankingRow
-                  key={row.userId}
-                  row={row}
-                  highlight={row.rank === 1}
-                  showDivider={index > 0}
-                  onClick={() => openMember(row)}
-                />
-              ))}
-            </div>
+            <>
+              <p className="mt-3 text-xs text-gray-400 sm:text-sm">
+                红绿两队对决 · 各赢几场
+                {asOf ? ` · 统计至 ${asOf}` : ''}
+              </p>
+
+              {teamLoading ? (
+                <div className="py-8 text-center">
+                  <div className="mx-auto h-10 w-10 animate-spin rounded-full border-[3px] border-[#F15B98] border-t-transparent" />
+                  <p className="mt-3 text-sm text-gray-500">加载中...</p>
+                </div>
+              ) : teamError ? (
+                <div className="py-8 text-center text-sm text-gray-500">{teamError}</div>
+              ) : !teamStanding || teamStanding.matches.length === 0 ? (
+                <div className="py-8 text-center sm:py-10">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#F15B98]/10">
+                    <Trophy className="h-8 w-8 text-[#F15B98]/60" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600 sm:text-base">
+                    {year} 年暂无红绿对决成绩
+                  </p>
+                  <p className="mt-2 text-xs text-gray-400 sm:text-sm">
+                    仅统计恰好红、绿两队的团体赛场次
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-4">
+                  {/* 赛季胜场总览：刻意不用单场 VS 对决条，避免误会成单场比分 */}
+                  <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+                    <div className="mb-1.5 text-center">
+                      <span className="rounded-full bg-[#F15B98]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#F15B98]">
+                        赛季胜场
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="text-[2.25rem] font-black tabular-nums leading-none text-[#E53935]">
+                        {teamStanding.redWins}
+                      </span>
+                      <span className="text-2xl font-bold text-gray-300">:</span>
+                      <span className="text-[2.25rem] font-black tabular-nums leading-none text-[#43A047]">
+                        {teamStanding.greenWins}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-center text-xs text-gray-400">
+                      {teamStanding.redWins === teamStanding.greenWins
+                        ? '目前双方胜场持平'
+                        : teamStanding.redWins > teamStanding.greenWins
+                          ? `红队领先 ${teamStanding.redWins - teamStanding.greenWins} 场`
+                          : `绿队领先 ${teamStanding.greenWins - teamStanding.redWins} 场`}
+                      {teamStanding.ties > 0 ? ` · 平局 ${teamStanding.ties} 场` : ''}
+                      · 共 {teamStanding.matches.length} 场
+                    </p>
+                  </div>
+
+                  <div className="px-1 text-xs font-medium text-gray-500">各场对决明细</div>
+                  <div className="space-y-2">
+                    {teamStanding.matches.map((match) => (
+                      <div
+                        key={match.eventId}
+                        className="rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm"
+                      >
+                        <div className="truncate text-sm font-semibold text-gray-900">
+                          {match.eventTitle}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-400">
+                          {match.startTime
+                            ? formatEventDateInTimezone(match.startTime)
+                            : '日期待定'}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-2 text-sm">
+                          <span className="font-medium text-[#E53935]">
+                            红队{' '}
+                            {formatTeamScoreDisplay(match.redScore, match.scoringMode)}
+                          </span>
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              match.winner === '红队'
+                                ? 'bg-red-50 text-[#E53935]'
+                                : match.winner === '绿队'
+                                  ? 'bg-green-50 text-[#43A047]'
+                                  : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {match.winner === '平局' ? '平局' : `${match.winner}胜`}
+                          </span>
+                          <span className="font-medium text-[#43A047]">
+                            绿队{' '}
+                            {formatTeamScoreDisplay(match.greenScore, match.scoringMode)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
