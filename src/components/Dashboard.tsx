@@ -16,6 +16,7 @@ import PosterDetail from './PosterDetail'
 import ScoreList from './ScoreList'
 import ScoreDetail from './ScoreDetail'
 import UserScoreQuery from './UserScoreQuery'
+import AnnualMemberRankingCard from './AnnualMemberRankingCard'
 import InvestmentList from './InvestmentList'
 import InvestmentDetail from './InvestmentDetail'
 import ExpenseList from './ExpenseList'
@@ -2468,6 +2469,10 @@ export default function Dashboard() {
             </div>
 
             {/* Main Content Sections */}
+            <div className="mb-4 sm:mb-6 lg:mb-8">
+              <AnnualMemberRankingCard />
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-3">
               {/* 即将举行的活动 */}
               <div className="relative p-5 sm:p-7 bg-white border border-gray-200 rounded-3xl transition-all duration-300 overflow-hidden" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.06)' }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)' }}>
