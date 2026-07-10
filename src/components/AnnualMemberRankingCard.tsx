@@ -351,21 +351,11 @@ export default function AnnualMemberRankingCard() {
         }}
       >
         <div className="relative z-10">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <h3 className="flex min-w-0 items-center text-lg font-bold text-gray-900 sm:text-xl">
               <span className="mr-3 inline-block h-6 w-1.5 shrink-0 rounded-full bg-[#F15B98]" />
               {boardTab === 'member' ? '本年度会员榜' : '本年度团体成绩榜'}
             </h3>
-            {boardTab === 'member' && result && result.rows.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowFull(true)}
-                className="inline-flex shrink-0 items-center gap-0.5 text-sm font-medium text-[#F15B98] transition-colors hover:text-[#E0487A]"
-              >
-                完整榜单
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            )}
           </div>
 
           {/* 会员榜 / 团体成绩榜 切换 */}
@@ -421,17 +411,29 @@ export default function AnnualMemberRankingCard() {
                   </p>
                 </div>
               ) : (
-                <div className="mt-4">
-                  {topRows.map((row, index) => (
-                    <RankingRow
-                      key={row.userId}
-                      row={row}
-                      highlight={row.rank === 1}
-                      showDivider={index > 0}
-                      onClick={() => openMember(row)}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="mt-4">
+                    {topRows.map((row, index) => (
+                      <RankingRow
+                        key={row.userId}
+                        row={row}
+                        highlight={row.rank === 1}
+                        showDivider={index > 0}
+                        onClick={() => openMember(row)}
+                      />
+                    ))}
+                  </div>
+                  <div className="pt-3 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowFull(true)}
+                      className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-[#F15B98] to-[#E0487A] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-300 hover:from-[#E0487A] hover:to-[#F15B98] hover:shadow-md hover:scale-105"
+                    >
+                      <span className="relative z-10">查看完整榜单</span>
+                      <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-white/0 via-white/20 to-white/0 transition-transform duration-700 group-hover:translate-x-[100%]" />
+                    </button>
+                  </div>
+                </>
               )}
             </>
           ) : (
