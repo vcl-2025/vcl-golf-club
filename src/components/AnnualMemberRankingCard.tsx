@@ -462,21 +462,49 @@ export default function AnnualMemberRankingCard() {
                 </div>
               ) : (
                 <div className="mt-4 space-y-4">
-                  {/* 赛季胜场总览：刻意不用单场 VS 对决条，避免误会成单场比分 */}
-                  <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-                    <div className="mb-1.5 text-center">
+                  {/* 赛季胜场：红绿倒角底 + VS，无高尔夫球，仅数字 */}
+                  <div>
+                    <div className="mb-2 text-center">
                       <span className="rounded-full bg-[#F15B98]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#F15B98]">
                         赛季胜场
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-3">
-                      <span className="text-[2.25rem] font-black tabular-nums leading-none text-[#E53935]">
-                        {teamStanding.redWins}
-                      </span>
-                      <span className="text-2xl font-bold text-gray-300">:</span>
-                      <span className="text-[2.25rem] font-black tabular-nums leading-none text-[#43A047]">
-                        {teamStanding.greenWins}
-                      </span>
+                    <div
+                      className="relative mx-auto h-14 w-full max-w-xs overflow-hidden rounded-2xl sm:h-16"
+                      style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.10)' }}
+                    >
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background: '#E53935',
+                          clipPath: 'polygon(0 0, 56% 0, 44% 100%, 0 100%)',
+                        }}
+                      />
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          background: '#43A047',
+                          clipPath: 'polygon(56% 0, 100% 0, 100% 100%, 44% 100%)',
+                        }}
+                      />
+                      <div className="absolute inset-y-0 left-0 z-[1] flex w-[46%] items-center justify-center">
+                        <span className="text-[2rem] font-black italic tabular-nums leading-none text-white sm:text-[2.25rem]">
+                          {teamStanding.redWins}
+                        </span>
+                      </div>
+                      <div className="absolute inset-y-0 right-0 z-[1] flex w-[46%] items-center justify-center">
+                        <span className="text-[2rem] font-black italic tabular-nums leading-none text-white sm:text-[2.25rem]">
+                          {teamStanding.greenWins}
+                        </span>
+                      </div>
+                      {/* 中间 VS：圆角方块，不是高尔夫球 */}
+                      <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+                        <div className="flex h-8 w-10 items-center justify-center rounded-lg bg-white shadow-md sm:h-9 sm:w-11">
+                          <span className="text-xs font-black italic tracking-tight text-[#F15B98] sm:text-sm">
+                            VS
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <p className="mt-2 text-center text-xs text-gray-400">
                       {teamStanding.redWins === teamStanding.greenWins
