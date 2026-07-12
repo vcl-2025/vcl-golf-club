@@ -7,6 +7,7 @@ import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
 import { fetchRegistrationRequiresApproval } from '../lib/clubSettings'
 import { canMemberSelfCancelRegistration } from '../utils/registrationCancel'
+import { ENABLE_REGISTRATION_PAYMENT_PROOF } from '../utils/registrationFeatures'
 import { cancelOwnRegistrationWithAudit } from '../lib/audit'
 import RegistrationCancelForm from './RegistrationCancelForm'
 
@@ -157,7 +158,12 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
         }
       }
 
-      // console.log('没有现有报名记录，进入支付步骤')
+      // 付款证明关闭时：信息页直接提交，跳过支付步骤
+      if (!ENABLE_REGISTRATION_PAYMENT_PROOF) {
+        await handleRegistrationSubmit()
+        return
+      }
+
       // 进入支付步骤（不创建报名记录）
       setStep('payment')
     } catch (error: any) {
@@ -667,9 +673,19 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                   <div className="text-sm text-yellow-800">
                     <div className="font-semibold mb-1">报名流程说明：</div>
                     <ul className="space-y-1 text-xs">
-                      <li>• 报名缴费后提交缴费证明，等待审核</li>
-                      <li>• 审核通过后，报名正式生效</li>
-                      <li>• 审核中或未付款前可自行取消报名</li>
+                      {ENABLE_REGISTRATION_PAYMENT_PROOF ? (
+                        <>
+                          <li>• 报名缴费后提交缴费证明，等待审核</li>
+                          <li>• 审核通过后，报名正式生效</li>
+                          <li>• 审核中或未付款前可自行取消报名</li>
+                        </>
+                      ) : (
+                        <>
+                          <li>• 提交报名后等待审核</li>
+                          <li>• 审核通过后，报名正式生效</li>
+                          <li>• 审核中或未付款前可自行取消报名</li>
+                        </>
+                      )}
                     </ul>
                   </div>
                 </div>
@@ -681,17 +697,12 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                   type="submit"
                   disabled={loading || !userProfile?.full_name}
                   className="flex-1 py-3 px-4 bg-[#F15B98] text-white rounded-lg hover:bg-[#F15B98]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  onClick={() => {
-                    // console.log('按钮点击调试信息:', {
-                    //   loading,
-                    //   userProfile,
-                    //   full_name: userProfile?.full_name,
-                    //   phone: userProfile?.phone,
-                    //   disabled: loading || !userProfile?.full_name || !userProfile?.phone
-                    // })
-                  }}
                 >
-                  {loading ? '提交中...' : '下一步：支付信息'}
+                  {loading
+                    ? '提交中...'
+                    : ENABLE_REGISTRATION_PAYMENT_PROOF
+                      ? '下一步：支付信息'
+                      : '提交报名'}
                 </button>
                 
                 <button
@@ -781,7 +792,8 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                 </div>
               </div>
 
-              {/* 上传支付证明 */}
+              {/* 上传支付证明（开关关闭时屏蔽，代码保留便于恢复） */}
+              {ENABLE_REGISTRATION_PAYMENT_PROOF && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
                   <CreditCard className="w-5 h-5 mr-2" />
@@ -822,6 +834,7 @@ export default function EventRegistrationModal({ event, user, onClose, onSuccess
                   </div>
                 </div>
               </div>
+              )}
 
               {/* 操作按钮 */}
               <div className="flex space-x-3">

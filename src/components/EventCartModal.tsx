@@ -8,6 +8,7 @@ import { canRegister, getEventStatus, getEventStatusText } from '../utils/eventS
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
 import { fetchRegistrationRequiresApproval } from '../lib/clubSettings'
+import { ENABLE_REGISTRATION_PAYMENT_PROOF } from '../utils/registrationFeatures'
 
 interface EventCartModalProps {
   eventIds: string[]
@@ -219,7 +220,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
       return
     }
 
-    if (!paymentProof) {
+    if (ENABLE_REGISTRATION_PAYMENT_PROOF && !paymentProof) {
       showError('请上传支付凭证')
       return
     }
@@ -259,8 +260,10 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
         throw new Error(`以下活动报名名额已满：${fullEvents.join('、')}。请从购物车中移除这些活动后重试。`)
       }
 
-      // 上传支付凭证
-      const paymentProofUrl = await uploadPaymentProof(paymentProof)
+      let paymentProofUrl: string | null = null
+      if (ENABLE_REGISTRATION_PAYMENT_PROOF && paymentProof) {
+        paymentProofUrl = await uploadPaymentProof(paymentProof)
+      }
 
       const requiresApproval = await fetchRegistrationRequiresApproval(supabase)
 
@@ -518,8 +521,8 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
                 </div>
               </div>
 
-              {/* 支付凭证上传 */}
-              {!hasAlreadyRegistered && (
+              {/* 支付凭证上传（开关关闭时屏蔽，代码保留便于恢复） */}
+              {ENABLE_REGISTRATION_PAYMENT_PROOF && !hasAlreadyRegistered && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <Upload className="w-4 h-4 inline mr-2" />
@@ -605,7 +608,7 @@ export default function EventCartModal({ eventIds, onClose, onRemoveFromCart, on
           {!hasAlreadyRegistered && events.length > 0 && (
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || events.length === 0 || !paymentProof || invalidEvents.length > 0}
+              disabled={isSubmitting || events.length === 0 || (ENABLE_REGISTRATION_PAYMENT_PROOF && !paymentProof) || invalidEvents.length > 0}
               className="px-6 py-2.5 text-white bg-[#F15B98] rounded-lg hover:bg-[#F15B98]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (

@@ -8,6 +8,7 @@ import { canRegister, getEventStatus } from '../utils/eventStatus'
 import { formatEventDateTimeInTimezone } from '../utils/eventDateTime'
 import { REGISTRATION_OCCUPYING_SLOT_OR_FILTER } from '../utils/eventRegistrationSlotFilter'
 import { fetchRegistrationRequiresApproval } from '../lib/clubSettings'
+import { ENABLE_REGISTRATION_PAYMENT_PROOF } from '../utils/registrationFeatures'
 
 interface BatchRegistrationCartProps {
   events: Event[]
@@ -210,8 +211,8 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
       return
     }
 
-    console.log('4. 检查支付凭证:', { paymentProof: !!paymentProof })
-    if (!paymentProof) {
+    console.log('4. 检查支付凭证:', { enabled: ENABLE_REGISTRATION_PAYMENT_PROOF, paymentProof: !!paymentProof })
+    if (ENABLE_REGISTRATION_PAYMENT_PROOF && !paymentProof) {
       console.error('❌ 未上传支付凭证')
       showError('请上传支付凭证')
       return
@@ -257,10 +258,12 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
       }
 
       console.log('✅ 名额检查通过')
-      console.log('7. 开始上传支付凭证...')
-      // 上传支付凭证
-      const paymentProofUrl = await uploadPaymentProof(paymentProof)
-      console.log('✅ 支付凭证上传成功:', paymentProofUrl)
+      let paymentProofUrl: string | null = null
+      if (ENABLE_REGISTRATION_PAYMENT_PROOF && paymentProof) {
+        console.log('7. 开始上传支付凭证...')
+        paymentProofUrl = await uploadPaymentProof(paymentProof)
+        console.log('✅ 支付凭证上传成功:', paymentProofUrl)
+      }
 
       const requiresApproval = await fetchRegistrationRequiresApproval(supabase)
 
@@ -530,8 +533,8 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
             </div>
           </div>
 
-          {/* 支付凭证上传 */}
-          {!hasAlreadyRegistered && (
+          {/* 支付凭证上传（开关关闭时屏蔽，代码保留便于恢复） */}
+          {ENABLE_REGISTRATION_PAYMENT_PROOF && !hasAlreadyRegistered && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Upload className="w-4 h-4 inline mr-2" />
@@ -615,7 +618,7 @@ export default function BatchRegistrationCart({ events, noticeId, onClose, onSuc
           {!hasAlreadyRegistered && (
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || selectedEvents.length === 0 || !paymentProof || invalidEvents.length > 0}
+              disabled={isSubmitting || selectedEvents.length === 0 || (ENABLE_REGISTRATION_PAYMENT_PROOF && !paymentProof) || invalidEvents.length > 0}
               className="px-6 py-2.5 text-white bg-[#F15B98] rounded-lg hover:bg-[#F15B98]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
