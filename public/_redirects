@@ -1,5 +1,10 @@
-# SPA 路由重定向（Cloudflare Pages：会匹配所有未命中静态文件的路径；
-# /open-graph/information-og 与 /api/information-og 由 Pages Functions 处理，见 public/_routes.json）
+# Cloudflare Pages / SPA
+# log-lottery 独立应用（须写在主站 catch-all 之前）
+/log-lottery    /log-lottery/index.html   200
+/log-lottery/   /log-lottery/index.html   200
+/log-lottery/*  /log-lottery/index.html   200
+
+# 主站 SPA
 /*    /index.html   200
 
 # 静态资源缓存

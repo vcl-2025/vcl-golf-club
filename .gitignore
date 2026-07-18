@@ -81,8 +81,7 @@ dist
 tmp/
 temp/
 
-
-
-
+# log-lottery：源码在 vendor（可本地重建）；线上用 public/log-lottery
+vendor/
 
 

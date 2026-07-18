@@ -34,8 +34,24 @@ function injectAbsoluteOgImage() {
   }
 }
 
+/** 本地开发：/log-lottery/* 回退到 public/log-lottery/index.html */
+function logLotterySpaFallback() {
+  return {
+    name: 'log-lottery-spa-fallback',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        const url = req.url?.split('?')[0] || ''
+        if (url.startsWith('/log-lottery') && !url.includes('.')) {
+          req.url = '/log-lottery/index.html'
+        }
+        next()
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), injectAbsoluteOgImage()],
+  plugins: [react(), injectAbsoluteOgImage(), logLotterySpaFallback()],
   define: {
     global: 'globalThis',
   },

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:lottery": "bash scripts/build-log-lottery.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
