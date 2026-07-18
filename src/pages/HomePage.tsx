@@ -1589,7 +1589,7 @@ export default function HomePage() {
           <div className="border-t border-white/10 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
             <div className="flex flex-col gap-1">
               <p>&copy; 2025 VCL Golf Club. All rights reserved.</p>
-              <p style={{ color: 'rgba(255,255,255,0.55)' }}>技术支持：南京博斯尔信息技术有限责任公司</p>
+              <p style={{ color: 'rgba(255,255,255,0.55)' }}>软件技术支持：南京博斯尔信息技术有限责任公司</p>
             </div>
             <div className="flex gap-2">
               <a href="#" className="text-[var(--accent)] no-underline hover:text-[var(--pink)] transition-colors">Privacy Policy</a>
