@@ -10,7 +10,15 @@
       "destination": "/api/review-og"
     },
     {
-      "source": "^/(?!api/).*$",
+      "source": "/log-lottery",
+      "destination": "/log-lottery/index.html"
+    },
+    {
+      "source": "/log-lottery/:path*",
+      "destination": "/log-lottery/index.html"
+    },
+    {
+      "source": "/((?!api/|log-lottery(?:/|$)).*)",
       "destination": "/index.html"
     }
   ]
