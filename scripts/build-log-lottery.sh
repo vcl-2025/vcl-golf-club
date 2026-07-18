@@ -85,9 +85,12 @@ echo ">> syncing to public/log-lottery"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 rsync -a --exclude='*.gz' "$VENDOR/dist/" "$OUT/"
-# 页面标题
+# 页面标题兜底（源码 index.html 已是 VCL；兼容旧构建产物）
 if [[ -f "$OUT/index.html" ]]; then
-  sed -i.bak 's/<title>Log-Lottery<\/title>/<title>VCL 抽奖<\/title>/' "$OUT/index.html" || true
+  sed -i.bak \
+    -e 's/<title>Log-Lottery<\/title>/<title>VCL Golf Club · 抽奖管理<\/title>/' \
+    -e 's/<title>VCL 抽奖<\/title>/<title>VCL Golf Club · 抽奖管理<\/title>/' \
+    "$OUT/index.html" || true
   rm -f "$OUT/index.html.bak"
 fi
 
