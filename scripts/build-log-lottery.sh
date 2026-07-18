@@ -91,6 +91,23 @@ if [[ -f "$OUT/index.html" ]]; then
   rm -f "$OUT/index.html.bak"
 fi
 
+
+# SPA history 回退：为客户端路由生成真实 index.html，避免 CF Pages
+# 主站 /* -> /index.html 吞掉 /log-lottery/home 等路径
+echo ">> writing SPA route fallbacks"
+ROUTES=(
+  home demo mobile
+  config
+  config/person config/person/all config/person/already
+  config/prize
+  config/global config/global/face config/global/image config/global/music
+  config/server config/readme
+)
+for r in "${ROUTES[@]}"; do
+  mkdir -p "$OUT/$r"
+  cp -f "$OUT/index.html" "$OUT/$r/index.html"
+done
+
 echo ">> done. open /log-lottery/home"
 echo ">> 若仍无声音：到抽奖页「全局配置」重置音乐/数据，或清站点 localStorage 后刷新"
 du -sh "$OUT"

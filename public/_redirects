@@ -1,11 +1,15 @@
-# Cloudflare Pages / SPA
-# Nested lottery SPA rewrites (Functions also cover /log-lottery/* on CF Pages)
-/log-lottery    /log-lottery/index.html   200
-/log-lottery/   /log-lottery/index.html   200
-/log-lottery/*  /log-lottery/index.html   200
+# Cloudflare Pages / SPA — more specific rules first
+/log-lottery/home /log-lottery/index.html 200
+/log-lottery/demo /log-lottery/index.html 200
+/log-lottery/mobile /log-lottery/index.html 200
+/log-lottery/config /log-lottery/index.html 200
+/log-lottery/config/* /log-lottery/index.html 200
+/log-lottery /log-lottery/index.html 200
+/log-lottery/ /log-lottery/index.html 200
+/log-lottery/* /log-lottery/index.html 200
 
 # Main site SPA
-/*    /index.html   200
+/* /index.html 200
 
 # Static asset cache passthrough
-/assets/*   /assets/:splat   200
+/assets/* /assets/:splat 200
