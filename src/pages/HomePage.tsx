@@ -1593,7 +1593,7 @@ export default function HomePage() {
                 软件技术支持：南京博斯尔信息技术有限责任公司
               </p>
               <p style={{ color: 'rgba(255,255,255,0.45)' }}>
-                微信 56704498 或 13813896301 · 电话 13813896301
+                微信 56704498 或 13813896301
               </p>
             </div>
             <div className="flex gap-2">
