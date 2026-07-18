@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="	¾4Ï">
+  <circle cx="100" cy="100" r="96" fill="#F4F7FA"/>
+  <circle cx="100" cy="100" r="96" fill="none" stroke="#2F5D8C" stroke-width="6"/>
+  <!-- guest silhouette: no visor, suit collar -->
+  <g fill="#3A6EA5">
+    <ellipse cx="100" cy="78" rx="34" ry="38"/>
+    <path d="M48 168c8-34 28-52 52-52s44 18 52 52v8H48v-8z"/>
+    <path d="M78 118l22 18 22-18c-6 16-14 24-22 24s-16-8-22-24z" fill="#2F5D8C"/>
+  </g>
+  <path d="M100 136v28" stroke="#E8C56A" stroke-width="4" stroke-linecap="round"/>
+</svg>
