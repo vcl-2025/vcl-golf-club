@@ -1,11 +1,11 @@
 # Cloudflare Pages / SPA
-# log-lottery 独立应用（须写在主站 catch-all 之前）
+# Nested lottery SPA rewrites (Functions also cover /log-lottery/* on CF Pages)
 /log-lottery    /log-lottery/index.html   200
 /log-lottery/   /log-lottery/index.html   200
 /log-lottery/*  /log-lottery/index.html   200
 
-# 主站 SPA
+# Main site SPA
 /*    /index.html   200
 
-# 静态资源缓存
+# Static asset cache passthrough
 /assets/*   /assets/:splat   200

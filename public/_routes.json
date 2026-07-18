@@ -4,7 +4,9 @@
     "/open-graph/information-og",
     "/api/information-og",
     "/open-graph/review-og",
-    "/api/review-og"
+    "/api/review-og",
+    "/log-lottery",
+    "/log-lottery/*"
   ],
   "exclude": []
 }
