@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SVG Mask 不规则卡片预览</title>
+  <style>
+    :root {
+      --bg: #eef1f6;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --accent: #2f6bff;
+      --soft: #eaf1ff;
+      /*
+        左上标题托盘 + 主身。
+        关键处用 sweep=0 的圆弧做内凹（inverted corner）。
+      */
+      --mask-notch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M26 0H162A22 22 0 0 1 184 22V36A22 22 0 0 0 206 58H374A26 26 0 0 1 400 84V274A26 26 0 0 1 374 300H26A26 26 0 0 1 0 274V26A26 26 0 0 1 26 0Z'/%3E%3C/svg%3E");
+      /* 右上缺口版（镜像托盘） */
+      --mask-cutout: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300' preserveAspectRatio='none'%3E%3Cpath fill='white' d='M26 58H194A22 22 0 0 0 216 36V22A22 22 0 0 1 238 0H374A26 26 0 0 1 400 26V274A26 26 0 0 1 374 300H26A26 26 0 0 1 0 274V84A26 26 0 0 1 26 58Z'/%3E%3C/svg%3E");
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem 3rem;
+      font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      margin: 0 0 0.4rem;
+      font-size: 1.45rem;
+      font-weight: 750;
+    }
+    .lead {
+      margin: 0 0 1.75rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.25rem;
+      max-width: 1100px;
+    }
+
+    .card {
+      position: relative;
+      min-height: 220px;
+      padding: 1.35rem 1.4rem 1.5rem;
+      background: var(--card);
+      color: var(--text);
+      -webkit-mask-image: var(--mask-notch);
+      mask-image: var(--mask-notch);
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      filter: drop-shadow(0 14px 28px rgba(15, 23, 42, 0.1));
+    }
+
+    .card--cutout {
+      -webkit-mask-image: var(--mask-cutout);
+      mask-image: var(--mask-cutout);
+      padding-top: 3.4rem;
+    }
+
+    .card__tab {
+      margin: -0.15rem 0 1rem;
+      max-width: 46%;
+      font-size: 0.95rem;
+      font-weight: 750;
+      letter-spacing: 0.01em;
+    }
+
+    .card--cutout .card__tab {
+      position: absolute;
+      top: 0.85rem;
+      right: 1.2rem;
+      max-width: none;
+      margin: 0;
+    }
+
+    .card__value {
+      margin: 0.35rem 0 0.2rem;
+      font-size: 2rem;
+      font-weight: 780;
+      letter-spacing: -0.02em;
+    }
+
+    .card__meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      margin-top: 1rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 650;
+    }
+
+    .float-btn {
+      position: absolute;
+      right: 1.1rem;
+      top: 4.2rem;
+      width: 2.4rem;
+      height: 2.4rem;
+      border: 0;
+      border-radius: 999px;
+      background: #111827;
+      color: #fff;
+      font-size: 1.1rem;
+      cursor: default;
+      filter: drop-shadow(0 8px 16px rgba(15, 23, 42, 0.18));
+    }
+
+    .card--cutout .float-btn {
+      top: 0.7rem;
+      left: 1.1rem;
+      right: auto;
+      background: var(--accent);
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; max-width: 420px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>SVG Mask 不规则卡片预览</h1>
+  <p class="lead">左上托盘凹角 / 右上缺口两种造型。打开：/card-mask-demo.html</p>
+
+  <div class="grid">
+    <article class="card">
+      <h2 class="card__tab">Total revenue</h2>
+      <p class="card__value">$98,361</p>
+      <p class="card__meta">Year to date performance</p>
+      <span class="pill">+8.2% vs last year</span>
+      <button class="float-btn" type="button" aria-hidden="true">→</button>
+    </article>
+
+    <article class="card card--cutout">
+      <h2 class="card__tab">Employee</h2>
+      <p class="card__value">124</p>
+      <p class="card__meta">Active staff this month</p>
+      <span class="pill">12 new hires</span>
+      <button class="float-btn" type="button" aria-hidden="true">+</button>
+    </article>
+
+    <article class="card">
+      <h2 class="card__tab">Satisfaction</h2>
+      <p class="card__value">92%</p>
+      <p class="card__meta">Patient feedback score</p>
+      <span class="pill">Stable this week</span>
+      <button class="float-btn" type="button" aria-hidden="true">→</button>
+    </article>
+  </div>
+</body>
+</html>
