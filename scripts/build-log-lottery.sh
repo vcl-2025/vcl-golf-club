@@ -77,6 +77,19 @@ PY
 
 echo ">> installing deps"
 npm install --legacy-peer-deps
+# 抽奖页云端配置库需要与主站相同的 Supabase 环境变量
+if [[ -f "$ROOT/.env" ]]; then
+  echo ">> syncing Supabase env from project root"
+  # 只写入需要的键，避免把无关本地变量打进产物调试信息
+  : > "$VENDOR/.env"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    case "$line" in
+      VITE_SUPABASE_URL=*|VITE_SUPABASE_ANON_KEY=*)
+        printf '%s\n' "$line" >> "$VENDOR/.env"
+        ;;
+    esac
+  done < "$ROOT/.env"
+fi
 
 echo ">> building (base=/log-lottery/)"
 npm run build
